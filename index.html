@@ -6,7 +6,18 @@
 <title>Midland Quarter - মেস ম্যানেজমেন্ট</title>
 <!-- Dark mode flash fix: apply class BEFORE paint -->
 <script>try{if(localStorage.getItem('mq_dark')==='1')document.documentElement.classList.add('dark-mode');}catch(e){}</script>
-<style>html.dark-mode{background:#0b0f1a;color:#e2e8f0;}html{background:#f4f7f5;}</style>
+<style>
+html.dark-mode{background:#0d1117;color:#e2e8f0;}
+html{background:#f4f7f5;}
+/* Dark mode loading overlay */
+html.dark-mode #fb-loading{background:#0d1117 !important;}
+html.dark-mode #fb-loading .mq-load-title{color:#e2e8f0 !important;}
+html.dark-mode #fb-loading .mq-load-sub{color:#8b95a9 !important;}
+html.dark-mode #fb-loading .mq-load-ring-track{border-color:#232d42 !important;}
+html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#818cf8 !important;}
+html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#4f46e5,#818cf8) !important;}
+html.dark-mode #fb-loading .mq-dot{background:#818cf8 !important;}
+</style>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
@@ -25,34 +36,88 @@
   --shadow:0 4px 20px rgba(26,107,60,0.10);--radius:16px;--radius-sm:10px;
 }
 .dark-mode {
-  --primary:#34d399;--primary-light:#6ee7b7;--primary-dark:#059669;
-  --accent:#fbbf24;--accent-light:#fcd34d;
-  --bg:#0b0f1a;--card:#131929;--text:#e2e8f0;--text-light:#94a3b8;
-  --border:#1e2d45;--danger:#f87171;--danger-light:#1f1215;
-  --success:#34d399;--success-light:#052e1c;
+  /* Night mode — deep navy + soft violet/indigo accents */
+  --primary:#818cf8;--primary-light:#a5b4fc;--primary-dark:#4f46e5;
+  --accent:#f59e0b;--accent-light:#fbbf24;
+  --bg:#0d1117;--card:#161b27;--text:#e2e8f0;--text-light:#8b95a9;
+  --border:#232d42;--danger:#f87171;--danger-light:#1f1215;
+  --success:#4ade80;--success-light:#052e1c;
   --info:#60a5fa;--info-light:#0c1a36;
-  --shadow:0 4px 32px rgba(0,0,0,0.7),0 1px 6px rgba(0,0,0,0.5);
+  --shadow:0 4px 32px rgba(0,0,0,0.8),0 1px 8px rgba(0,0,0,0.6);
 }
-.dark-mode .app-header{background:linear-gradient(135deg,#060c18 0%,#0d1f35 60%,#0f2942 100%);}
-.dark-mode .today-card{background:linear-gradient(135deg,#131929,#0d1a2e);border-color:#1e2d45;}
-.dark-mode .stat-card{background:linear-gradient(135deg,#131929,#0d1a2e);border-color:#1e2d45;}
-.dark-mode .menu-item{background:linear-gradient(135deg,#131929,#0f1f35);border-color:#1e2d45;}
-.dark-mode .menu-item:active{background:#0b1525;}
-.dark-mode .pqo-btn{background:#0b1525;border-color:#1e2d45;color:#94a3b8;}
-.dark-mode .pqo-btn.selP{background:#052e1c;border-color:#34d399;color:#34d399;}
-.dark-mode .pqo-btn.selQ{background:#0c1a36;border-color:#60a5fa;color:#60a5fa;}
+.dark-mode .app-header{background:linear-gradient(135deg,#0d1117 0%,#161b27 50%,#1e1f3a 100%);}
+.dark-mode .today-card{background:linear-gradient(135deg,#161b27,#1a1f35);border-color:#232d42;}
+.dark-mode .stat-card{background:linear-gradient(135deg,#161b27,#1a1f35);border-color:#232d42;}
+.dark-mode .menu-item{background:linear-gradient(135deg,#161b27,#1c2033);border-color:#232d42;}
+.dark-mode .menu-item:active{background:#111622;}
+.dark-mode .menu-item{border-top-color:#4f46e5 !important;}
+.dark-mode .menu-item.ac{border-top-color:#f59e0b !important;}
+.dark-mode .menu-item.dg{border-top-color:#f87171 !important;}
+.dark-mode .menu-item.in{border-top-color:#60a5fa !important;}
+.dark-mode .pqo-btn{background:#111622;border-color:#232d42;color:#8b95a9;}
+.dark-mode .pqo-btn.selP{background:#0d2010;border-color:#4ade80;color:#4ade80;}
+.dark-mode .pqo-btn.selQ{background:#0c1535;border-color:#818cf8;color:#818cf8;}
 .dark-mode .pqo-btn.seloff{background:#1f1215;border-color:#f87171;color:#f87171;}
-.dark-mode .form-input{background:#0b1525;border-color:#1e2d45;color:#e2e8f0;}
-.dark-mode .form-input:focus{border-color:#34d399;background:#0f1e35;}
-.dark-mode .btn-primary{background:linear-gradient(135deg,#059669,#34d399);color:#020c0a;}
-.dark-mode .bottom-nav{background:#0d1525;border-top-color:#1e2d45;}
-.dark-mode .modal{background:#131929;}
-.dark-mode .mpill.b{background:#1a1005;color:#fbbf24;}
-.dark-mode .mpill.l{background:#052e1c;color:#34d399;}
-.dark-mode .mpill.d{background:#0c1a36;color:#60a5fa;}
-.dark-mode .welcome-role{background:#fbbf24;color:#020c0a;}
-.dark-mode .rep-val{color:#34d399;}
-.dark-mode .sec-title{color:#60a5fa;}
+.dark-mode .form-input{background:#111622;border-color:#232d42;color:#e2e8f0;}
+.dark-mode .form-input:focus{border-color:#818cf8;background:#161b27;box-shadow:0 0 0 3px rgba(129,140,248,0.15);}
+.dark-mode .btn-primary{background:linear-gradient(135deg,#4f46e5,#818cf8);color:#fff;}
+.dark-mode .btn-primary:active:not(:disabled){transform:scale(.98);}
+.dark-mode .bottom-nav{background:#0d1117;border-top-color:#232d42;box-shadow:0 -2px 20px rgba(0,0,0,0.5);}
+.dark-mode .nav-btn.active{color:#818cf8;}
+.dark-mode .modal{background:#161b27;border:1px solid #232d42;}
+.dark-mode .modal-bg{background:rgba(0,0,0,0.7);}
+.dark-mode .mpill.b{background:#1e1505;color:#fbbf24;border:1px solid #3a2a0a;}
+.dark-mode .mpill.l{background:#0d2010;color:#4ade80;border:1px solid #1a3a1e;}
+.dark-mode .mpill.d{background:#0c1535;color:#818cf8;border:1px solid #1e2a50;}
+.dark-mode .welcome-role{background:#f59e0b;color:#0d1117;}
+.dark-mode .rep-val{color:#818cf8;}
+.dark-mode .sec-title{color:#818cf8;}
+.dark-mode .card{border-color:#232d42;}
+.dark-mode .balance-card.positive{background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.25);}
+.dark-mode .balance-card.negative{background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.25);}
+.dark-mode .tab-btn.active{background:#4f46e5;border-color:#4f46e5;}
+.dark-mode .btn-outline{color:#818cf8;border-color:#818cf8;}
+.dark-mode .lock-badge{background:#1e1505;color:#fbbf24;border-color:#3a2a0a;}
+.dark-mode .stat-num{color:#818cf8;}
+.dark-mode .mem-meals{color:#818cf8;}
+.dark-mode .mess-month-bar{background:linear-gradient(90deg,#4f46e5,#818cf8);}
+.dark-mode .mgr-av{background:linear-gradient(135deg,#4f46e5,#818cf8);}
+.dark-mode .mem-av{background:linear-gradient(135deg,#4f46e5,#818cf8);}
+.dark-mode .prof-av{background:linear-gradient(135deg,#4f46e5,#818cf8);}
+.dark-mode .toast{background:#161b27;border:1px solid #4f46e5;color:#e2e8f0;}
+.dark-mode .today-hd{color:#a5b4fc;}
+.dark-mode .bz-amt{color:#818cf8;}
+.dark-mode .badge-ctrl{background:rgba(129,140,248,0.15);color:#a5b4fc;}
+.dark-mode .badge-mgr{background:rgba(245,158,11,0.15);color:#fbbf24;}
+.dark-mode .badge-mem{background:rgba(129,140,248,0.12);color:#818cf8;}
+.dark-mode .badge-cook{background:rgba(96,165,250,0.15);color:#93c5fd;}
+.dark-mode .badge-outside{background:rgba(245,158,11,0.12);color:#fbbf24;}
+.dark-mode .badge-inside{background:rgba(74,222,128,0.12);color:#86efac;}
+/* Login / Register / Forgot screens in dark mode */
+.dark-mode #sc-login .content,.dark-mode #sc-register .content,.dark-mode #sc-forgot .content{background:#0d1117;}
+.dark-mode .link-txt{color:#818cf8;}
+.dark-mode .chk-row span{color:#8b95a9;}
+.dark-mode .alert-danger{background:rgba(248,113,113,0.1);color:#fca5a5;border-color:rgba(248,113,113,0.3);}
+.dark-mode .alert-success{background:rgba(74,222,128,0.1);color:#86efac;border-color:rgba(74,222,128,0.3);}
+.dark-mode .alert-info{background:rgba(96,165,250,0.1);color:#93c5fd;border-color:rgba(96,165,250,0.3);}
+.dark-mode .divider{background:#232d42;}
+.dark-mode .rep-row{border-bottom-color:#232d42;}
+.dark-mode .prof-row{border-bottom-color:#232d42;}
+.dark-mode .bazar-item{border-bottom-color:#232d42;}
+.dark-mode .mem-item{border-bottom-color:#232d42;}
+.dark-mode .tx-item{border-bottom-color:#232d42;}
+.dark-mode .adm-item{border-bottom-color:#232d42;}
+.dark-mode .who-tag{background:rgba(74,222,128,0.1);color:#4ade80;border-color:rgba(74,222,128,0.25);}
+.dark-mode .date-nav-btn{background:#4f46e5;}
+.dark-mode .btn-accent{background:linear-gradient(135deg,#d97706,#f59e0b);color:#0d1117;}
+.dark-mode .header-back{background:rgba(129,140,248,0.2);border:1px solid rgba(129,140,248,0.3);}
+.dark-mode .header-icon-btn{background:rgba(129,140,248,0.2);border:1px solid rgba(129,140,248,0.2);}
+.dark-mode .dark-toggle{background:rgba(129,140,248,0.2);}
+/* Scrollbar in dark mode */
+.dark-mode ::-webkit-scrollbar{width:6px;}
+.dark-mode ::-webkit-scrollbar-track{background:#0d1117;}
+.dark-mode ::-webkit-scrollbar-thumb{background:#232d42;border-radius:3px;}
+.dark-mode ::-webkit-scrollbar-thumb:hover{background:#4f46e5;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;transition:background .3s,color .3s;}
 .screen{display:none;min-height:100vh;flex-direction:column;}
@@ -412,7 +477,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <div class="stat-num" id="st-month">0.00</div>
         <div class="stat-lbl">এই মাসের মিল <span style="font-size:10px">↗</span></div>
       </div>
-      <div class="stat-card" onclick="showAllMembersBill()" style="cursor:pointer;border:1px solid var(--accent);">
+      <div class="stat-card" onclick="showAllMembersBill()" style="cursor:pointer;border:1px solid var(--border);">
         <div class="stat-num" id="st-bill" style="color:var(--accent)">৳ 0</div>
         <div class="stat-lbl">মিল রেট <span style="font-size:10px;color:var(--accent)">↗ সব হিসাব</span></div>
       </div>
@@ -993,20 +1058,20 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 
 
 <!-- ═══════════ FIREBASE LOADING OVERLAY ═══════════ -->
-<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#f4f7f5;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:background .3s;">
   <div style="position:relative;width:72px;height:72px;">
-    <div style="position:absolute;inset:0;border-radius:50%;border:6px solid #e8f5e9;"></div>
-    <div style="position:absolute;inset:0;border-radius:50%;border:6px solid transparent;border-top-color:#1a6b3c;animation:mq-spin 0.9s linear infinite;"></div>
-    <div style="position:absolute;inset:16px;background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">🍽️</div>
+    <div class="mq-load-ring-track" style="position:absolute;inset:0;border-radius:50%;border:6px solid #e8f5e9;"></div>
+    <div class="mq-load-ring-spin" style="position:absolute;inset:0;border-radius:50%;border:6px solid transparent;border-top-color:#1a6b3c;animation:mq-spin 0.9s linear infinite;"></div>
+    <div class="mq-load-inner" style="position:absolute;inset:16px;background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">🍽️</div>
   </div>
   <div style="text-align:center;">
-    <div style="font-size:18px;font-weight:700;color:#1a2e22;font-family:'Hind Siliguri',sans-serif;margin-bottom:6px;">লোড হচ্ছে...</div>
-    <div style="font-size:13px;color:#5a7a65;font-family:'Hind Siliguri',sans-serif;">দয়া করে অপেক্ষা করুন</div>
+    <div class="mq-load-title" style="font-size:18px;font-weight:700;color:#1a2e22;font-family:'Hind Siliguri',sans-serif;margin-bottom:6px;">লোড হচ্ছে...</div>
+    <div class="mq-load-sub" style="font-size:13px;color:#5a7a65;font-family:'Hind Siliguri',sans-serif;">দয়া করে অপেক্ষা করুন</div>
   </div>
   <div style="display:flex;gap:6px;margin-top:4px;">
-    <div style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out infinite;"></div>
-    <div style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.2s infinite;"></div>
-    <div style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.4s infinite;"></div>
+    <div class="mq-dot" style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out infinite;"></div>
+    <div class="mq-dot" style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.2s infinite;"></div>
+    <div class="mq-dot" style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.4s infinite;"></div>
   </div>
 </div>
 <style>
@@ -1809,19 +1874,42 @@ function messMonthMeals(uname, mmKey){
 }
 
 // ═══════════════════════════════════════════════
-// MEAL RATE CALCULATION (updated: cookBills + split)
+// MEAL RATE CALCULATION
+// সূত্র: মিলরেট = (বাজার + অন্যান্য) / নেট মিল
+// নেট মিল = সবার মোট মিল - বাবুর্চির মিল
+// বাবুর্চি বিল (cookBills) মিলরেটে যোগ হয় না — আলাদা শেয়ার
 // ═══════════════════════════════════════════════
+function getCookMeals(mmKey){
+  // বাবুর্চির (type='cook') মোট মিল
+  let cookMeals=0;
+  DB.users.filter(u=>u.type==='cook').forEach(u=>{ cookMeals+=messMonthMeals(u.u,mmKey); });
+  return cookMeals;
+}
+function getNetMeals(mmKey){
+  // নেট মিল = সবার মোট মিল - বাবুর্চির মিল
+  let totalMeals=0;
+  DB.users.forEach(u=>{ totalMeals+=messMonthMeals(u.u,mmKey); });
+  const cookMeals=getCookMeals(mmKey);
+  return {totalMeals, cookMeals, netMeals: totalMeals-cookMeals};
+}
 function calcMealRate(mmKey){
   const bazar=DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
   const othersAll=DB.others.filter(o=>dateInMessMonth(o.date,mmKey));
   const others=othersAll.reduce((s,o)=>s+o.amount,0);
   const cookBillsAll=(DB.cookBills||[]).filter(c=>dateInMessMonth(c.date,mmKey));
   const cookBillsTotal=cookBillsAll.reduce((s,c)=>s+c.amount,0);
-  const total=bazar+others+cookBillsTotal;
-  let tm=0;
-  DB.users.forEach(u=>{tm+=messMonthMeals(u.u,mmKey);});
-  const pm = DB.mealRates[mmKey] || (tm>0?total/tm:0);
-  return {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals:tm,pm};
+
+  // মিলরেটে শুধু বাজার + অন্যান্য — বাবুর্চি বিল আলাদা
+  const rateBase=bazar+others;
+  const total=bazar+others+cookBillsTotal; // সর্বমোট (display এর জন্য)
+
+  const {totalMeals, cookMeals, netMeals}=getNetMeals(mmKey);
+
+  // মিলরেট = (বাজার + অন্যান্য) / নেট মিল
+  const pm = DB.mealRates[mmKey] || (netMeals>0 ? rateBase/netMeals : 0);
+
+  return {bazar, others, othersAll, cookBillsTotal, cookBillsAll,
+          total, rateBase, totalMeals, cookMeals, netMeals, pm};
 }
 
 // Calculate a single member's share of others + cookBills
@@ -2098,7 +2186,7 @@ function loadBill(){
   const sub=document.getElementById('bill-month-sub');
   if(lbl) lbl.textContent='মিল রেট — '+messMonthLabel();
   if(sub) sub.textContent=messMonthLabel();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,pm}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
   const myMeals=messMonthMeals(CU.u,mmKey);
   const mealBill=myMeals*pm;
@@ -2114,7 +2202,8 @@ function loadBill(){
   document.getElementById('bl-total-exp').textContent='৳ '+total.toLocaleString();
   document.getElementById('bl-bazar-s').textContent='৳ '+bazar.toLocaleString();
   document.getElementById('bl-others-s').textContent='৳ '+(others+cookBillsTotal).toLocaleString();
-  document.getElementById('bl-meals-s').textContent=totalMeals.toFixed(2);
+  // নেট মিল দেখাও (বাবুর্চি বাদে)
+  document.getElementById('bl-meals-s').textContent=netMeals.toFixed(2);
   document.getElementById('bl-my-meals').textContent=myMeals.toFixed(2)+' মিল';
   document.getElementById('bl-meal-bill').textContent='৳ '+mealBill.toFixed(2);
   document.getElementById('bl-other-share').textContent='৳ '+othersShare.toFixed(2);
@@ -2130,7 +2219,7 @@ function loadBill(){
 // ═══════════════════════════════════════════════
 function loadReport(){
   const mmKey=document.getElementById('rpt-month').value; if(!mmKey) return;
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,pm}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
 
   // Parse mess month label for header
   const [my,mm]=mmKey.split('-').map(Number);
@@ -2145,10 +2234,12 @@ function loadReport(){
   </div>
   <div class="rep-row"><span class="rep-key">মোট বাজার</span><span class="rep-val">৳ ${bazar.toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">মোট অন্যান্য</span><span class="rep-val">৳ ${others.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">মোট বাবুর্চি বিল</span><span class="rep-val">৳ ${cookBillsTotal.toLocaleString()}</span></div>
+  <div class="rep-row"><span class="rep-key">মোট বাবুর্চি বিল <span style="font-size:10px;opacity:.7">(মিলরেটে নয়)</span></span><span class="rep-val">৳ ${cookBillsTotal.toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">সর্বমোট খরচ</span><span class="rep-val">৳ ${total.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">মোট মিল</span><span class="rep-val">${totalMeals.toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key" style="color:var(--primary);font-weight:700">প্রতি মিল রেট (অটো)</span><span class="rep-val" style="font-size:18px">৳ ${pm.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">সবার মোট মিল</span><span class="rep-val">${totalMeals.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">বাবুর্চির মিল <span style="font-size:10px;opacity:.7">(বাদ দেওয়া হয়)</span></span><span class="rep-val" style="color:var(--text-light)">−${cookMeals.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">নেট মিল <span style="font-size:10px;opacity:.7">(রেট নির্ধারণে)</span></span><span class="rep-val">${netMeals.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key" style="color:var(--primary);font-weight:700">প্রতি মিল রেট</span><span class="rep-val" style="font-size:18px">৳ ${pm.toFixed(2)}</span></div>
   <div class="divider"></div>`;
 
   DB.users.filter(u=>u.type!=='cook').forEach(u=>{
@@ -2752,8 +2843,7 @@ function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
 function makePDF(type){
   // Build an off-screen render div with full Bengali support
   const mmKey=messMonthKey();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,pm}=calcMealRate(mmKey);
-  const today=tod();
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
   const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
 
   let html=`<div style="font-family:'Hind Siliguri',sans-serif;background:#fff;padding:16px;width:780px;color:#1a2e22;">
@@ -2905,7 +2995,7 @@ function makePDF(type){
 // ═══════════════════════════════════════════════
 function showAllMembersBill(){
   const mmKey=messMonthKey();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,pm}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
   const modal=document.getElementById('all-members-bill-modal');
   const content=document.getElementById('all-members-bill-content');
 
@@ -2926,7 +3016,7 @@ function showAllMembersBill(){
       <div><div style="opacity:.7">বাজার</div><div style="font-weight:700;margin-top:1px">৳${bazar.toLocaleString()}</div></div>
       <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">অন্যান্য</div><div style="font-weight:700;margin-top:1px">৳${others.toLocaleString()}</div></div>
       <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চি বিল</div><div style="font-weight:700;margin-top:1px">৳${cookBillsTotal.toLocaleString()}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">মোট মিল</div><div style="font-weight:700;margin-top:1px">${totalMeals.toFixed(1)}</div></div>
+      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">নেট মিল</div><div style="font-weight:700;margin-top:1px">${netMeals.toFixed(1)}</div></div>
     </div>
   </div>`;
 
