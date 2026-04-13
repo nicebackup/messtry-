@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Midland Quarter - মেস ম্যানেজমেন্ট</title>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -358,17 +359,26 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     </div>
     <!-- Today card -->
     <div class="today-card" style="position:relative">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="flex:1">
           <div class="today-hd" id="td-date">তারিখ: --</div>
           <div class="today-day" id="td-day">--</div>
+          <div id="td-viewing-badge" style="display:none;font-size:10px;background:var(--accent-light);color:#7a4800;border-radius:12px;padding:2px 10px;margin-top:4px;display:inline-block;"></div>
         </div>
-        <button onclick="downloadDayCSV()" title="আজকের রিপোর্ট ডাউনলোড" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">⬇ CSV</button>
+        <button onclick="downloadDayCSV()" title="রিপোর্ট ডাউনলোড" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">⬇ CSV</button>
+      </div>
+      <!-- Date navigation for browsing other days -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;">
+        <button onclick="homeShiftDate(-1)" style="background:var(--primary);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
+        <div style="flex:1;text-align:center;">
+          <div id="td-nav-label" style="font-size:12px;color:var(--text-light);font-weight:500;"></div>
+        </div>
+        <button onclick="homeShiftDate(1)" id="td-next-btn" style="background:var(--primary);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">›</button>
       </div>
       <div class="meal-pills">
-        <div class="mpill b" onclick="showWhoEats('b')">🌅 সকাল <b id="td-b">0</b></div>
-        <div class="mpill l" onclick="showWhoEats('l')">☀️ দুপুর <b id="td-l">0</b></div>
-        <div class="mpill d" onclick="showWhoEats('d')">🌙 রাত <b id="td-d">0</b></div>
+        <div class="mpill b" onclick="showWhoEatsDate('b')">🌅 সকাল <b id="td-b">0</b></div>
+        <div class="mpill l" onclick="showWhoEatsDate('l')">☀️ দুপুর <b id="td-l">0</b></div>
+        <div class="mpill d" onclick="showWhoEatsDate('d')">🌙 রাত <b id="td-d">0</b></div>
       </div>
       <div class="today-total">মোট: <b id="td-total">0.00</b> মিল</div>
     </div>
@@ -585,11 +595,15 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="content pb-nav">
     <div class="card">
       <div class="sec-title">💵 টাকা জমা / ফেরত</div>
-      <div class="form-group">
-        <label class="form-label">সদস্য নির্বাচন</label>
-        <select id="dep-mem" class="form-input" onchange="showMemberBalance()">
-          <option value="">-- সদস্য নির্বাচন করুন --</option>
-        </select>
+      <div class="form-group" style="position:relative;">
+        <label class="form-label">সদস্য নির্বাচন (নাম / ID / মোবাইল দিয়ে খুঁজুন)</label>
+        <input type="text" id="dep-mem-search" class="form-input" placeholder="🔍 নাম, Job ID বা মোবাইল নম্বর লিখুন..." autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
+        <input type="hidden" id="dep-mem" value="">
+        <div id="dep-mem-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(26,107,60,0.15);"></div>
+        <div id="dep-mem-selected" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);display:flex;align-items:center;justify-content:space-between;">
+          <span id="dep-mem-selected-name">—</span>
+          <button onclick="clearDepMem()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;">✕</button>
+        </div>
       </div>
       <div id="dep-bal-info" class="alert alert-info" style="display:none"></div>
       <div class="form-group">
@@ -952,13 +966,25 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 
 
 <!-- ═══════════ FIREBASE LOADING OVERLAY ═══════════ -->
-<div id="fb-loading" style="display:none;position:fixed;inset:0;background:rgba(10,30,20,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
-  <div style="width:54px;height:54px;border:5px solid rgba(255,255,255,0.15);border-top-color:#34d399;border-radius:50%;animation:fb-spin 0.8s linear infinite;"></div>
-  <div style="color:#e2e8f0;font-size:16px;font-family:'Hind Siliguri',sans-serif;font-weight:600;">Firebase সংযোগ হচ্ছে...</div>
-  <div style="color:#94a3b8;font-size:12px;font-family:'Hind Siliguri',sans-serif;">ডেটা লোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন</div>
+<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <div style="position:relative;width:72px;height:72px;">
+    <div style="position:absolute;inset:0;border-radius:50%;border:6px solid #e8f5e9;"></div>
+    <div style="position:absolute;inset:0;border-radius:50%;border:6px solid transparent;border-top-color:#1a6b3c;animation:mq-spin 0.9s linear infinite;"></div>
+    <div style="position:absolute;inset:16px;background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">🍽️</div>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:18px;font-weight:700;color:#1a2e22;font-family:'Hind Siliguri',sans-serif;margin-bottom:6px;">লোড হচ্ছে...</div>
+    <div style="font-size:13px;color:#5a7a65;font-family:'Hind Siliguri',sans-serif;">দয়া করে অপেক্ষা করুন</div>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:4px;">
+    <div style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out infinite;"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.2s infinite;"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.4s infinite;"></div>
+  </div>
 </div>
 <style>
-@keyframes fb-spin { to { transform: rotate(360deg); } }
+@keyframes mq-spin { to { transform: rotate(360deg); } }
+@keyframes mq-dot { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
 </style>
 
 <!-- ═══════════ CONFIRM MODAL ═══════════ -->
@@ -1195,7 +1221,7 @@ function showSc(id){
   if(el) el.classList.add('active');
   window.scrollTo(0,0);
 }
-function goHome(){ showSc('home'); refreshHome(); }
+function goHome(){ homeViewDate=null; showSc('home'); refreshHome(); }
 function tog(id){ const e=document.getElementById(id); if(e) e.style.display=e.style.display==='none'?'block':'none'; }
 function sec(s){
   if(s==='meal'){ initMeal(); showSc('meal'); return; }
@@ -1291,19 +1317,55 @@ function confirmLogout(){
 // ═══════════════════════════════════════════════
 // HOME
 // ═══════════════════════════════════════════════
+// Home page browsing date (separate from real today)
+let homeViewDate = null; // null = always show today
+
+function homeShiftDate(delta){
+  const realToday = tod();
+  const base = homeViewDate || realToday;
+  const d = new Date(base); d.setDate(d.getDate()+delta);
+  const newDate = toISODate(d);
+  // Don't go beyond today
+  if(newDate > realToday){ homeViewDate=null; } else { homeViewDate=newDate; }
+  refreshHome();
+}
+
+function showWhoEatsDate(slot){
+  const viewDate = homeViewDate || tod();
+  showWhoEatsOnDate(slot, viewDate);
+}
+
 function refreshHome(){
   if(!CU) return;
   document.getElementById('home-date').textContent=(CU.name||'')+(CU.job?' · '+CU.job:'');
   document.getElementById('home-role').textContent=roleLabel(CU.role,CU);
-  // Site note display
   document.getElementById('home-mgr').textContent=DB.siteNote||'Midland East Power Limited';
-  // Today meals — pills show count (qty sum), total shows meal value
-  const td=tod();
+
+  // Always use real today for stats
+  const realToday = tod();
+  // For display, use homeViewDate if set, else real today
+  const viewDate = homeViewDate || realToday;
+  const isToday = (viewDate === realToday);
+
+  // Date display
+  const days=['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
+  const vd = new Date(viewDate+'T00:00:00');
+  document.getElementById('td-date').textContent='তারিখ: '+viewDate.split('-').reverse().join('-');
+  document.getElementById('td-day').textContent=days[vd.getDay()];
+
+  // Nav label
+  const navLbl = document.getElementById('td-nav-label');
+  if(navLbl) navLbl.textContent = isToday ? '🟢 আজকের তথ্য দেখছেন' : '📅 '+viewDate+' এর তথ্য দেখছেন';
+
+  // Disable next button if already on today
+  const nextBtn = document.getElementById('td-next-btn');
+  if(nextBtn) nextBtn.style.opacity = isToday ? '0.3' : '1';
+
+  // Meal counts for viewDate
   let tb=0,tl=0,tdv=0, cbQ=0,clQ=0,cdQ=0;
   DB.users.filter(u=>!u.blocked).forEach(u=>{
-    const m=DB.meals[u.u+'_'+td]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-    tb+=mTV('b',m.b,td); tl+=mTV('l',m.l,td); tdv+=mTV('d',m.d,td);
-    // count = qty (P1=1, P2=2, Q3=3 etc)
+    const m=DB.meals[u.u+'_'+viewDate]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+    tb+=mTV('b',m.b,viewDate); tl+=mTV('l',m.l,viewDate); tdv+=mTV('d',m.d,viewDate);
     if(m.b&&m.b.t!=='off') cbQ+=(m.b.q||1);
     if(m.l&&m.l.t!=='off') clQ+=(m.l.q||1);
     if(m.d&&m.d.t!=='off') cdQ+=(m.d.q||1);
@@ -1312,21 +1374,23 @@ function refreshHome(){
   document.getElementById('td-l').textContent=clQ;
   document.getElementById('td-d').textContent=cdQ;
   document.getElementById('td-total').textContent=(tb+tl+tdv).toFixed(2);
-  const days=['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
-  document.getElementById('td-date').textContent='তারিখ: '+td.split('-').reverse().join('-');
-  document.getElementById('td-day').textContent=days[getBSTDate().getDay()];
-  // Stats
+
+  // Stats always use real today's mess month
   const mKey=messMonthKey();
   const mTotal=messMonthMeals(CU.u,mKey);
   document.getElementById('st-month').textContent=mTotal.toFixed(2);
   const {pm}=calcMealRate(mKey);
   document.getElementById('st-bill').textContent='৳ '+pm.toFixed(2);
+
   // Show/hide manager-only buttons
   const mgr=isManagerOrCtrl();
   document.getElementById('menu-bazar').style.display=mgr?'block':'none';
   document.getElementById('menu-others').style.display=mgr?'block':'none';
   document.getElementById('menu-deposit').style.display=mgr?'block':'none';
   document.getElementById('admin-btn').style.display=isController()?'block':'none';
+
+  // Auto-reset to today every time goHome is called fresh
+  if(!homeViewDate) homeViewDate=null;
 }
 
 // ═══════════════════════════════════════════════
@@ -1397,10 +1461,15 @@ function showMyMealHistory(){
 // ═══════════════════════════════════════════════
 // WHO EATS TODAY — প্ল্যান্টে খাবে (P only)
 // ═══════════════════════════════════════════════
+function showWhoEatsOnDate(slot, dateStr){
+  showWhoEatsImpl(slot, dateStr);
+}
 function showWhoEats(slot){
-  const td=tod();
+  showWhoEatsImpl(slot, tod());
+}
+function showWhoEatsImpl(slot, td){
   const labels={'b':'🌅 সকাল','l':'🌞 দুপুর','d':'🌙 রাত'};
-  document.getElementById('who-eats-title').textContent=labels[slot]+' — প্ল্যান্টে খাবে';
+  document.getElementById('who-eats-title').textContent=labels[slot]+' — '+td+' — প্ল্যান্টে খাবে';
   const planters=DB.users.filter(u=>{
     const m=DB.meals[u.u+'_'+td];
     return m && m[slot] && m[slot].t==='P';
@@ -1763,10 +1832,59 @@ function delCookBill(id){
 // ═══════════════════════════════════════════════
 function initDeposit(){
   if(!document.getElementById('dep-date').value) document.getElementById('dep-date').value=tod();
-  const sel=document.getElementById('dep-mem');
-  sel.innerHTML='<option value="">-- সদস্য নির্বাচন করুন --</option>';
-  DB.users.filter(u=>u.type!=='cook').forEach(u=>{ sel.innerHTML+=`<option value="${u.u}">${u.name} (রুম ${u.room||'-'})</option>`; });
+  // Reset search UI
+  clearDepMem();
+  document.getElementById('dep-mem-search').value='';
+  document.getElementById('dep-mem-dropdown').style.display='none';
   renderDepHistory();
+}
+function depMemSearch(){
+  const q=(document.getElementById('dep-mem-search').value||'').trim().toLowerCase();
+  const dd=document.getElementById('dep-mem-dropdown');
+  const users=DB.users.filter(u=>u.type!=='cook');
+  const matches = q.length===0 ? users : users.filter(u=>
+    (u.name||'').toLowerCase().includes(q)||
+    (u.u||'').toLowerCase().includes(q)||
+    (u.mob||'').includes(q)||
+    (u.job||'').toLowerCase().includes(q)||
+    (u.room||'').includes(q)
+  );
+  if(!matches.length){
+    dd.innerHTML='<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
+    dd.style.display='block'; return;
+  }
+  dd.innerHTML=matches.slice(0,10).map(u=>{
+    const bal=u.balance||0;
+    const balColor=bal>=0?'var(--success)':'var(--danger)';
+    const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString():'-৳'+Math.abs(bal).toLocaleString();
+    return`<div onclick="selectDepMem('${u.u}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='var(--success-light)'" onmouseout="this.style.background=''">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${u.name[0]}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${u.name}</div>
+        <div style="font-size:11px;color:var(--text-light)">🪪 ${u.job||'-'} &nbsp;·&nbsp; 📱 ${u.mob||'-'} &nbsp;·&nbsp; 🏠 ${u.room||'-'}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:${balColor}">${balTxt}</div>
+    </div>`;
+  }).join('');
+  dd.style.display='block';
+}
+function selectDepMem(uname){
+  document.getElementById('dep-mem').value=uname;
+  document.getElementById('dep-mem-dropdown').style.display='none';
+  const u=DB.users.find(x=>x.u===uname); if(!u) return;
+  document.getElementById('dep-mem-search').value='';
+  const sel=document.getElementById('dep-mem-selected');
+  sel.style.display='flex';
+  const bal=u.balance||0;
+  document.getElementById('dep-mem-selected-name').innerHTML=
+    `✅ ${u.name} &nbsp;<span style="font-size:11px;color:var(--text-light)">| 🪪 ${u.job||'-'} | 🏠 রুম ${u.room||'-'}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString()}</span>`;
+  showMemberBalance();
+}
+function clearDepMem(){
+  document.getElementById('dep-mem').value='';
+  const sel=document.getElementById('dep-mem-selected');
+  if(sel){ sel.style.display='none'; }
+  document.getElementById('dep-bal-info').style.display='none';
 }
 function setDepType(t){
   document.getElementById('dep-type').value=t;
@@ -2209,7 +2327,7 @@ function removeController(){
 // CSV DAY DOWNLOAD
 // ═══════════════════════════════════════════════
 function downloadDayCSV(){
-  const dt=tod();
+  const dt=homeViewDate||tod();
   const rows=[['Name','Job ID','Room','Type','Breakfast','B-Meals','Lunch','L-Meals','Dinner','D-Meals','Total Meals']];
   DB.users.forEach(u=>{
     const meal=DB.meals[u.u+'_'+dt]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
@@ -2273,126 +2391,154 @@ function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
 }
 
 function makePDF(type){
-  if(!window.jspdf){ toast('❌ PDF library not loaded!'); return; }
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const pw=210, margin=10;
-
-  // Header bar
-  doc.setFillColor(15,69,38); doc.rect(0,0,pw,26,'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-  doc.text('MIDLAND QUARTER - MESS MANAGEMENT',pw/2,10,{align:'center'});
-  doc.setFont('helvetica','normal'); doc.setFontSize(8);
-  const note=toASCII(DB.siteNote||'Midland East Power Limited').substring(0,60)||'Midland Quarter';
-  doc.text(note+' | Generated: '+new Date().toLocaleDateString('en-GB'),pw/2,19,{align:'center'});
-  doc.setTextColor(0,0,0);
-
+  // Build an off-screen render div with full Bengali support
   const mmKey=messMonthKey();
-  const {bazar,others,total,totalMeals,pm}=calcMealRate(mmKey);
-  let y=32;
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,pm}=calcMealRate(mmKey);
+  const today=tod();
+  const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
+
+  let html=`<div style="font-family:'Hind Siliguri',sans-serif;background:#fff;padding:16px;width:780px;color:#1a2e22;">
+    <div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:20px;font-weight:700;font-family:'Poppins',sans-serif;">Midland Quarter</div>
+        <div style="font-size:11px;opacity:.8;margin-top:2px;">${DB.siteNote||'মেস ম্যানেজমেন্ট'} | Generated: ${new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;font-weight:600;">${type==='daily'?'দৈনিক রিপোর্ট':'মাসিক রিপোর্ট'}</div>
+        <div style="font-size:11px;opacity:.8;">${type==='daily'?today:messMonthLabel()}</div>
+      </div>
+    </div>`;
 
   if(type==='report'||type==='bill'){
-    // Title
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('MONTHLY REPORT  -  '+mmKey,margin,y); y+=7;
-
-    // Summary box (3 rows x 2 cols)
-    const boxW=190; const boxH=22;
-    doc.setFillColor(232,245,233); doc.rect(margin,y,boxW,boxH,'F');
-    doc.setDrawColor(26,107,60); doc.rect(margin,y,boxW,boxH,'S');
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    const col2=margin+boxW/2+3;
-    doc.setFont('helvetica','bold'); doc.text('Summary',margin+3,y+6);
-    doc.setFont('helvetica','normal');
-    doc.text('Bazar Total:',margin+3,y+12); doc.text('BDT '+bazar.toFixed(2),margin+40,y+12);
-    doc.text('Others Total:',col2,y+12); doc.text('BDT '+others.toFixed(2),col2+38,y+12);
-    doc.text('Grand Total:',margin+3,y+19); doc.text('BDT '+total.toFixed(2),margin+40,y+19);
-    doc.text('Total Meals:',col2,y+19); doc.text(totalMeals.toFixed(2)+' meals',col2+38,y+19);
-    // Per meal rate highlight
-    doc.setFillColor(26,107,60); doc.rect(margin+boxW-46,y,46,boxH,'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
-    doc.text('Per Meal Rate',margin+boxW-44,y+8);
-    doc.setFontSize(12); doc.text('BDT '+pm.toFixed(2),margin+boxW-44,y+18);
-    doc.setTextColor(0,0,0); doc.setFont('helvetica','normal');
-    y+=boxH+6;
-
+    // Summary cards
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div style="background:#e8f5e9;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #1a6b3c;">
+        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">মোট বাজার</div>
+        <div style="font-size:18px;font-weight:700;color:#1a6b3c;">৳ ${bazar.toLocaleString()}</div>
+      </div>
+      <div style="background:#e3f2fd;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #1565c0;">
+        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">অন্যান্য খরচ</div>
+        <div style="font-size:18px;font-weight:700;color:#1565c0;">৳ ${others.toLocaleString()}</div>
+      </div>
+      <div style="background:#fff3e0;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #e65100;">
+        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">বাবুর্চি বিল</div>
+        <div style="font-size:18px;font-weight:700;color:#e65100;">৳ ${cookBillsTotal.toLocaleString()}</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:10px;color:rgba(255,255,255,.8);margin-bottom:4px;">প্রতি মিল রেট</div>
+        <div style="font-size:20px;font-weight:700;color:#fff;">৳ ${pm.toFixed(2)}</div>
+      </div>
+    </div>`;
     // Member table
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    doc.text('MEMBER-WISE SUMMARY',margin,y); y+=5;
-
-    const nonCookCount=DB.users.filter(u=>u.type!=='cook').length||1;
-    const cooks=DB.users.filter(u=>u.type==='cook');
-    const cookTotalMeals=cooks.reduce((s,c)=>s+messMonthMeals(c.u,mmKey),0);
-    const cookTotalCost=cookTotalMeals*pm;
-    const ins=DB.users.filter(u=>u.type==='inside');
-    const out=DB.users.filter(u=>u.type==='outside');
-    const cookDenom=ins.length+out.length*0.5;
-
-    const mHeaders=['Name','Job ID','Rm','Type','Meals','Meal Bill','Others','Cook','Due','Balance','Net'];
-    const mCols=[34,18,10,12,16,20,16,14,20,18,18];
-    const mRows=DB.users.filter(u=>u.type!=='cook').map(u=>{
-      const m=messMonthMeals(u.u,mmKey);
-      const mBill=m*pm;
-      const othShare=others/nonCookCount;
-      const cookShare=u.type==='inside'?(cookDenom>0?cookTotalCost/cookDenom:0):(cookDenom>0?cookTotalCost/cookDenom*0.5:0);
-      const due=mBill+othShare+cookShare;
+    html+=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#1a6b3c;color:#fff;">
+        <th style="padding:8px 10px;text-align:left;border-radius:4px 0 0 0;">সদস্যের নাম</th>
+        <th style="padding:8px 6px;text-align:center;">ধরন</th>
+        <th style="padding:8px 6px;text-align:center;">রুম</th>
+        <th style="padding:8px 6px;text-align:right;">মিল</th>
+        <th style="padding:8px 6px;text-align:right;">মিল বিল</th>
+        <th style="padding:8px 6px;text-align:right;">অন্যান্য</th>
+        <th style="padding:8px 6px;text-align:right;">বাবুর্চি</th>
+        <th style="padding:8px 6px;text-align:right;color:#fcd34d;">মোট দেয়</th>
+        <th style="padding:8px 6px;text-align:right;">জমা</th>
+        <th style="padding:8px 10px;text-align:right;border-radius:0 4px 0 0;">নেট</th>
+      </tr></thead><tbody>`;
+    nonCookUsers.forEach((u,ri)=>{
+      const myMeals=messMonthMeals(u.u,mmKey);
+      const mealBill=myMeals*pm;
+      const {othersShare,cookBillShare}=calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
+      const payable=mealBill+othersShare+cookBillShare;
       const bal=u.balance||0;
-      const net=bal-due;
-      return[pdfLabel(u),u.job||'-',u.room||'-',u.type==='inside'?'In':'Out',m.toFixed(2),mBill.toFixed(0),othShare.toFixed(0),cookShare.toFixed(0),due.toFixed(0),bal.toFixed(0),(net>=0?'+':'')+net.toFixed(0)];
+      const net=bal-payable;
+      const bg=ri%2===0?'#f4f7f5':'#fff';
+      const netColor=net>=0?'#2e7d32':'#e53935';
+      html+=`<tr style="background:${bg};">
+        <td style="padding:7px 10px;font-weight:600;">${u.name}<br><span style="font-size:10px;color:#5a7a65;font-weight:400;">${u.job||'-'}</span></td>
+        <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.type==='inside'?'ইন':'আউট'}</td>
+        <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.room||'-'}</td>
+        <td style="padding:7px 6px;text-align:right;color:#1a6b3c;font-weight:700;">${myMeals.toFixed(2)}</td>
+        <td style="padding:7px 6px;text-align:right;">৳${mealBill.toFixed(0)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#1565c0;">৳${othersShare.toFixed(0)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#e65100;">৳${cookBillShare.toFixed(0)}</td>
+        <td style="padding:7px 6px;text-align:right;font-weight:700;color:#e53935;">৳${payable.toFixed(0)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#2e7d32;">৳${Math.abs(bal).toFixed(0)}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:${netColor};">${net>=0?'+':''} ৳${Math.abs(net).toFixed(0)}</td>
+      </tr>`;
     });
-    y=pdfDrawTable(doc,mHeaders,mRows,y,mCols,margin);
-
-    // Cook section if any
-    if(cooks.length){
-      doc.setFont('helvetica','bold'); doc.setFontSize(9);
-      doc.text('COOK(S)',margin,y); y+=4;
-      const cHeaders=['Name','Job ID','Room','Meals','Cost (BDT)'];
-      const cCols=[50,30,20,30,50];
-      const cRows=cooks.map(u=>{
-        const m=messMonthMeals(u.u,mmKey);
-        return[pdfLabel(u),u.job||'-',u.room||'-',m.toFixed(2),(m*pm).toFixed(2)];
-      });
-      y=pdfDrawTable(doc,cHeaders,cRows,y,cCols,margin);
-    }
+    html+='</tbody></table>';
 
   } else {
     // Daily report
-    const dateStr=tod();
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('DAILY MEAL REPORT  -  '+dateStr,margin,y); y+=7;
-
-    // Day totals
     let totB=0,totL=0,totD=0;
     DB.users.forEach(u=>{
-      const mm2=DB.meals[u.u+'_'+dateStr]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      totB+=mTV('b',mm2.b,dateStr); totL+=mTV('l',mm2.l,dateStr); totD+=mTV('d',mm2.d,dateStr);
+      const mm2=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+      totB+=mTV('b',mm2.b,today); totL+=mTV('l',mm2.l,today); totD+=mTV('d',mm2.d,today);
     });
-    const boxW=190;
-    doc.setFillColor(232,245,233); doc.rect(margin,y,boxW,12,'F');
-    doc.setDrawColor(26,107,60); doc.rect(margin,y,boxW,12,'S');
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text('Breakfast: '+totB.toFixed(2)+'  |  Lunch: '+totL.toFixed(2)+'  |  Dinner: '+totD.toFixed(2)+'  |  TOTAL: '+(totB+totL+totD).toFixed(2)+' meals',margin+3,y+7.5);
-    y+=18;
-
-    const dHeaders=['Name','Job ID','Rm','Breakfast','B-Meals','Lunch','L-Meals','Dinner','D-Meals','Total'];
-    const dCols=[32,18,10,18,14,16,14,16,14,18];
-    const dRows=DB.users.map(u=>{
-      const meal=DB.meals[u.u+'_'+dateStr]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      const bm=meal.b, lm=meal.l, dm=meal.d;
-      const bL=bm.t==='off'?'off':(bm.q>1?bm.t+bm.q:bm.t);
-      const lL=lm.t==='off'?'off':(lm.q>1?lm.t+lm.q:lm.t);
-      const dL=dm.t==='off'?'off':(dm.q>1?dm.t+dm.q:dm.t);
-      const bv=mTV('b',bm,dateStr), lv=mTV('l',lm,dateStr), dv=mTV('d',dm,dateStr);
-      return[pdfLabel(u),u.job||'-',u.room||'-',bL,bv.toFixed(2),lL,lv.toFixed(2),dL,dv.toFixed(2),(bv+lv+dv).toFixed(2)];
+    html+=`<div style="background:#e8f5e9;border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-around;text-align:center;">
+      <div><div style="font-size:10px;color:#5a7a65;">সকাল</div><div style="font-size:20px;font-weight:700;color:#1a6b3c;">${totB.toFixed(2)}</div></div>
+      <div><div style="font-size:10px;color:#5a7a65;">দুপুর</div><div style="font-size:20px;font-weight:700;color:#1a6b3c;">${totL.toFixed(2)}</div></div>
+      <div><div style="font-size:10px;color:#5a7a65;">রাত</div><div style="font-size:20px;font-weight:700;color:#1a6b3c;">${totD.toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:6px;padding:8px 16px;"><div style="font-size:10px;color:rgba(255,255,255,.8);">মোট মিল</div><div style="font-size:20px;font-weight:700;color:#fff;">${(totB+totL+totD).toFixed(2)}</div></div>
+    </div>`;
+    html+=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#1a6b3c;color:#fff;">
+        <th style="padding:8px 10px;text-align:left;">নাম</th>
+        <th style="padding:8px 6px;text-align:center;">রুম</th>
+        <th style="padding:8px 6px;text-align:center;">সকাল</th>
+        <th style="padding:8px 6px;text-align:center;">দুপুর</th>
+        <th style="padding:8px 6px;text-align:center;">রাত</th>
+        <th style="padding:8px 10px;text-align:right;">মোট</th>
+      </tr></thead><tbody>`;
+    DB.users.forEach((u,ri)=>{
+      const meal=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+      const bm=meal.b,lm=meal.l,dm=meal.d;
+      const bL=bm.t==='off'?'—':(bm.q>1?bm.t+bm.q:bm.t);
+      const lL=lm.t==='off'?'—':(lm.q>1?lm.t+lm.q:lm.t);
+      const dL=dm.t==='off'?'—':(dm.q>1?dm.t+dm.q:dm.t);
+      const bv=mTV('b',bm,today), lv=mTV('l',lm,today), dv=mTV('d',dm,today);
+      const bg=ri%2===0?'#f4f7f5':'#fff';
+      const bColor=bm.t==='off'?'#aaa':bm.t==='P'?'#2e7d32':'#1565c0';
+      const lColor=lm.t==='off'?'#aaa':lm.t==='P'?'#2e7d32':'#1565c0';
+      const dColor=dm.t==='off'?'#aaa':dm.t==='P'?'#2e7d32':'#1565c0';
+      html+=`<tr style="background:${bg};">
+        <td style="padding:7px 10px;font-weight:600;">${u.name}<br><span style="font-size:10px;color:#5a7a65;font-weight:400;">${u.job||'-'}</span></td>
+        <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.room||'-'}</td>
+        <td style="padding:7px 6px;text-align:center;font-weight:700;color:${bColor};">${bL}</td>
+        <td style="padding:7px 6px;text-align:center;font-weight:700;color:${lColor};">${lL}</td>
+        <td style="padding:7px 6px;text-align:center;font-weight:700;color:${dColor};">${dL}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#1a6b3c;">${(bv+lv+dv).toFixed(2)}</td>
+      </tr>`;
     });
-    y=pdfDrawTable(doc,dHeaders,dRows,y,dCols,margin);
+    html+='</tbody></table>';
   }
 
-  // Footer
-  doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(120);
-  doc.text('Midland Quarter Mess Management | '+new Date().toLocaleDateString('en-GB'),pw/2,289,{align:'center'});
-  doc.save('MQ_'+type+'_'+tod()+'.pdf');
-  toast('✅ PDF ready!');
+  html+=`<div style="margin-top:14px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;">
+    Midland Quarter Mess Management | ${new Date().toLocaleDateString('en-GB')} | Powered by Firebase
+  </div></div>`;
+
+  // Create off-screen div, render with html2canvas, then jsPDF
+  const wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1;';
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
+
+  toast('⏳ PDF তৈরি হচ্ছে...');
+  html2canvas(wrap.firstChild, {scale:2, useCORS:true, backgroundColor:'#fff'}).then(canvas=>{
+    document.body.removeChild(wrap);
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const imgW=210, imgH=(canvas.height*imgW)/canvas.width;
+    const pageH=297;
+    let yPos=0;
+    // Multi-page support
+    while(yPos < imgH){
+      if(yPos>0) doc.addPage();
+      doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,-yPos*canvas.width/imgW/2,imgW,imgH);
+      yPos+=pageH;
+    }
+    doc.save('MQ_'+type+'_'+today+'.pdf');
+    toast('✅ PDF তৈরি হয়েছে! ডাউনলোড করুন।');
+  }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
 }
 
 // ═══════════════════════════════════════════════
@@ -2601,6 +2747,15 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 // ═══════════════════════════════════════════════
 // INIT — no loading delay
 // ═══════════════════════════════════════════════
+
+// Close dep-mem dropdown on outside click
+document.addEventListener('click', function(e){
+  const dd=document.getElementById('dep-mem-dropdown');
+  const inp=document.getElementById('dep-mem-search');
+  if(dd && inp && !dd.contains(e.target) && e.target!==inp){
+    dd.style.display='none';
+  }
+});
 // Firebase loadDB handles initialization and real-time sync
 document.getElementById('fb-loading').style.display='flex';
 showSc('login'); // default while Firebase loads
