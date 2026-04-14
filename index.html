@@ -852,7 +852,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <input type="text" id="dep-mem-search" class="form-input" placeholder="🔍 নাম, Job ID বা মোবাইল নম্বর লিখুন..." autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
         <input type="hidden" id="dep-mem" value="">
         <div id="dep-mem-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(26,107,60,0.15);"></div>
-        <div id="dep-mem-selected" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);display:flex;align-items:center;justify-content:space-between;">
+        <div id="dep-mem-selected" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);align-items:center;justify-content:space-between;">
           <span id="dep-mem-selected-name">—</span>
           <button onclick="clearDepMem()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;">✕</button>
         </div>
@@ -1294,8 +1294,8 @@ const LS_USER = 'mq7u';
 function safeHTML(html){
   if(typeof DOMPurify !== 'undefined'){
     return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em'],
-      ALLOWED_ATTR:['style','class','colspan','rowspan']
+      ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em','button','input','a','select','option'],
+      ALLOWED_ATTR:['style','class','colspan','rowspan','type','value','data-id','data-uname','data-action','disabled','placeholder','readonly']
     });
   }
   return html; // fallback if CDN fails
@@ -1609,11 +1609,23 @@ function roleLabel(r,u){
 // ═══════════════════════════════════════════════
 // MODAL
 // ═══════════════════════════════════════════════
-function showModal(title,body,onOk){
+function showModal(title,body,onOk,isHtml){
   document.getElementById('modal-title').textContent=title;
-  document.getElementById('modal-body').textContent=body;
+  const bodyEl=document.getElementById('modal-body');
+  if(isHtml){ bodyEl.innerHTML=safeHTML(body); }
+  else bodyEl.textContent=body;
+  const okBtn=document.getElementById('modal-ok');
+  okBtn.textContent=isHtml?'✅ সেভ করুন':'হ্যাঁ';
   document.getElementById('modal-bg').classList.add('show');
-  document.getElementById('modal-ok').onclick=function(){ closeModal(); if(onOk) onOk(); };
+  okBtn.onclick=function(){
+    if(isHtml){
+      // For edit modals, onOk handles validation and closes if valid
+      if(onOk) onOk();
+    } else {
+      closeModal();
+      if(onOk) onOk();
+    }
+  };
 }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('show'); }
 
@@ -2181,13 +2193,44 @@ function renderBazar(){
   let total=0;
   list.innerHTML = safeHTML(items.map(b=>{
     total+=b.amount;
-    const del=isManagerOrCtrl()?`<button onclick="delBazar(${Number(b.id)})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;">🗑️</button>`:'';
-    return`<div class="bazar-item"><div><div class="bz-name">${esc(b.desc)}</div><div class="bz-meta">${esc(b.date)} · ${esc(b.by)}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="bz-amt">৳ ${b.amount.toLocaleString()}</div>${del}</div></div>`;
+    const btns=isManagerOrCtrl()?`
+      <button data-action="edit-bazar" data-id="${b.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
+      <button data-action="del-bazar" data-id="${b.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>`:'';
+    return`<div class="bazar-item"><div><div class="bz-name">${esc(b.desc)}</div><div class="bz-meta">${esc(b.date)} · ${esc(b.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt">৳ ${b.amount.toLocaleString()}</div>${btns}</div></div>`;
   }).join(''));
   document.getElementById('bz-total').textContent='৳ '+total.toLocaleString();
+  // Event delegation
+  list.onclick = function(e){
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const id = Number(btn.getAttribute('data-id'));
+    if(btn.getAttribute('data-action')==='del-bazar') delBazar(id);
+    else if(btn.getAttribute('data-action')==='edit-bazar') editBazar(id);
+  };
 }
 function delBazar(id){
   showModal('বাজার মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.bazar=DB.bazar.filter(b=>b.id!==id); saveDB(); renderBazar(); toast('✅ মুছে ফেলা হয়েছে!'); });
+}
+function editBazar(id){
+  const b=DB.bazar.find(x=>x.id===id); if(!b) return;
+  const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">বিবরণ</label>
+    <input id="edit-bz-desc" class="form-input" value="${esc(b.desc)}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
+    <input id="edit-bz-amt" type="number" class="form-input" value="${b.amount}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">তারিখ</label>
+    <input id="edit-bz-date" type="date" class="form-input" value="${esc(b.date)}" style="margin-top:4px"></div>
+  </div>`;
+  showModal('বাজার সম্পাদনা', html, ()=>{
+    const desc=sanitizeInput(document.getElementById('edit-bz-desc').value);
+    const amount=parseFloat(document.getElementById('edit-bz-amt').value);
+    const date=document.getElementById('edit-bz-date').value;
+    if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
+    if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+    if(!date){ toast('❌ তারিখ দিন!'); return; }
+    b.desc=desc; b.amount=amount; b.date=date;
+    saveDB(); renderBazar(); closeModal(); toast('✅ আপডেট হয়েছে!');
+  }, true);
 }
 
 function initOthers(){
@@ -2235,13 +2278,50 @@ function renderOthers(){
   const splitLabel=(s)=>s==='outside50'?'<span style="font-size:10px;background:rgba(21,101,192,.12);color:var(--info);border-radius:4px;padding:1px 6px;margin-left:4px">Outside 50%</span>':'<span style="font-size:10px;background:rgba(26,107,60,.1);color:var(--primary);border-radius:4px;padding:1px 6px;margin-left:4px">সমান</span>';
   list.innerHTML = safeHTML(items.map(o=>{
     total+=o.amount;
-    const del=isManagerOrCtrl()?`<button onclick="delOther(${Number(o.id)})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;">🗑️</button>`:'';
-    return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(o.desc)}${splitLabel(o.split||'equal')}</div><div class="bz-meta">${esc(o.date)} · ${esc(o.by)}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="bz-amt" style="color:var(--info)">৳ ${o.amount.toLocaleString()}</div>${del}</div></div>`;
+    const btns=isManagerOrCtrl()?`
+      <button data-action="edit-other" data-id="${o.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
+      <button data-action="del-other" data-id="${o.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>`:'';
+    return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(o.desc)}${splitLabel(o.split||'equal')}</div><div class="bz-meta">${esc(o.date)} · ${esc(o.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt" style="color:var(--info)">৳ ${o.amount.toLocaleString()}</div>${btns}</div></div>`;
   }).join(''));
   document.getElementById('oth-total').textContent='৳ '+total.toLocaleString();
+  // Event delegation
+  list.onclick = function(e){
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const id = Number(btn.getAttribute('data-id'));
+    if(btn.getAttribute('data-action')==='del-other') delOther(id);
+    else if(btn.getAttribute('data-action')==='edit-other') editOther(id);
+  };
 }
 function delOther(id){
   showModal('খরচ মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.others=DB.others.filter(o=>o.id!==id); saveDB(); renderOthers(); toast('✅ মুছে ফেলা হয়েছে!'); });
+}
+function editOther(id){
+  const o=DB.others.find(x=>x.id===id); if(!o) return;
+  const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">বিবরণ</label>
+    <input id="edit-oth-desc" class="form-input" value="${esc(o.desc)}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
+    <input id="edit-oth-amt" type="number" class="form-input" value="${o.amount}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">তারিখ</label>
+    <input id="edit-oth-date" type="date" class="form-input" value="${esc(o.date)}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">ভাগের ধরন</label>
+    <select id="edit-oth-split" class="form-input" style="margin-top:4px">
+      <option value="equal" ${(o.split||'equal')==='equal'?'selected':''}>সমান ভাগ</option>
+      <option value="outside50" ${o.split==='outside50'?'selected':''}>Outside 50%</option>
+    </select></div>
+  </div>`;
+  showModal('অন্যান্য খরচ সম্পাদনা', html, ()=>{
+    const desc=sanitizeInput(document.getElementById('edit-oth-desc').value);
+    const amount=parseFloat(document.getElementById('edit-oth-amt').value);
+    const date=document.getElementById('edit-oth-date').value;
+    const split=document.getElementById('edit-oth-split').value;
+    if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
+    if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+    if(!date){ toast('❌ তারিখ দিন!'); return; }
+    o.desc=desc; o.amount=amount; o.date=date; o.split=split;
+    saveDB(); renderOthers(); closeModal(); toast('✅ আপডেট হয়েছে!');
+  }, true);
 }
 function addCookBill(){
   const desc=sanitizeInput(V('cook-bill-desc'));
@@ -2267,13 +2347,44 @@ function renderCookBills(){
   let total=0;
   list.innerHTML = safeHTML(items.map(c=>{
     total+=c.amount;
-    const del=isManagerOrCtrl()?`<button onclick="delCookBill(${Number(c.id)})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;">🗑️</button>`:'';
-    return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(c.desc)}</div><div class="bz-meta">${esc(c.date)} · ${esc(c.by)} · <span style="color:var(--accent);font-size:11px">Inside=পূর্ণ, Outside=৫০%</span></div></div><div style="display:flex;align-items:center;gap:8px"><div class="bz-amt" style="color:var(--accent)">৳ ${c.amount.toLocaleString()}</div>${del}</div></div>`;
+    const btns=isManagerOrCtrl()?`
+      <button data-action="edit-cook" data-id="${c.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
+      <button data-action="del-cook" data-id="${c.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>`:'';
+    return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(c.desc)}</div><div class="bz-meta">${esc(c.date)} · ${esc(c.by)} · <span style="color:var(--accent);font-size:11px">Inside=পূর্ণ, Outside=৫০%</span></div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt" style="color:var(--accent)">৳ ${c.amount.toLocaleString()}</div>${btns}</div></div>`;
   }).join(''));
   document.getElementById('cook-bill-total').textContent='৳ '+total.toLocaleString();
+  // Event delegation
+  list.onclick = function(e){
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const id = Number(btn.getAttribute('data-id'));
+    if(btn.getAttribute('data-action')==='del-cook') delCookBill(id);
+    else if(btn.getAttribute('data-action')==='edit-cook') editCookBill(id);
+  };
 }
 function delCookBill(id){
   showModal('বাবুর্চি বিল মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.cookBills=DB.cookBills.filter(c=>c.id!==id); saveDB(); renderCookBills(); toast('✅ মুছে ফেলা হয়েছে!'); });
+}
+function editCookBill(id){
+  const c=DB.cookBills.find(x=>x.id===id); if(!c) return;
+  const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">বিবরণ</label>
+    <input id="edit-cook-desc" class="form-input" value="${esc(c.desc)}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
+    <input id="edit-cook-amt" type="number" class="form-input" value="${c.amount}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">তারিখ</label>
+    <input id="edit-cook-date" type="date" class="form-input" value="${esc(c.date)}" style="margin-top:4px"></div>
+  </div>`;
+  showModal('বাবুর্চি বিল সম্পাদনা', html, ()=>{
+    const desc=sanitizeInput(document.getElementById('edit-cook-desc').value);
+    const amount=parseFloat(document.getElementById('edit-cook-amt').value);
+    const date=document.getElementById('edit-cook-date').value;
+    if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
+    if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+    if(!date){ toast('❌ তারিখ দিন!'); return; }
+    c.desc=desc; c.amount=amount; c.date=date;
+    saveDB(); renderCookBills(); closeModal(); toast('✅ আপডেট হয়েছে!');
+  }, true);
 }
 
 // ═══════════════════════════════════════════════
@@ -2306,7 +2417,7 @@ function depMemSearch(){
     const bal=u.balance||0;
     const balColor=bal>=0?'var(--success)':'var(--danger)';
     const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString():'-৳'+Math.abs(bal).toLocaleString();
-    return`<div onclick="selectDepMem(${JSON.stringify(u.u)})" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='var(--success-light)'" onmouseout="this.style.background=''">
+    return`<div data-uname="${esc(u.u)}" data-action="select-dep-mem" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='var(--success-light)'" onmouseout="this.style.background=''">
       <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${esc(u.name[0])}</div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(u.name)}</div>
@@ -2316,6 +2427,11 @@ function depMemSearch(){
     </div>`;
   }).join(''));
   dd.style.display='block';
+  // Event delegation: use mousedown so it fires before blur hides the dropdown
+  dd.onmousedown = function(e){
+    const item = e.target.closest('[data-action="select-dep-mem"]');
+    if(item){ e.preventDefault(); selectDepMem(item.getAttribute('data-uname')); }
+  };
 }
 function selectDepMem(uname){
   document.getElementById('dep-mem').value=uname;
@@ -2323,7 +2439,7 @@ function selectDepMem(uname){
   const u=DB.users.find(x=>x.u===uname); if(!u) return;
   document.getElementById('dep-mem-search').value='';
   const sel=document.getElementById('dep-mem-selected');
-  sel.style.display='flex';
+  sel.style.display='flex'; sel.style.alignItems='center'; sel.style.justifyContent='space-between';
   const bal=u.balance||0;
   // Use textContent-safe approach for the selected name display
   document.getElementById('dep-mem-selected-name').innerHTML = safeHTML(
@@ -2372,11 +2488,28 @@ function saveDeposit(){
   toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(u.balance).toLocaleString()}`);
 }
 function renderDepHistory(){
-  const html=DB.transactions.slice().reverse().slice(0,20).map(tx=>{
+  const histEl=document.getElementById('dep-history');
+  const txs=DB.transactions.slice().reverse().slice(0,20);
+  if(!txs.length){ histEl.innerHTML='<p class="muted tc">কোনো লেনদেন নেই</p>'; return; }
+  const html=txs.map(tx=>{
     const u=DB.users.find(x=>x.u===tx.uname);
-    return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}</div></div>`;
+    const delBtn=isManagerOrCtrl()?`<button data-action="del-tx" data-id="${tx.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0;">🗑️</button>`:'';
+    return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}${delBtn}</div></div>`;
   }).join('');
-  document.getElementById('dep-history').innerHTML = safeHTML(html)||'<p class="muted tc">কোনো লেনদেন নেই</p>';
+  histEl.innerHTML = safeHTML(html)||'<p class="muted tc">কোনো লেনদেন নেই</p>';
+  // Event delegation
+  histEl.onclick = function(e){
+    const btn=e.target.closest('button[data-action="del-tx"]');
+    if(!btn) return;
+    const id=Number(btn.getAttribute('data-id'));
+    showModal('লেনদেন মুছুন','এই লেনদেন মুছে ফেলবেন? সদস্যের ব্যালেন্স রিভার্স হয়ে যাবে।',()=>{
+      const tx=DB.transactions.find(x=>x.id===id); if(!tx) return;
+      const u=DB.users.find(x=>x.u===tx.uname);
+      if(u) u.balance=(u.balance||0)-(tx.type==='deposit'?tx.amount:-tx.amount);
+      DB.transactions=DB.transactions.filter(x=>x.id!==id);
+      saveDB(); renderDepHistory(); showMemberBalance(); toast('✅ লেনদেন মুছে ফেলা হয়েছে!');
+    });
+  };
 }
 
 // ═══════════════════════════════════════════════
