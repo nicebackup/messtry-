@@ -372,60 +372,98 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="app-header">
     <button class="header-back" onclick="goHome()">← Home</button>
     <div class="header-title">🏢 অফিস মিল</div>
-    <div class="header-sub">MEPL / MPCL Management</div>
+    <div class="header-sub" id="ofms-date-sub">MEPL / MPCL Management</div>
   </div>
   <div class="content pb-nav">
+
+    <!-- Date navigation -->
+    <div class="card">
+      <div class="sec-title">📅 তারিখ নির্বাচন</div>
+      <div class="date-nav">
+        <button class="date-nav-btn" onclick="ofmsShiftDate(-1)">‹</button>
+        <input type="date" id="ofms-date" class="form-input" style="flex:1" onchange="ofmsLoadDate()">
+        <button class="date-nav-btn" onclick="ofmsShiftDate(1)">›</button>
+      </div>
+    </div>
+
     <!-- Month + Rate -->
     <div class="card">
-      <div class="sec-title">📅 মেস মাস ও রেট</div>
+      <div class="sec-title">💰 অফিস মিল রেট</div>
       <div class="form-group">
         <label class="form-label">মেস মাস</label>
         <input type="month" id="ofms-month" class="form-input" onchange="loadOfficeMealScreen()">
       </div>
       <div class="form-group">
-        <label class="form-label">💰 অফিস মিল রেট (প্রতি মিল) ৳</label>
+        <label class="form-label">প্রতি মিল রেট ৳</label>
         <input type="number" id="ofms-rate" class="form-input" placeholder="যেমন: ৫৫.৫" min="0" step="0.01">
       </div>
       <button class="btn btn-primary" onclick="saveOfficeMealRateScreen()">✅ রেট সেভ করুন</button>
     </div>
 
+    <!-- Legend -->
+    <div class="card" style="padding:14px 18px;">
+      <div class="legend">
+        <span class="tag-P">P = প্ল্যান্ট</span>
+        <span class="tag-Q">Q = কোয়ার্টার</span>
+        <span class="tag-off">off = বন্ধ</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-light);margin-top:6px">সংখ্যা × মিল মান = মোট মিল। যেমন সকালে ২ দিলে = ২×০.৭৫ = ১.৫ মিল</p>
+    </div>
+
     <!-- MEPL Account -->
     <div class="card" id="ofms-mepl-card">
       <div class="sec-title">🏢 Office MEPL</div>
-      <div id="ofms-mepl-meals" style="font-size:13px;color:var(--text-light);margin-bottom:12px">মিল লোড হচ্ছে...</div>
-      <!-- Meal entry for MEPL -->
+      <div id="ofms-mepl-meals" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+        <span>এই মাসের মোট মিল: <b style="color:var(--primary)" id="ofms-mepl-total-meals">0.00</b></span>
+        <span>মোট বিল: <b style="color:var(--danger)" id="ofms-mepl-total-bill">৳0.00</b></span>
+      </div>
+      <!-- Entry toggled by button -->
       <div id="ofms-mepl-entry" style="display:none">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-          <div style="text-align:center">
-            <div style="font-size:11px;font-weight:600;margin-bottom:4px">☀️ সকাল</div>
-            <select id="ofms-mepl-b" class="form-input" style="padding:8px;font-size:13px">
-              <option value="off">বন্ধ</option>
-              <option value="P">P</option>
-              <option value="Q">Q</option>
-            </select>
+        <!-- Breakfast -->
+        <div class="meal-card">
+          <div class="meal-hd">
+            <div><div class="meal-title">🌤️ সকাল — Breakfast</div><div class="meal-sub" id="ofms-cfg-mepl-b">মিল মান: ০.৭৫</div></div>
           </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌞 দুপুর</div>
-            <select id="ofms-mepl-l" class="form-input" style="padding:8px;font-size:13px">
-              <option value="off">বন্ধ</option>
-              <option value="P">P</option>
-              <option value="Q" selected>Q</option>
-            </select>
+          <div class="pqo-row">
+            <input type="number" id="ofms-qty-mepl-b" class="qty-input" min="0" max="5000" value="1" oninput="ofmsCalcMeal('mepl','b')">
+            <button class="pqo-btn" id="ofms-btn-mepl-b-P" onclick="ofmsSetPQO('mepl','b','P')">P<small>Plant</small></button>
+            <button class="pqo-btn" id="ofms-btn-mepl-b-Q" onclick="ofmsSetPQO('mepl','b','Q')">Q<small>Quarter</small></button>
+            <button class="pqo-btn seloff" id="ofms-btn-mepl-b-off" onclick="ofmsSetPQO('mepl','b','off')">off<small>বন্ধ</small></button>
           </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌙 রাত</div>
-            <select id="ofms-mepl-d" class="form-input" style="padding:8px;font-size:13px">
-              <option value="off">বন্ধ</option>
-              <option value="P">P</option>
-              <option value="Q">Q</option>
-            </select>
+          <div class="calc-info" id="ofms-calc-mepl-b">বন্ধ</div>
+        </div>
+        <!-- Lunch -->
+        <div class="meal-card">
+          <div class="meal-hd">
+            <div><div class="meal-title">☀️ দুপুর — Lunch</div><div class="meal-sub" id="ofms-cfg-mepl-l">মিল মান: ১.৫</div></div>
           </div>
+          <div class="pqo-row">
+            <input type="number" id="ofms-qty-mepl-l" class="qty-input" min="0" max="5000" value="1" oninput="ofmsCalcMeal('mepl','l')">
+            <button class="pqo-btn" id="ofms-btn-mepl-l-P" onclick="ofmsSetPQO('mepl','l','P')">P<small>Plant</small></button>
+            <button class="pqo-btn selQ" id="ofms-btn-mepl-l-Q" onclick="ofmsSetPQO('mepl','l','Q')">Q<small>Quarter</small></button>
+            <button class="pqo-btn" id="ofms-btn-mepl-l-off" onclick="ofmsSetPQO('mepl','l','off')">off<small>বন্ধ</small></button>
+          </div>
+          <div class="calc-info" id="ofms-calc-mepl-l">বন্ধ</div>
+        </div>
+        <!-- Dinner -->
+        <div class="meal-card">
+          <div class="meal-hd">
+            <div><div class="meal-title">🌙 রাত — Dinner</div><div class="meal-sub" id="ofms-cfg-mepl-d">মিল মান: ০.৭৫</div></div>
+          </div>
+          <div class="pqo-row">
+            <input type="number" id="ofms-qty-mepl-d" class="qty-input" min="0" max="5000" value="1" oninput="ofmsCalcMeal('mepl','d')">
+            <button class="pqo-btn" id="ofms-btn-mepl-d-P" onclick="ofmsSetPQO('mepl','d','P')">P<small>Plant</small></button>
+            <button class="pqo-btn" id="ofms-btn-mepl-d-Q" onclick="ofmsSetPQO('mepl','d','Q')">Q<small>Quarter</small></button>
+            <button class="pqo-btn seloff" id="ofms-btn-mepl-d-off" onclick="ofmsSetPQO('mepl','d','off')">off<small>বন্ধ</small></button>
+          </div>
+          <div class="calc-info" id="ofms-calc-mepl-d">বন্ধ</div>
         </div>
         <div class="form-group">
           <label class="form-label">📝 নোট (ঐচ্ছিক)</label>
           <input type="text" id="ofms-mepl-note" class="form-input" placeholder="ঠিকাদার, কারণ...">
         </div>
-        <button class="btn btn-accent" onclick="saveOfficeMeal('mepl')">✅ মিল সেভ করুন</button>
+        <button class="btn btn-accent" onclick="saveOfficeMeal('mepl')" style="margin-bottom:8px">✅ মিল সেভ করুন</button>
+        <button class="btn btn-outline" onclick="toggleOfficeMealEntry('mepl')">✕ বন্ধ করুন</button>
       </div>
       <button id="ofms-mepl-toggle" class="btn btn-outline" style="margin-top:6px" onclick="toggleOfficeMealEntry('mepl')">✏️ মিল এন্ট্রি করুন</button>
     </div>
@@ -433,39 +471,56 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <!-- MPCL Account -->
     <div class="card" id="ofms-mpcl-card">
       <div class="sec-title">🏢 Office MPCL</div>
-      <div id="ofms-mpcl-meals" style="font-size:13px;color:var(--text-light);margin-bottom:12px">মিল লোড হচ্ছে...</div>
+      <div id="ofms-mpcl-meals" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+        <span>এই মাসের মোট মিল: <b style="color:var(--primary)" id="ofms-mpcl-total-meals">0.00</b></span>
+        <span>মোট বিল: <b style="color:var(--danger)" id="ofms-mpcl-total-bill">৳0.00</b></span>
+      </div>
       <div id="ofms-mpcl-entry" style="display:none">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-          <div style="text-align:center">
-            <div style="font-size:11px;font-weight:600;margin-bottom:4px">☀️ সকাল</div>
-            <select id="ofms-mpcl-b" class="form-input" style="padding:8px;font-size:13px">
-              <option value="off">বন্ধ</option>
-              <option value="P">P</option>
-              <option value="Q">Q</option>
-            </select>
+        <!-- Breakfast -->
+        <div class="meal-card">
+          <div class="meal-hd">
+            <div><div class="meal-title">🌤️ সকাল — Breakfast</div><div class="meal-sub" id="ofms-cfg-mpcl-b">মিল মান: ০.৭৫</div></div>
           </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌞 দুপুর</div>
-            <select id="ofms-mpcl-l" class="form-input" style="padding:8px;font-size:13px">
-              <option value="off">বন্ধ</option>
-              <option value="P">P</option>
-              <option value="Q" selected>Q</option>
-            </select>
+          <div class="pqo-row">
+            <input type="number" id="ofms-qty-mpcl-b" class="qty-input" min="0" max="5000" value="1" oninput="ofmsCalcMeal('mpcl','b')">
+            <button class="pqo-btn" id="ofms-btn-mpcl-b-P" onclick="ofmsSetPQO('mpcl','b','P')">P<small>Plant</small></button>
+            <button class="pqo-btn" id="ofms-btn-mpcl-b-Q" onclick="ofmsSetPQO('mpcl','b','Q')">Q<small>Quarter</small></button>
+            <button class="pqo-btn seloff" id="ofms-btn-mpcl-b-off" onclick="ofmsSetPQO('mpcl','b','off')">off<small>বন্ধ</small></button>
           </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌙 রাত</div>
-            <select id="ofms-mpcl-d" class="form-input" style="padding:8px;font-size:13px">
-              <option value="off">বন্ধ</option>
-              <option value="P">P</option>
-              <option value="Q">Q</option>
-            </select>
+          <div class="calc-info" id="ofms-calc-mpcl-b">বন্ধ</div>
+        </div>
+        <!-- Lunch -->
+        <div class="meal-card">
+          <div class="meal-hd">
+            <div><div class="meal-title">☀️ দুপুর — Lunch</div><div class="meal-sub" id="ofms-cfg-mpcl-l">মিল মান: ১.৫</div></div>
           </div>
+          <div class="pqo-row">
+            <input type="number" id="ofms-qty-mpcl-l" class="qty-input" min="0" max="5000" value="1" oninput="ofmsCalcMeal('mpcl','l')">
+            <button class="pqo-btn" id="ofms-btn-mpcl-l-P" onclick="ofmsSetPQO('mpcl','l','P')">P<small>Plant</small></button>
+            <button class="pqo-btn selQ" id="ofms-btn-mpcl-l-Q" onclick="ofmsSetPQO('mpcl','l','Q')">Q<small>Quarter</small></button>
+            <button class="pqo-btn" id="ofms-btn-mpcl-l-off" onclick="ofmsSetPQO('mpcl','l','off')">off<small>বন্ধ</small></button>
+          </div>
+          <div class="calc-info" id="ofms-calc-mpcl-l">বন্ধ</div>
+        </div>
+        <!-- Dinner -->
+        <div class="meal-card">
+          <div class="meal-hd">
+            <div><div class="meal-title">🌙 রাত — Dinner</div><div class="meal-sub" id="ofms-cfg-mpcl-d">মিল মান: ০.৭৫</div></div>
+          </div>
+          <div class="pqo-row">
+            <input type="number" id="ofms-qty-mpcl-d" class="qty-input" min="0" max="5000" value="1" oninput="ofmsCalcMeal('mpcl','d')">
+            <button class="pqo-btn" id="ofms-btn-mpcl-d-P" onclick="ofmsSetPQO('mpcl','d','P')">P<small>Plant</small></button>
+            <button class="pqo-btn" id="ofms-btn-mpcl-d-Q" onclick="ofmsSetPQO('mpcl','d','Q')">Q<small>Quarter</small></button>
+            <button class="pqo-btn seloff" id="ofms-btn-mpcl-d-off" onclick="ofmsSetPQO('mpcl','d','off')">off<small>বন্ধ</small></button>
+          </div>
+          <div class="calc-info" id="ofms-calc-mpcl-d">বন্ধ</div>
         </div>
         <div class="form-group">
           <label class="form-label">📝 নোট (ঐচ্ছিক)</label>
           <input type="text" id="ofms-mpcl-note" class="form-input" placeholder="ঠিকাদার, কারণ...">
         </div>
-        <button class="btn btn-accent" onclick="saveOfficeMeal('mpcl')">✅ মিল সেভ করুন</button>
+        <button class="btn btn-accent" onclick="saveOfficeMeal('mpcl')" style="margin-bottom:8px">✅ মিল সেভ করুন</button>
+        <button class="btn btn-outline" onclick="toggleOfficeMealEntry('mpcl')">✕ বন্ধ করুন</button>
       </div>
       <button id="ofms-mpcl-toggle" class="btn btn-outline" style="margin-top:6px" onclick="toggleOfficeMealEntry('mpcl')">✏️ মিল এন্ট্রি করুন</button>
     </div>
@@ -3733,35 +3788,136 @@ function getOrCreateOfficeUser(key){
   return u;
 }
 
+// ═══════════════════════════════════════════════
+// OFFICE MEAL SCREEN — full meal-update-style
+// ═══════════════════════════════════════════════
+let ofmsDate = '';
+
 function initOfficeMealScreen(){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); goHome(); return; }
-  const el = document.getElementById('ofms-month');
-  if(el) el.value = messMonthKey();
-  // ensure accounts exist
   getOrCreateOfficeUser('mepl');
   getOrCreateOfficeUser('mpcl');
+  const mmKey = messMonthKey();
+  const el = document.getElementById('ofms-month');
+  if(el) el.value = mmKey;
+  if(!ofmsDate) ofmsDate = tod();
+  const dateEl = document.getElementById('ofms-date');
+  if(dateEl) dateEl.value = ofmsDate;
+  document.getElementById('ofms-date-sub').textContent = ofmsDate;
   loadOfficeMealScreen();
+}
+
+function ofmsShiftDate(delta){
+  const d = new Date(ofmsDate); d.setDate(d.getDate()+delta);
+  ofmsDate = toISODate(d);
+  document.getElementById('ofms-date').value = ofmsDate;
+  document.getElementById('ofms-date-sub').textContent = ofmsDate;
+  ['mepl','mpcl'].forEach(key => {
+    const entry = document.getElementById('ofms-'+key+'-entry');
+    if(entry && entry.style.display !== 'none') ofmsPrefill(key);
+    ['b','l','d'].forEach(t => {
+      const cfgEl = document.getElementById('ofms-cfg-'+key+'-'+t);
+      if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate);
+      ofmsCalcMeal(key, t);
+    });
+  });
+}
+
+function ofmsLoadDate(){
+  ofmsDate = document.getElementById('ofms-date').value || tod();
+  document.getElementById('ofms-date-sub').textContent = ofmsDate;
+  ['mepl','mpcl'].forEach(key => {
+    const entry = document.getElementById('ofms-'+key+'-entry');
+    if(entry && entry.style.display !== 'none') ofmsPrefill(key);
+    ['b','l','d'].forEach(t => {
+      const cfgEl = document.getElementById('ofms-cfg-'+key+'-'+t);
+      if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate);
+      ofmsCalcMeal(key, t);
+    });
+  });
+}
+
+function ofmsPrefill(key){
+  const u = getOrCreateOfficeUser(key);
+  const mKey = u.u + '_' + ofmsDate;
+  const m = DB.meals[mKey] || {b:{t:'off',q:1}, l:{t:'off',q:1}, d:{t:'off',q:1}};
+  ['b','l','d'].forEach(t => {
+    const slot = m[t] || {t:'off', q:1};
+    const qty = document.getElementById('ofms-qty-'+key+'-'+t);
+    if(qty){ qty.value = slot.q||1; qty.disabled = (slot.t==='off'); }
+    ofmsHlPQO(key, t, slot.t||'off');
+    const cfgEl = document.getElementById('ofms-cfg-'+key+'-'+t);
+    if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate);
+    ofmsCalcMeal(key, t);
+  });
+}
+
+function ofmsHlPQO(key, t, val){
+  ['P','Q','off'].forEach(v => {
+    const b = document.getElementById('ofms-btn-'+key+'-'+t+'-'+v);
+    if(b) b.className = 'pqo-btn'+(val===v?' sel'+v:'');
+  });
+}
+
+function ofmsGetSel(key, t){
+  for(const v of ['P','Q','off']){
+    const b = document.getElementById('ofms-btn-'+key+'-'+t+'-'+v);
+    if(b && b.className.includes('sel'+v)) return v;
+  }
+  return 'off';
+}
+
+function ofmsSetPQO(key, t, val){
+  ofmsHlPQO(key, t, val);
+  const qi = document.getElementById('ofms-qty-'+key+'-'+t);
+  if(qi){ qi.disabled=(val==='off'); if(val==='off') qi.value=1; }
+  ofmsCalcMeal(key, t);
+}
+
+function ofmsCalcMeal(key, t){
+  const calcEl = document.getElementById('ofms-calc-'+key+'-'+t);
+  if(!calcEl) return;
+  const sel = ofmsGetSel(key, t);
+  const qty = parseInt(document.getElementById('ofms-qty-'+key+'-'+t)?.value)||1;
+  const base = getCfg(t, ofmsDate||tod());
+  if(sel==='off'){ calcEl.textContent='বন্ধ'; return; }
+  const total = qty*base;
+  const tag = qty>1?sel+qty:sel;
+  calcEl.textContent = tag+' = '+qty+'×'+base+' = '+total.toFixed(2)+' মিল';
+}
+
+function toggleOfficeMealEntry(key){
+  const el = document.getElementById('ofms-'+key+'-entry');
+  const btn = document.getElementById('ofms-'+key+'-toggle');
+  const show = el.style.display==='none';
+  el.style.display = show?'block':'none';
+  if(btn) btn.style.display = show?'none':'block';
+  if(show){
+    ofmsPrefill(key);
+    const noteEl = document.getElementById('ofms-'+key+'-note');
+    if(noteEl) noteEl.value='';
+  }
 }
 
 function loadOfficeMealScreen(){
   const mmKey = document.getElementById('ofms-month')?.value || messMonthKey();
   const rate = getOfficeMealRate(mmKey);
   const rateEl = document.getElementById('ofms-rate');
-  if(rateEl) rateEl.value = rate || '';
-
+  if(rateEl) rateEl.value = rate||'';
+  if(!ofmsDate) ofmsDate = tod();
+  const dateEl = document.getElementById('ofms-date');
+  if(dateEl) dateEl.value = ofmsDate;
+  const subEl = document.getElementById('ofms-date-sub');
+  if(subEl) subEl.textContent = ofmsDate;
   ['mepl','mpcl'].forEach(key=>{
     const u = getOrCreateOfficeUser(key);
     const meals = messMonthMeals(u.u, mmKey);
-    const cost = meals * (rate||0);
-    const el = document.getElementById('ofms-'+key+'-meals');
-    if(el) el.innerHTML = safeHTML(`
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
-        <span>এই মাসের মোট মিল: <b style="color:var(--primary)">${meals.toFixed(2)}</b></span>
-        <span>মোট বিল: <b style="color:var(--danger)">৳${cost.toFixed(2)}</b></span>
-      </div>`);
+    const cost = meals*(rate||0);
+    const tmEl = document.getElementById('ofms-'+key+'-total-meals');
+    const tbEl = document.getElementById('ofms-'+key+'-total-bill');
+    if(tmEl) tmEl.textContent = meals.toFixed(2);
+    if(tbEl) tbEl.textContent = '৳'+cost.toFixed(2);
   });
-
-  // render notes
   renderOfficeMealNotesScreen();
 }
 
@@ -3772,79 +3928,53 @@ function saveOfficeMealRateScreen(){
   if(isNaN(rate)||rate<0){ toast('❌ সঠিক রেট দিন!'); return; }
   if(!DB.officeMealRates) DB.officeMealRates={};
   DB.officeMealRates[mmKey] = rate;
-  saveDB();
-  loadOfficeMealScreen();
+  saveDB(); loadOfficeMealScreen();
   toast('✅ অফিস মিল রেট সেভ: ৳'+rate.toFixed(2));
-}
-
-function toggleOfficeMealEntry(key){
-  const el = document.getElementById('ofms-'+key+'-entry');
-  const btn = document.getElementById('ofms-'+key+'-toggle');
-  const show = el.style.display==='none';
-  el.style.display = show ? 'block' : 'none';
-  if(btn) btn.textContent = show ? '✕ বন্ধ করুন' : '✏️ মিল এন্ট্রি করুন';
-  if(show){
-    // pre-fill today's meal if exists
-    const u = getOrCreateOfficeUser(key);
-    const mKey = u.u + '_' + tod();
-    const m = DB.meals[mKey] || {b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-    const bSel = document.getElementById('ofms-'+key+'-b');
-    const lSel = document.getElementById('ofms-'+key+'-l');
-    const dSel = document.getElementById('ofms-'+key+'-d');
-    if(bSel) bSel.value = m.b.t||'off';
-    if(lSel) lSel.value = m.l.t||'off';
-    if(dSel) dSel.value = m.d.t||'off';
-    const noteEl = document.getElementById('ofms-'+key+'-note');
-    if(noteEl) noteEl.value = '';
-  }
 }
 
 function saveOfficeMeal(key){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
   const u = getOrCreateOfficeUser(key);
-  const bv = document.getElementById('ofms-'+key+'-b')?.value||'off';
-  const lv = document.getElementById('ofms-'+key+'-l')?.value||'off';
-  const dv = document.getElementById('ofms-'+key+'-d')?.value||'off';
-  const note = sanitizeInput(document.getElementById('ofms-'+key+'-note')?.value||'');
-  const date = tod();
-  const mKey = u.u + '_' + date;
-  DB.meals[mKey] = {b:{t:bv,q:1}, l:{t:lv,q:1}, d:{t:dv,q:1}};
-  // save note if provided
-  if(note){
-    if(!DB.officeMealNotes) DB.officeMealNotes=[];
-    DB.officeMealNotes.push({id:Date.now(), date, text:OFFICE_ACCOUNTS[key]+': '+note, by:CU?CU.name:'Admin'});
-  }
-  saveDB();
-  toggleOfficeMealEntry(key);
-  loadOfficeMealScreen();
-  toast('✅ '+(OFFICE_ACCOUNTS[key])+' মিল সেভ হয়েছে!');
+  const date = ofmsDate||tod();
+  const bT=ofmsGetSel(key,'b'), lT=ofmsGetSel(key,'l'), dT=ofmsGetSel(key,'d');
+  const bQ=parseInt(document.getElementById('ofms-qty-'+key+'-b')?.value)||1;
+  const lQ=parseInt(document.getElementById('ofms-qty-'+key+'-l')?.value)||1;
+  const dQ=parseInt(document.getElementById('ofms-qty-'+key+'-d')?.value)||1;
+  const bv=mealTypeValue('b',bT,bQ,date), lv=mealTypeValue('l',lT,lQ,date), dv=mealTypeValue('d',dT,dQ,date);
+  const bLabel=bT==='off'?'off':(bQ>1?bT+bQ:bT);
+  const lLabel=lT==='off'?'off':(lQ>1?lT+lQ:lT);
+  const dLabel=dT==='off'?'off':(dQ>1?dT+dQ:dT);
+  const note=sanitizeInput(document.getElementById('ofms-'+key+'-note')?.value||'');
+  showModal('মিল সেভ করুন',
+    date+' — '+OFFICE_ACCOUNTS[key]+'\n\n☀️ সকাল: '+bLabel+' = '+bv.toFixed(2)+' meals\n🌞 দুপুর: '+lLabel+' = '+lv.toFixed(2)+' meals\n🌙 রাত: '+dLabel+' = '+dv.toFixed(2)+' meals\n\nমোট: '+(bv+lv+dv).toFixed(2)+' meals',
+    function(){
+      DB.meals[u.u+'_'+date]={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
+      if(note){ if(!DB.officeMealNotes) DB.officeMealNotes=[]; DB.officeMealNotes.push({id:Date.now(),date,text:OFFICE_ACCOUNTS[key]+': '+note,by:CU?CU.name:'Admin'}); }
+      saveDB(); toggleOfficeMealEntry(key); loadOfficeMealScreen();
+      toast('✅ '+OFFICE_ACCOUNTS[key]+' মিল সেভ! ('+date+')');
+    }
+  );
 }
 
 function saveOfficeMealNoteScreen(){
-  const text = sanitizeInput(document.getElementById('ofms-note-input')?.value||'');
+  const text=sanitizeInput(document.getElementById('ofms-note-input')?.value||'');
   if(!text||text.length<2){ toast('❌ নোট লিখুন!'); return; }
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
-  DB.officeMealNotes.push({id:Date.now(), date:tod(), text, by:CU?CU.name:'Admin'});
+  DB.officeMealNotes.push({id:Date.now(),date:tod(),text,by:CU?CU.name:'Admin'});
   saveDB();
-  const el = document.getElementById('ofms-note-input');
-  if(el) el.value='';
-  renderOfficeMealNotesScreen();
-  toast('✅ নোট সেভ হয়েছে!');
+  const el=document.getElementById('ofms-note-input'); if(el) el.value='';
+  renderOfficeMealNotesScreen(); toast('✅ নোট সেভ হয়েছে!');
 }
 
 function renderOfficeMealNotesScreen(){
-  const el = document.getElementById('ofms-notes-list');
-  if(!el) return;
-  const notes = (DB.officeMealNotes||[]).slice().reverse().slice(0,10);
+  const el=document.getElementById('ofms-notes-list'); if(!el) return;
+  const notes=(DB.officeMealNotes||[]).slice().reverse().slice(0,10);
   if(!notes.length){ el.innerHTML='<p style="font-size:12px;color:var(--text-light);text-align:center">কোনো নোট নেই</p>'; return; }
   let h='';
   notes.forEach(n=>{
-    h+=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:12px">
-      <div style="color:var(--text-light);margin-bottom:3px">${esc(n.date)} — ${esc(n.by)}</div>
-      <div style="line-height:1.5">${esc(n.text)}</div>
-    </div>`;
+    h+=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:12px"><div style="color:var(--text-light);margin-bottom:3px">${esc(n.date)} — ${esc(n.by)}</div><div style="line-height:1.5">${esc(n.text)}</div></div>`;
   });
-  el.innerHTML = safeHTML(h);
+  el.innerHTML=safeHTML(h);
 }
 
 </script>
