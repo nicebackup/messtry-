@@ -367,6 +367,122 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div id="ofm-notes-list" style="margin-top:14px"></div>
     </div>
 
+<!-- ═══════════ OFFICE MEAL SCREEN ═══════════ -->
+<div id="sc-officemeal" class="screen">
+  <div class="app-header">
+    <button class="header-back" onclick="goHome()">← Home</button>
+    <div class="header-title">🏢 অফিস মিল</div>
+    <div class="header-sub">MEPL / MPCL Management</div>
+  </div>
+  <div class="content pb-nav">
+    <!-- Month + Rate -->
+    <div class="card">
+      <div class="sec-title">📅 মেস মাস ও রেট</div>
+      <div class="form-group">
+        <label class="form-label">মেস মাস</label>
+        <input type="month" id="ofms-month" class="form-input" onchange="loadOfficeMealScreen()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">💰 অফিস মিল রেট (প্রতি মিল) ৳</label>
+        <input type="number" id="ofms-rate" class="form-input" placeholder="যেমন: ৫৫.৫" min="0" step="0.01">
+      </div>
+      <button class="btn btn-primary" onclick="saveOfficeMealRateScreen()">✅ রেট সেভ করুন</button>
+    </div>
+
+    <!-- MEPL Account -->
+    <div class="card" id="ofms-mepl-card">
+      <div class="sec-title">🏢 Office MEPL</div>
+      <div id="ofms-mepl-meals" style="font-size:13px;color:var(--text-light);margin-bottom:12px">মিল লোড হচ্ছে...</div>
+      <!-- Meal entry for MEPL -->
+      <div id="ofms-mepl-entry" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:600;margin-bottom:4px">☀️ সকাল</div>
+            <select id="ofms-mepl-b" class="form-input" style="padding:8px;font-size:13px">
+              <option value="off">বন্ধ</option>
+              <option value="P">P</option>
+              <option value="Q">Q</option>
+            </select>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌞 দুপুর</div>
+            <select id="ofms-mepl-l" class="form-input" style="padding:8px;font-size:13px">
+              <option value="off">বন্ধ</option>
+              <option value="P">P</option>
+              <option value="Q" selected>Q</option>
+            </select>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌙 রাত</div>
+            <select id="ofms-mepl-d" class="form-input" style="padding:8px;font-size:13px">
+              <option value="off">বন্ধ</option>
+              <option value="P">P</option>
+              <option value="Q">Q</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">📝 নোট (ঐচ্ছিক)</label>
+          <input type="text" id="ofms-mepl-note" class="form-input" placeholder="ঠিকাদার, কারণ...">
+        </div>
+        <button class="btn btn-accent" onclick="saveOfficeMeal('mepl')">✅ মিল সেভ করুন</button>
+      </div>
+      <button id="ofms-mepl-toggle" class="btn btn-outline" style="margin-top:6px" onclick="toggleOfficeMealEntry('mepl')">✏️ মিল এন্ট্রি করুন</button>
+    </div>
+
+    <!-- MPCL Account -->
+    <div class="card" id="ofms-mpcl-card">
+      <div class="sec-title">🏢 Office MPCL</div>
+      <div id="ofms-mpcl-meals" style="font-size:13px;color:var(--text-light);margin-bottom:12px">মিল লোড হচ্ছে...</div>
+      <div id="ofms-mpcl-entry" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:600;margin-bottom:4px">☀️ সকাল</div>
+            <select id="ofms-mpcl-b" class="form-input" style="padding:8px;font-size:13px">
+              <option value="off">বন্ধ</option>
+              <option value="P">P</option>
+              <option value="Q">Q</option>
+            </select>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌞 দুপুর</div>
+            <select id="ofms-mpcl-l" class="form-input" style="padding:8px;font-size:13px">
+              <option value="off">বন্ধ</option>
+              <option value="P">P</option>
+              <option value="Q" selected>Q</option>
+            </select>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:600;margin-bottom:4px">🌙 রাত</div>
+            <select id="ofms-mpcl-d" class="form-input" style="padding:8px;font-size:13px">
+              <option value="off">বন্ধ</option>
+              <option value="P">P</option>
+              <option value="Q">Q</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">📝 নোট (ঐচ্ছিক)</label>
+          <input type="text" id="ofms-mpcl-note" class="form-input" placeholder="ঠিকাদার, কারণ...">
+        </div>
+        <button class="btn btn-accent" onclick="saveOfficeMeal('mpcl')">✅ মিল সেভ করুন</button>
+      </div>
+      <button id="ofms-mpcl-toggle" class="btn btn-outline" style="margin-top:6px" onclick="toggleOfficeMealEntry('mpcl')">✏️ মিল এন্ট্রি করুন</button>
+    </div>
+
+    <!-- Notes history -->
+    <div class="card">
+      <div class="sec-title">📝 নোট</div>
+      <div class="form-group">
+        <label class="form-label">নোট লিখুন</label>
+        <textarea id="ofms-note-input" class="form-input" rows="2" placeholder="ঠিকাদার, রেট পরিবর্তনের কারণ..." style="resize:none"></textarea>
+      </div>
+      <button class="btn btn-outline" onclick="saveOfficeMealNoteScreen()">💾 নোট সেভ</button>
+      <div id="ofms-notes-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ MESS MANAGER LIST SCREEN ═══════════ -->
 <div id="sc-messmanager" class="screen">
   <div class="app-header">
@@ -533,6 +649,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="menu-item ac" id="menu-bazar" onclick="sec('bazar')" style="display:none"><div class="menu-icon">🛒</div><div class="menu-lbl">বাজার খরচ</div><div class="menu-sub">Bazar Entry</div></div>
       <div class="menu-item in" id="menu-others" onclick="sec('others')" style="display:none"><div class="menu-icon">⚡</div><div class="menu-lbl">অন্যান্য খরচ</div><div class="menu-sub">Others Expense</div></div>
       <div class="menu-item ac" id="menu-deposit" onclick="sec('deposit')" style="display:none"><div class="menu-icon">💵</div><div class="menu-lbl">জমা/উত্তোলন</div><div class="menu-sub">Deposit/Withdraw</div></div>
+      <div class="menu-item in" id="menu-officemeal" onclick="sec('officemeal')" style="display:none"><div class="menu-icon">🏢</div><div class="menu-lbl">অফিস মিল</div><div class="menu-sub">MEPL / MPCL</div></div>
       <div class="menu-item" onclick="sec('report')"><div class="menu-icon">📊</div><div class="menu-lbl">মাসিক রিপোর্ট</div><div class="menu-sub">Monthly Report</div></div>
       <div class="menu-item" onclick="sec('members')"><div class="menu-icon">👥</div><div class="menu-lbl">সদস্য তালিকা</div><div class="menu-sub">All Members</div></div>
       <div class="menu-item in" onclick="sec('notice')"><div class="menu-icon">📢</div><div class="menu-lbl">নোটিশ</div><div class="menu-sub">Notice Board</div></div>
@@ -796,7 +913,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="rep-row"><span class="rep-key">অন্যান্য শেয়ার <span style="font-size:10px;color:var(--text-light)">(split নিয়ম অনুযায়ী)</span></span><span class="rep-val" id="bl-other-share">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">বাবুর্চি বিল শেয়ার <span style="font-size:10px;color:var(--text-light)">(In=পূর্ণ, Out=৫০%)</span></span><span class="rep-val" id="bl-cook-share">৳ ০</span></div>
       <div class="divider"></div>
-      <div class="rep-row"><span class="rep-key" style="color:var(--danger);font-weight:700">মোট দেয়</span><span class="rep-val" style="color:var(--danger);font-size:22px" id="bl-my-bill">৳ ০</span></div>
+      <div class="rep-row"><span class="rep-key" style="color:var(--danger);font-weight:700">মোট বিল</span><span class="rep-val" style="color:var(--danger);font-size:22px" id="bl-my-bill">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">জমা আছে</span><span class="rep-val" style="color:var(--success)" id="bl-balance">৳ ০</span></div>
       <div class="divider"></div>
       <div class="rep-row">
@@ -1417,10 +1534,38 @@ function showSc(id){
   const el=document.getElementById('sc-'+id);
   if(el) el.classList.add('active');
   window.scrollTo(0,0);
+  // Push history state for back button
+  if(id!=='login'&&id!=='register'&&id!=='forgot'){
+    history.pushState({screen:id},'',window.location.pathname+'?s='+id);
+  }
 }
-function goHome(){ homeViewDate=null; showSc('home'); refreshHome(); }
+function goHome(){ closeAllAdminCards(); homeViewDate=null; showSc('home'); refreshHome(); }
+// Handle back button
+window.addEventListener('popstate',function(e){
+  if(e.state&&e.state.screen){
+    const id=e.state.screen;
+    if(id==='home'){ homeViewDate=null; refreshHome(); }
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el=document.getElementById('sc-'+id);
+    if(el){ el.classList.add('active'); window.scrollTo(0,0); }
+  } else {
+    // No state = go home
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el=document.getElementById('sc-home');
+    if(el){ el.classList.add('active'); homeViewDate=null; refreshHome(); }
+  }
+});
 function tog(id){ const e=document.getElementById(id); if(e) e.style.display=e.style.display==='none'?'block':'none'; }
+function closeAllAdminCards(){
+  // Close all toggled cards in admin panel when navigating away
+  ['card-mgr','card-cfg','card-adm-meal','card-edit-mem','card-del-mem',
+   'card-ctrl','card-sitenote','card-del-cycle','card-office-meal'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+}
 function sec(s){
+  closeAllAdminCards();
   if(s==='meal'){ initMeal(); showSc('meal'); return; }
   if(s==='bazar'){ initBazar(); showSc('bazar'); return; }
   if(s==='others'){ initOthers(); showSc('others'); return; }
@@ -1430,6 +1575,7 @@ function sec(s){
   if(s==='members'){ loadMembers(); showSc('members'); return; }
   if(s==='profile'){ loadProfile(); showSc('profile'); return; }
   if(s==='admin'){ initAdmin(); showSc('admin'); return; }
+  if(s==='officemeal'){ initOfficeMealScreen(); showSc('officemeal'); return; }
   if(s==='messmanager'){ newMessManagerScreen(); return; }
   if(s==='notice'){ initNotice(); showSc('notice'); return; }
 }
@@ -1654,6 +1800,8 @@ function refreshHome(){
   const mgr=isManagerOrCtrl();
   document.getElementById('menu-bazar').style.display=mgr?'block':'none';
   document.getElementById('menu-others').style.display=mgr?'block':'none';
+  const omEl=document.getElementById('menu-officemeal');
+  if(omEl) omEl.style.display=mgr?'block':'none';
   document.getElementById('menu-deposit').style.display=mgr?'block':'none';
   document.getElementById('admin-btn').style.display=isController()?'block':'none';
 
@@ -2320,9 +2468,9 @@ function loadReport(){
       <span class="rep-key">${u.name}<br><small style="font-size:11px">${u.job||'-'} · রুম ${u.room||'-'} · ${u.type==='inside'?'ইন':'আউট'}</small></span>
       <span style="text-align:right">
         <div style="font-size:13px;color:var(--primary)">${m.toFixed(2)} মিল</div>
-        <div style="font-size:12px;color:var(--text-light)">মিল: ৳${mealB.toFixed(0)} + অন্য: ৳${othersShare.toFixed(0)} + বাবুর্চি: ৳${cookBillShare.toFixed(0)}</div>
-        <div style="font-size:13px;font-weight:700;color:var(--danger)">দেয়: ৳${payable.toFixed(0)}</div>
-        <div style="font-size:12px;font-weight:700;color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'জমা':'বকেয়া'}: ৳${Math.abs(net).toFixed(0)}</div>
+        <div style="font-size:12px;color:var(--text-light)">মিল: ৳${mealB.toFixed(2)} + অন্য: ৳${othersShare.toFixed(2)} + বাবুর্চি: ৳${cookBillShare.toFixed(2)}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--danger)">মোট বিল: ৳${payable.toFixed(2)}</div>
+        <div style="font-size:12px;font-weight:700;color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'জমা':'বকেয়া'}: ৳${Math.abs(net).toFixed(2)}</div>
       </span>
     </div>`;
   });
@@ -2982,26 +3130,30 @@ function makePDF(type){
         <th style="padding:8px 6px;text-align:right;">জমা</th>
         <th style="padding:8px 10px;text-align:right;border-radius:0 4px 0 0;">নেট</th>
       </tr></thead><tbody>`;
+    const pdfOfRate=getOfficeMealRate(mmKey);
     nonCookUsers.forEach((u,ri)=>{
       const myMeals=messMonthMeals(u.u,mmKey);
-      const mealBill=myMeals*pm;
-      const {othersShare,cookBillShare}=calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
+      const isOffU=isOfficeMealUser(u);
+      const appRate=isOffU?(pdfOfRate||pm):pm;
+      const mealBill=myMeals*appRate;
+      const {othersShare,cookBillShare}=isOffU?{othersShare:0,cookBillShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
       const payable=mealBill+othersShare+cookBillShare;
       const bal=u.balance||0;
       const net=bal-payable;
       const bg=ri%2===0?'#f4f7f5':'#fff';
       const netColor=net>=0?'#2e7d32':'#e53935';
+      const typeLabel=isOffU?'🏢অফিস':u.type==='inside'?'ইন':'আউট';
       html+=`<tr style="background:${bg};">
         <td style="padding:7px 10px;font-weight:600;">${u.name}<br><span style="font-size:10px;color:#5a7a65;font-weight:400;">${u.job||'-'}</span></td>
-        <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.type==='inside'?'ইন':'আউট'}</td>
+        <td style="padding:7px 6px;text-align:center;font-size:11px;">${typeLabel}</td>
         <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.room||'-'}</td>
         <td style="padding:7px 6px;text-align:right;color:#1a6b3c;font-weight:700;">${myMeals.toFixed(2)}</td>
-        <td style="padding:7px 6px;text-align:right;">৳${mealBill.toFixed(0)}</td>
-        <td style="padding:7px 6px;text-align:right;color:#1565c0;">৳${othersShare.toFixed(0)}</td>
-        <td style="padding:7px 6px;text-align:right;color:#e65100;">৳${cookBillShare.toFixed(0)}</td>
-        <td style="padding:7px 6px;text-align:right;font-weight:700;color:#e53935;">৳${payable.toFixed(0)}</td>
-        <td style="padding:7px 6px;text-align:right;color:#2e7d32;">৳${Math.abs(bal).toFixed(0)}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:${netColor};">${net>=0?'+':''} ৳${Math.abs(net).toFixed(0)}</td>
+        <td style="padding:7px 6px;text-align:right;">৳${mealBill.toFixed(2)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#1565c0;">${isOffU?'—':'৳'+othersShare.toFixed(2)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#e65100;">${isOffU?'—':'৳'+cookBillShare.toFixed(2)}</td>
+        <td style="padding:7px 6px;text-align:right;font-weight:700;color:#e53935;">৳${payable.toFixed(2)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#2e7d32;">৳${Math.abs(bal).toFixed(2)}</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:700;color:${netColor};">${net>=0?'+':''} ৳${Math.abs(net).toFixed(2)}</td>
       </tr>`;
     });
     html+='</tbody></table>';
@@ -3055,29 +3207,31 @@ function makePDF(type){
     Midland Quarter Mess Management | ${new Date().toLocaleDateString('en-GB')} | Powered by Firebase
   </div></div>`;
 
-  // Create off-screen div, render with html2canvas, then jsPDF
-  const wrap=document.createElement('div');
-  wrap.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1;';
-  wrap.innerHTML=html;
-  document.body.appendChild(wrap);
-
-  toast('⏳ PDF তৈরি হচ্ছে...');
-  html2canvas(wrap.firstChild, {scale:2, useCORS:true, backgroundColor:'#fff'}).then(canvas=>{
-    document.body.removeChild(wrap);
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const imgW=210, imgH=(canvas.height*imgW)/canvas.width;
-    const pageH=297;
-    let yPos=0;
-    // Multi-page support
-    while(yPos < imgH){
-      if(yPos>0) doc.addPage();
-      doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,-yPos*canvas.width/imgW/2,imgW,imgH);
-      yPos+=pageH;
-    }
-    doc.save('MQ_'+type+'_'+today+'.pdf');
-    toast('✅ PDF তৈরি হয়েছে! ডাউনলোড করুন।');
-  }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
+  // Open print window — reliable on all devices including mobile
+  const printWin = window.open('','_blank');
+  if(!printWin){ toast('❌ পপআপ ব্লক করা আছে! ব্রাউজারে পপআপ অনুমতি দিন।'); return; }
+  printWin.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>MQ Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Hind Siliguri',sans-serif;background:#fff;color:#1a2e22;padding:12px;}
+      @media print{body{padding:0;} .no-print{display:none!important;} }
+      table{border-collapse:collapse;width:100%;}
+      th,td{padding:6px 8px;border:1px solid #d0e4d8;}
+      th{background:#1a6b3c;color:#fff;font-weight:600;}
+      tr:nth-child(even){background:#f4f7f5;}
+    </style>
+  </head><body>${html}
+  <div class="no-print" style="margin-top:20px;text-align:center;">
+    <button onclick="window.print()" style="padding:12px 32px;background:#1a6b3c;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;font-family:'Hind Siliguri',sans-serif;">🖨️ Print / PDF সেভ করুন</button>
+    <button onclick="window.close()" style="padding:12px 24px;background:#e53935;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-left:10px;font-family:'Hind Siliguri',sans-serif;">✕ বন্ধ</button>
+  </div>
+  </body></html>`);
+  printWin.document.close();
+  toast('✅ প্রিন্ট উইন্ডো খুলেছে! Print বা PDF সেভ করুন।');
 }
 
 // ═══════════════════════════════════════════════
@@ -3111,9 +3265,9 @@ function showAllMembersBill(){
   </div>`;
 
   const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
+  const ofRate=getOfficeMealRate(mmKey);
   if(!nonCookUsers.length){ html+='<p class="muted tc">কোনো সদস্য নেই</p>'; }
   else{
-    // Table header
     html+=`<div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       <tr style="background:var(--primary);color:#fff">
@@ -3122,29 +3276,32 @@ function showAllMembersBill(){
         <th style="text-align:right;padding:8px 4px">মিল বিল</th>
         <th style="text-align:right;padding:8px 4px">অন্যান্য</th>
         <th style="text-align:right;padding:8px 4px">বাবুর্চি</th>
-        <th style="text-align:right;padding:8px 4px;font-weight:700">মোট দেয়</th>
+        <th style="text-align:right;padding:8px 4px;font-weight:700">মোট বিল</th>
         <th style="text-align:right;padding:8px 4px">বাকি/জমা</th>
       </tr>`;
     nonCookUsers.forEach((u,ri)=>{
       const myMeals=messMonthMeals(u.u,mmKey);
-      const mealBill=myMeals*pm;
-      const {othersShare,cookBillShare}=calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
+      const isOff=isOfficeMealUser(u);
+      const appliedRate=isOff?(ofRate||pm):pm;
+      const mealBill=myMeals*appliedRate;
+      const {othersShare,cookBillShare}=isOff?{othersShare:0,cookBillShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
       const payable=mealBill+othersShare+cookBillShare;
       const bal=u.balance||0;
       const net=bal-payable;
       const bg=ri%2===0?'var(--bg)':'transparent';
       const netColor=net>=0?'var(--success)':'var(--danger)';
+      const rateLabel=isOff?`<div style="font-size:9px;color:var(--info)">🏢 অফিস রেট: ৳${appliedRate.toFixed(0)}</div>`:'';
       html+=`<tr style="background:${bg};border-top:1px solid var(--border)">
         <td style="padding:7px 6px">
           <div style="font-weight:600">${u.name}</div>
-          <div style="font-size:10px;color:var(--text-light)">${u.type==='inside'?'ইন':'আউট'} · রুম ${u.room||'-'}</div>
+          <div style="font-size:10px;color:var(--text-light)">${isOff?'🏢 অফিস':u.type==='inside'?'ইন':'আউট'} · রুম ${u.room||'-'}</div>
         </td>
-        <td style="text-align:right;padding:7px 4px;color:var(--primary);font-weight:600">${myMeals.toFixed(1)}</td>
-        <td style="text-align:right;padding:7px 4px">৳${mealBill.toFixed(0)}</td>
-        <td style="text-align:right;padding:7px 4px;color:var(--info)">৳${othersShare.toFixed(0)}</td>
-        <td style="text-align:right;padding:7px 4px;color:var(--accent)">৳${cookBillShare.toFixed(0)}</td>
-        <td style="text-align:right;padding:7px 4px;font-weight:700;color:var(--danger)">৳${payable.toFixed(0)}</td>
-        <td style="text-align:right;padding:7px 4px;font-weight:700;color:${netColor}">${net>=0?'+':''}৳${Math.abs(net).toFixed(0)}</td>
+        <td style="text-align:right;padding:7px 4px;color:var(--primary);font-weight:600">${myMeals.toFixed(1)}${rateLabel}</td>
+        <td style="text-align:right;padding:7px 4px">৳${mealBill.toFixed(2)}</td>
+        <td style="text-align:right;padding:7px 4px;color:var(--info)">${isOff?'—':'৳'+othersShare.toFixed(2)}</td>
+        <td style="text-align:right;padding:7px 4px;color:var(--accent)">${isOff?'—':'৳'+cookBillShare.toFixed(2)}</td>
+        <td style="text-align:right;padding:7px 4px;font-weight:700;color:var(--danger)">৳${payable.toFixed(2)}</td>
+        <td style="text-align:right;padding:7px 4px;font-weight:700;color:${netColor}">${net>=0?'+':''}৳${Math.abs(net).toFixed(2)}</td>
       </tr>`;
     });
     html+=`</table></div>`;
@@ -3307,9 +3464,10 @@ const OFFICE_MEAL_USERS = ['Office MEPL','Office MPCL','mepl','mpcl'];
 
 function isOfficeMealUser(u){
   if(!u) return false;
+  if(u._office) return true;
   const nm=(u.name||'').toLowerCase();
   const un=(u.u||'').toLowerCase();
-  return nm.includes('mepl')||nm.includes('mpcl')||un.includes('mepl')||un.includes('mpcl');
+  return nm.includes('mepl')||nm.includes('mpcl')||un.includes('mepl')||un.includes('mpcl')||un==='off_mepl'||un==='off_mpcl';
 }
 
 function getOfficeMealUsers(){
@@ -3420,6 +3578,141 @@ function getOfficeMealBill(mmKey){
   const rate=getOfficeMealRate(mmKey);
   if(!rate) return 0;
   return getOfficeMealUsers().reduce((s,u)=>s+messMonthMeals(u.u,mmKey)*rate, 0);
+}
+
+
+// ═══════════════════════════════════════════════
+// OFFICE MEAL SCREEN FUNCTIONS
+// ═══════════════════════════════════════════════
+const OFFICE_ACCOUNTS = {
+  mepl: 'Office MEPL',
+  mpcl: 'Office MPCL'
+};
+
+function getOrCreateOfficeUser(key){
+  const name = OFFICE_ACCOUNTS[key];
+  let u = DB.users.find(x=>x.name===name||x.u===('off_'+key));
+  if(!u){
+    u = {u:'off_'+key, p:'', name:name, mob:'', job:'OFF-'+key.toUpperCase(),
+         room:'—', role:'member', type:'outside', joined:tod(), balance:0, _office:true};
+    DB.users.push(u);
+    saveDB();
+  }
+  return u;
+}
+
+function initOfficeMealScreen(){
+  if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); goHome(); return; }
+  const el = document.getElementById('ofms-month');
+  if(el) el.value = messMonthKey();
+  // ensure accounts exist
+  getOrCreateOfficeUser('mepl');
+  getOrCreateOfficeUser('mpcl');
+  loadOfficeMealScreen();
+}
+
+function loadOfficeMealScreen(){
+  const mmKey = document.getElementById('ofms-month')?.value || messMonthKey();
+  const rate = getOfficeMealRate(mmKey);
+  const rateEl = document.getElementById('ofms-rate');
+  if(rateEl) rateEl.value = rate || '';
+
+  ['mepl','mpcl'].forEach(key=>{
+    const u = getOrCreateOfficeUser(key);
+    const meals = messMonthMeals(u.u, mmKey);
+    const cost = meals * (rate||0);
+    const el = document.getElementById('ofms-'+key+'-meals');
+    if(el) el.innerHTML = safeHTML(`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        <span>এই মাসের মোট মিল: <b style="color:var(--primary)">${meals.toFixed(2)}</b></span>
+        <span>মোট বিল: <b style="color:var(--danger)">৳${cost.toFixed(2)}</b></span>
+      </div>`);
+  });
+
+  // render notes
+  renderOfficeMealNotesScreen();
+}
+
+function saveOfficeMealRateScreen(){
+  const mmKey = document.getElementById('ofms-month')?.value;
+  if(!mmKey){ toast('❌ মাস নির্বাচন করুন!'); return; }
+  const rate = parseFloat(document.getElementById('ofms-rate').value);
+  if(isNaN(rate)||rate<0){ toast('❌ সঠিক রেট দিন!'); return; }
+  if(!DB.officeMealRates) DB.officeMealRates={};
+  DB.officeMealRates[mmKey] = rate;
+  saveDB();
+  loadOfficeMealScreen();
+  toast('✅ অফিস মিল রেট সেভ: ৳'+rate.toFixed(2));
+}
+
+function toggleOfficeMealEntry(key){
+  const el = document.getElementById('ofms-'+key+'-entry');
+  const btn = document.getElementById('ofms-'+key+'-toggle');
+  const show = el.style.display==='none';
+  el.style.display = show ? 'block' : 'none';
+  if(btn) btn.textContent = show ? '✕ বন্ধ করুন' : '✏️ মিল এন্ট্রি করুন';
+  if(show){
+    // pre-fill today's meal if exists
+    const u = getOrCreateOfficeUser(key);
+    const mKey = u.u + '_' + tod();
+    const m = DB.meals[mKey] || {b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+    const bSel = document.getElementById('ofms-'+key+'-b');
+    const lSel = document.getElementById('ofms-'+key+'-l');
+    const dSel = document.getElementById('ofms-'+key+'-d');
+    if(bSel) bSel.value = m.b.t||'off';
+    if(lSel) lSel.value = m.l.t||'off';
+    if(dSel) dSel.value = m.d.t||'off';
+    const noteEl = document.getElementById('ofms-'+key+'-note');
+    if(noteEl) noteEl.value = '';
+  }
+}
+
+function saveOfficeMeal(key){
+  if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
+  const u = getOrCreateOfficeUser(key);
+  const bv = document.getElementById('ofms-'+key+'-b')?.value||'off';
+  const lv = document.getElementById('ofms-'+key+'-l')?.value||'off';
+  const dv = document.getElementById('ofms-'+key+'-d')?.value||'off';
+  const note = sanitizeInput(document.getElementById('ofms-'+key+'-note')?.value||'');
+  const date = tod();
+  const mKey = u.u + '_' + date;
+  DB.meals[mKey] = {b:{t:bv,q:1}, l:{t:lv,q:1}, d:{t:dv,q:1}};
+  // save note if provided
+  if(note){
+    if(!DB.officeMealNotes) DB.officeMealNotes=[];
+    DB.officeMealNotes.push({id:Date.now(), date, text:OFFICE_ACCOUNTS[key]+': '+note, by:CU?CU.name:'Admin'});
+  }
+  saveDB();
+  toggleOfficeMealEntry(key);
+  loadOfficeMealScreen();
+  toast('✅ '+(OFFICE_ACCOUNTS[key])+' মিল সেভ হয়েছে!');
+}
+
+function saveOfficeMealNoteScreen(){
+  const text = sanitizeInput(document.getElementById('ofms-note-input')?.value||'');
+  if(!text||text.length<2){ toast('❌ নোট লিখুন!'); return; }
+  if(!DB.officeMealNotes) DB.officeMealNotes=[];
+  DB.officeMealNotes.push({id:Date.now(), date:tod(), text, by:CU?CU.name:'Admin'});
+  saveDB();
+  const el = document.getElementById('ofms-note-input');
+  if(el) el.value='';
+  renderOfficeMealNotesScreen();
+  toast('✅ নোট সেভ হয়েছে!');
+}
+
+function renderOfficeMealNotesScreen(){
+  const el = document.getElementById('ofms-notes-list');
+  if(!el) return;
+  const notes = (DB.officeMealNotes||[]).slice().reverse().slice(0,10);
+  if(!notes.length){ el.innerHTML='<p style="font-size:12px;color:var(--text-light);text-align:center">কোনো নোট নেই</p>'; return; }
+  let h='';
+  notes.forEach(n=>{
+    h+=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:12px">
+      <div style="color:var(--text-light);margin-bottom:3px">${esc(n.date)} — ${esc(n.by)}</div>
+      <div style="line-height:1.5">${esc(n.text)}</div>
+    </div>`;
+  });
+  el.innerHTML = safeHTML(h);
 }
 
 </script>
