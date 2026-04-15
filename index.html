@@ -3462,7 +3462,7 @@ function showAllMembersBill(){
       const messBalance=DB.users.filter(u=>u.type!=='cook').reduce((s,u)=>s+(u.balance||0),0);
       const balColor=messBalance>=0?'#4ade80':'#f87171';
       const balSign=messBalance>=0?'+':'−';
-      const balLabel=messBalance>=0?'💚 মেস ফান্ড (জমা)':'🔴 মেস ফান্ড (ঘাটতি)';
+      const balLabel=messBalance>=0?'🟢 মেস ফান্ড (জমা)':'🔴 মেস ফান্ড (ঘাটতি)';
       return `<div style="margin-top:8px;background:rgba(0,0,0,.25);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:11px;opacity:.85">${balLabel}</div>
         <div style="font-size:19px;font-weight:700;color:${balColor}">${balSign}৳${Math.abs(messBalance).toLocaleString()}</div>
@@ -3474,16 +3474,26 @@ function showAllMembersBill(){
   const ofRate=getOfficeMealRate(mmKey);
   if(!nonCookUsers.length){ html+='<p class="muted tc">কোনো সদস্য নেই</p>'; }
   else{
+    const fmtTk=v=>{const r=Math.round(v*100)/100;return Number.isInteger(r)?r.toLocaleString('en-US'):r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
     html+=`<div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed">
+      <colgroup>
+        <col style="width:22%">
+        <col style="width:10%">
+        <col style="width:16%">
+        <col style="width:14%">
+        <col style="width:12%">
+        <col style="width:14%">
+        <col style="width:12%">
+      </colgroup>
       <tr style="background:var(--primary);color:#fff">
-        <th style="padding:8px 6px;text-align:left;font-weight:600;min-width:80px">সদস্য</th>
-        <th style="text-align:right;padding:8px 4px">মিল</th>
-        <th style="text-align:right;padding:8px 4px">মিল বিল</th>
-        <th style="text-align:right;padding:8px 4px">অন্যান্য</th>
-        <th style="text-align:right;padding:8px 4px">বাবুর্চি</th>
-        <th style="text-align:right;padding:8px 4px;font-weight:700">মোট বিল</th>
-        <th style="text-align:right;padding:8px 4px">বাকি/জমা</th>
+        <th style="padding:7px 5px;text-align:left;font-weight:600">সদস্য</th>
+        <th style="text-align:right;padding:7px 3px;white-space:nowrap">মিল</th>
+        <th style="text-align:right;padding:7px 3px;white-space:nowrap">মিল বিল</th>
+        <th style="text-align:right;padding:7px 3px;white-space:nowrap">অন্যান্য</th>
+        <th style="text-align:right;padding:7px 3px;white-space:nowrap">বাবুর্চি</th>
+        <th style="text-align:right;padding:7px 3px;font-weight:700;white-space:nowrap">মোট বিল</th>
+        <th style="text-align:right;padding:7px 3px;white-space:nowrap">বাকি/জমা</th>
       </tr>`;
     nonCookUsers.forEach((u,ri)=>{
       const myMeals=messMonthMeals(u.u,mmKey);
@@ -3496,18 +3506,18 @@ function showAllMembersBill(){
       const net=bal-payable;
       const bg=ri%2===0?'var(--bg)':'transparent';
       const netColor=net>=0?'var(--success)':'var(--danger)';
-      const rateLabel=isOff?`<div style="font-size:9px;color:var(--info)">🏢 অফিস রেট: ৳${appliedRate.toFixed(0)}</div>`:'';
+      const rateLabel=isOff?`<div style="font-size:9px;color:var(--info)">🏢 ৳${appliedRate.toFixed(0)}/মিল</div>`:'';
       html+=`<tr style="background:${bg};border-top:1px solid var(--border)">
-        <td style="padding:7px 6px">
-          <div style="font-weight:600">${u.name}</div>
-          <div style="font-size:10px;color:var(--text-light)">${isOff?'🏢 অফিস':u.type==='inside'?'ইন':'আউট'} · রুম ${u.room||'-'}</div>
+        <td style="padding:6px 5px;word-break:break-word">
+          <div style="font-weight:600;font-size:11px">${u.name}</div>
+          <div style="font-size:9px;color:var(--text-light)">${isOff?'অফিস':u.type==='inside'?'ইন':'আউট'} ${u.room?'R'+u.room:''}</div>
         </td>
-        <td style="text-align:right;padding:7px 4px;color:var(--primary);font-weight:600">${myMeals.toFixed(1)}${rateLabel}</td>
-        <td style="text-align:right;padding:7px 4px">৳${mealBill.toFixed(2)}</td>
-        <td style="text-align:right;padding:7px 4px;color:var(--info)">${isOff?'—':'৳'+othersShare.toFixed(2)}</td>
-        <td style="text-align:right;padding:7px 4px;color:var(--accent)">${isOff?'—':'৳'+cookBillShare.toFixed(2)}</td>
-        <td style="text-align:right;padding:7px 4px;font-weight:700;color:var(--danger)">৳${payable.toFixed(2)}</td>
-        <td style="text-align:right;padding:7px 4px;font-weight:700;color:${netColor}">${net>=0?'+':''}৳${Math.abs(net).toFixed(2)}</td>
+        <td style="text-align:right;padding:6px 3px;color:var(--primary);font-weight:600;white-space:nowrap">${myMeals.toFixed(1)}${rateLabel}</td>
+        <td style="text-align:right;padding:6px 3px;white-space:nowrap">৳${fmtTk(mealBill)}</td>
+        <td style="text-align:right;padding:6px 3px;color:var(--info);white-space:nowrap">${isOff?'—':'৳'+fmtTk(othersShare)}</td>
+        <td style="text-align:right;padding:6px 3px;color:var(--accent);white-space:nowrap">${isOff?'—':'৳'+fmtTk(cookBillShare)}</td>
+        <td style="text-align:right;padding:6px 3px;font-weight:700;color:var(--danger);white-space:nowrap">৳${fmtTk(payable)}</td>
+        <td style="text-align:right;padding:6px 3px;font-weight:700;color:${netColor};white-space:nowrap">${net>=0?'+':'−'}৳${fmtTk(Math.abs(net))}</td>
       </tr>`;
     });
     html+=`</table></div>`;
