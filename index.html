@@ -966,7 +966,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="rep-row"><span class="rep-key">আমার মিল</span><span class="rep-val" id="bl-my-meals">০</span></div>
       <div class="rep-row"><span class="rep-key">মিল বিল</span><span class="rep-val" id="bl-meal-bill">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">অন্যান্য শেয়ার <span style="font-size:10px;color:var(--text-light)">(split নিয়ম অনুযায়ী)</span></span><span class="rep-val" id="bl-other-share">৳ ০</span></div>
-      <div class="rep-row"><span class="rep-key">বাবুর্চি বিল শেয়ার <span style="font-size:10px;color:var(--text-light)">(In=পূর্ণ, Out=৫০%)</span></span><span class="rep-val" id="bl-cook-share">৳ ০</span></div>
+      <div class="rep-row"><span class="rep-key">বাবুর্চি খাবার ভাগ <span style="font-size:10px;color:var(--text-light)">(সমান ভাগ, ০ মিলেও)</span></span><span class="rep-val" id="bl-cook-food-share">৳ ০</span></div>
+      <div class="rep-row"><span class="rep-key">বাবুর্চি বেতন ভাগ <span style="font-size:10px;color:var(--text-light)">(In=পূর্ণ, Out=৫০%)</span></span><span class="rep-val" id="bl-cook-share">৳ ০</span></div>
       <div class="divider"></div>
       <div class="rep-row"><span class="rep-key" style="color:var(--danger);font-weight:700">মোট বিল</span><span class="rep-val" style="color:var(--danger);font-size:22px" id="bl-my-bill">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">জমা আছে</span><span class="rep-val" style="color:var(--success)" id="bl-balance">৳ ০</span></div>
@@ -2166,8 +2167,8 @@ function getNetMeals(mmKey){
   // অফিস মিল (MEPL/MPCL) বাদ দিতে হবে — আলাদা রেটে হিসাব হয়
   let officeMeals=0;
   DB.users.filter(u=>isOfficeMealUser(u)).forEach(u=>{ officeMeals+=messMonthMeals(u.u,mmKey); });
-  // বাবুর্চির মিল এখন নেট মিলে থাকবে — শুধু অফিস মিল বাদ
-  return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-officeMeals};
+  // নেট মিল = সদস্যদের মিল (বাবুর্চি বাদ, অফিস মিল বাদ)
+  return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-cookMeals-officeMeals};
 }
 function calcMealRate(mmKey){
   const bazar=DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
@@ -2176,21 +2177,24 @@ function calcMealRate(mmKey){
   const cookBillsAll=(DB.cookBills||[]).filter(c=>dateInMessMonth(c.date,mmKey));
   const cookBillsTotal=cookBillsAll.reduce((s,c)=>s+c.amount,0);
 
-  // মিলরেট = বাজার ÷ (নেট মিল + বাবুর্চির মিল) — বাবুর্চি বিল আলাদা শেয়ার
+  // মিল রেট = বাজার ÷ নেট মিল (বাবুর্চির মিল বাদ, অফিস মিল বাদ)
+  // বাবুর্চির খাবার খরচ = cookMeals × pm → সদস্যরা মাথাপিছু সমান ভাগে দেবে
   const rateBase=bazar+others;
   const total=bazar+others+cookBillsTotal;
 
   const {totalMeals, cookMeals, officeMeals, netMeals}=getNetMeals(mmKey);
-  // netMeals এখন বাবুর্চির মিলসহ (অফিস মিল বাদে)
 
   const pm = DB.mealRates[mmKey] || (netMeals>0 ? rateBase/netMeals : 0);
 
+  // বাবুর্চির খাবার খরচ (cookMeals × মিল রেট) — সদস্যরা সমান ভাগে দেবে
+  const cookFoodCost = cookMeals * pm;
+
   return {bazar, others, othersAll, cookBillsTotal, cookBillsAll,
-          total, rateBase, totalMeals, cookMeals, officeMeals, netMeals, pm};
+          total, rateBase, totalMeals, cookMeals, officeMeals, netMeals, pm, cookFoodCost};
 }
 
 // Calculate a single member's share of others + cookBills
-function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll){
+function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
   // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
   if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0};
   const nonCookMembers=DB.users.filter(x=>x.type!=='cook'&&!isOfficeMealUser(x));
@@ -2213,7 +2217,7 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll){
     }
   });
 
-  // Cook bills — always inside=full, outside=50%
+  // Cook bills (salary) — inside=full, outside=50%
   let cookBillShare=0;
   const cookDenom=insideCount+outsideCount*0.5;
   cookBillsAll.forEach(c=>{
@@ -2223,7 +2227,10 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll){
     }
   });
 
-  return {othersShare, cookBillShare};
+  // বাবুর্চির খাবার খরচ — সব সদস্য সমান ভাগে (যে ০ মিল খেলেও)
+  const cookFoodShare = cookFoodCost / (nonCookMembers.length||1);
+
+  return {othersShare, cookBillShare, cookFoodShare};
 }
 
 // ═══════════════════════════════════════════════
@@ -2592,7 +2599,7 @@ function loadBill(){
   const mealBill=myMeals*pm;
 
   // Use new split-aware calculation
-  const {othersShare,cookBillShare}=calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll);
+  const {othersShare,cookBillShare,cookFoodShare}=calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
 
   let netPayable, mealBillDisplay=mealBill;
   if(isOfficeMealUser(cu)){
@@ -2600,7 +2607,7 @@ function loadBill(){
     mealBillDisplay=myMeals*ofRate;
     netPayable=mealBillDisplay; // no misc for office
   } else {
-    netPayable=mealBill+othersShare+cookBillShare;
+    netPayable=mealBill+othersShare+cookBillShare+cookFoodShare;
   }
   const bal=cu.balance||0;
   const net=bal-netPayable;
@@ -2615,6 +2622,8 @@ function loadBill(){
   document.getElementById('bl-my-meals').textContent=myMeals.toFixed(2)+' মিল';
   document.getElementById('bl-meal-bill').textContent='৳ '+mealBillDisplay.toFixed(2);
   document.getElementById('bl-other-share').textContent='৳ '+othersShare.toFixed(2);
+  document.getElementById('bl-cook-food-share').textContent='৳ '+(cookFoodShare||0).toFixed(2);
+  document.getElementById('bl-cook-food-share').textContent='৳ '+(cookFoodShare||0).toFixed(2);
   document.getElementById('bl-cook-share').textContent='৳ '+cookBillShare.toFixed(2);
   document.getElementById('bl-my-bill').textContent='৳ '+netPayable.toFixed(2);
   document.getElementById('bl-balance').textContent='৳ '+bal.toLocaleString();
@@ -2657,8 +2666,8 @@ function loadReport(){
   DB.users.filter(u=>u.type!=='cook'&&!isOfficeMealUser(u)).forEach(u=>{
     const m=messMonthMeals(u.u,mmKey);
     const mealB=m*pm;
-    const {othersShare,cookBillShare}=calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
-    const payable=mealB+othersShare+cookBillShare;
+    const {othersShare,cookBillShare,cookFoodShare}=calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+    const payable=mealB+othersShare+cookBillShare+cookFoodShare;
     const bal=u.balance||0;
     const net=bal-payable;
     html+=`<div class="rep-row">
@@ -3333,8 +3342,8 @@ function makePDF(type){
       const isOffU=isOfficeMealUser(u);
       const appRate=isOffU?(pdfOfRate||pm):pm;
       const mealBill=myMeals*appRate;
-      const {othersShare,cookBillShare}=isOffU?{othersShare:0,cookBillShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
-      const payable=mealBill+othersShare+cookBillShare;
+      const {othersShare,cookBillShare,cookFoodShare}=isOffU?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+      const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
       const bal=u.balance||0;
       const net=bal-payable;
       const bg=ri%2===0?'#f4f7f5':'#fff';
@@ -3471,8 +3480,8 @@ function showAllMembersBill(){
         const appliedRate=isOff?(ofRateInner||pm):pm;
         const myMeals=messMonthMeals(u.u,mmKey);
         const mealBill=myMeals*appliedRate;
-        const {othersShare,cookBillShare}=isOff?{othersShare:0,cookBillShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
-        const payable=mealBill+othersShare+cookBillShare;
+        const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+        const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
         messBalance+=(u.balance||0)-payable;
       });
       const balColor=messBalance>=0?'#4ade80':'#f87171';
