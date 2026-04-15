@@ -1830,7 +1830,7 @@ function refreshHome(){
   // Date display
   const days=['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
   const vd = new Date(viewDate+'T00:00:00');
-  document.getElementById('td-date').textContent='তারিখ: '+viewDate.split('-').reverse().join('-');
+  document.getElementById('td-date').textContent='তারিখ: '+fmtDate(viewDate);
   document.getElementById('td-day').textContent=days[vd.getDay()];
 
   // Nav label
@@ -2023,9 +2023,18 @@ function shiftDate(delta){
   loadMealDate();
 }
 function toISODate(d){ return d.toISOString().split('T')[0]; }
+function fmtDate(isoStr){
+  // Converts "YYYY-MM-DD" → "DD-Mon-YYYY" e.g. "16-Apr-2026"
+  if(!isoStr) return '';
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts=isoStr.split('-');
+  if(parts.length!==3) return isoStr;
+  const y=parts[0], m=parseInt(parts[1],10)-1, d=parts[2];
+  return d+'-'+(months[m]||parts[1])+'-'+y;
+}
 function loadMealDate(){
   mealDate=document.getElementById('meal-date').value; if(!mealDate) return;
-  document.getElementById('meal-sub').textContent=mealDate;
+  document.getElementById('meal-sub').textContent=fmtDate(mealDate);
   const todStr=tod(), hour=getBSTHour();
   const tmr=nextDay(todStr);
   // Lock rules: past dates always locked for non-admin. Tomorrow after 11pm locked.
@@ -3620,7 +3629,7 @@ function closeNoticePopup(){
 // ═══════════════════════════════════════════════
 function V(id){ return document.getElementById(id)?.value?.trim()||''; }
 function isAdmin(){ return CU&&isManagerOrCtrl(CU); }
-function fmtDate(dt){
+function fmtDateBN(dt){
   const days=['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
   const months=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   return `${days[dt.getDay()]}, ${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
@@ -3800,10 +3809,10 @@ function initOfficeMealScreen(){
   const mmKey = messMonthKey();
   const el = document.getElementById('ofms-month');
   if(el) el.value = mmKey;
-  if(!ofmsDate) ofmsDate = tod();
+  if(!ofmsDate) ofmsDate = nextDay(tod());
   const dateEl = document.getElementById('ofms-date');
   if(dateEl) dateEl.value = ofmsDate;
-  document.getElementById('ofms-date-sub').textContent = ofmsDate;
+  document.getElementById('ofms-date-sub').textContent = fmtDate(ofmsDate);
   loadOfficeMealScreen();
 }
 
@@ -3811,7 +3820,7 @@ function ofmsShiftDate(delta){
   const d = new Date(ofmsDate); d.setDate(d.getDate()+delta);
   ofmsDate = toISODate(d);
   document.getElementById('ofms-date').value = ofmsDate;
-  document.getElementById('ofms-date-sub').textContent = ofmsDate;
+  document.getElementById('ofms-date-sub').textContent = fmtDate(ofmsDate);
   ['mepl','mpcl'].forEach(key => {
     const entry = document.getElementById('ofms-'+key+'-entry');
     if(entry && entry.style.display !== 'none') ofmsPrefill(key);
@@ -3825,7 +3834,7 @@ function ofmsShiftDate(delta){
 
 function ofmsLoadDate(){
   ofmsDate = document.getElementById('ofms-date').value || tod();
-  document.getElementById('ofms-date-sub').textContent = ofmsDate;
+  document.getElementById('ofms-date-sub').textContent = fmtDate(ofmsDate);
   ['mepl','mpcl'].forEach(key => {
     const entry = document.getElementById('ofms-'+key+'-entry');
     if(entry && entry.style.display !== 'none') ofmsPrefill(key);
@@ -3904,11 +3913,11 @@ function loadOfficeMealScreen(){
   const rate = getOfficeMealRate(mmKey);
   const rateEl = document.getElementById('ofms-rate');
   if(rateEl) rateEl.value = rate||'';
-  if(!ofmsDate) ofmsDate = tod();
+  if(!ofmsDate) ofmsDate = nextDay(tod());
   const dateEl = document.getElementById('ofms-date');
   if(dateEl) dateEl.value = ofmsDate;
   const subEl = document.getElementById('ofms-date-sub');
-  if(subEl) subEl.textContent = ofmsDate;
+  if(subEl) subEl.textContent = fmtDate(ofmsDate);
   ['mepl','mpcl'].forEach(key=>{
     const u = getOrCreateOfficeUser(key);
     const meals = messMonthMeals(u.u, mmKey);
