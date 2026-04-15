@@ -2166,7 +2166,8 @@ function getNetMeals(mmKey){
   // অফিস মিল (MEPL/MPCL) বাদ দিতে হবে — আলাদা রেটে হিসাব হয়
   let officeMeals=0;
   DB.users.filter(u=>isOfficeMealUser(u)).forEach(u=>{ officeMeals+=messMonthMeals(u.u,mmKey); });
-  return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-cookMeals-officeMeals};
+  // বাবুর্চির মিল এখন নেট মিলে থাকবে — শুধু অফিস মিল বাদ
+  return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-officeMeals};
 }
 function calcMealRate(mmKey){
   const bazar=DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
@@ -2175,17 +2176,17 @@ function calcMealRate(mmKey){
   const cookBillsAll=(DB.cookBills||[]).filter(c=>dateInMessMonth(c.date,mmKey));
   const cookBillsTotal=cookBillsAll.reduce((s,c)=>s+c.amount,0);
 
-  // মিলরেটে শুধু বাজার + অন্যান্য — বাবুর্চি বিল আলাদা
+  // মিলরেট = বাজার ÷ (নেট মিল + বাবুর্চির মিল) — বাবুর্চি বিল আলাদা শেয়ার
   const rateBase=bazar+others;
-  const total=bazar+others+cookBillsTotal; // সর্বমোট (display এর জন্য)
+  const total=bazar+others+cookBillsTotal;
 
-  const {totalMeals, cookMeals, netMeals}=getNetMeals(mmKey);
+  const {totalMeals, cookMeals, officeMeals, netMeals}=getNetMeals(mmKey);
+  // netMeals এখন বাবুর্চির মিলসহ (অফিস মিল বাদে)
 
-  // মিলরেট = (বাজার + অন্যান্য) / নেট মিল
   const pm = DB.mealRates[mmKey] || (netMeals>0 ? rateBase/netMeals : 0);
 
   return {bazar, others, othersAll, cookBillsTotal, cookBillsAll,
-          total, rateBase, totalMeals, cookMeals, netMeals, pm};
+          total, rateBase, totalMeals, cookMeals, officeMeals, netMeals, pm};
 }
 
 // Calculate a single member's share of others + cookBills
@@ -3452,11 +3453,14 @@ function showAllMembersBill(){
         <div style="font-size:11px;opacity:.75">মোট খরচ</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.15);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.15);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:10px">
       <div><div style="opacity:.7">বাজার</div><div style="font-weight:700;margin-top:1px">৳${bazar.toLocaleString()}</div></div>
       <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">অন্যান্য</div><div style="font-weight:700;margin-top:1px">৳${others.toLocaleString()}</div></div>
       <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চি বিল</div><div style="font-weight:700;margin-top:1px">৳${cookBillsTotal.toLocaleString()}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">নেট মিল</div><div style="font-weight:700;margin-top:1px">${parseFloat(netMeals.toFixed(2))}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(0,0,0,.1);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:4px">
+      <div><div style="opacity:.7">নেট মিল (সবার)</div><div style="font-weight:700;margin-top:1px">${parseFloat(netMeals.toFixed(2))}</div></div>
+      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চির মিল</div><div style="font-weight:700;margin-top:1px;color:#fcd34d">${parseFloat(cookMeals.toFixed(2))}</div></div>
     </div>
     ${(()=>{
       // মেস ফান্ড = সবার (জমা - বকেয়া বিল) এর সমষ্টি
@@ -3522,6 +3526,25 @@ function showAllMembersBill(){
         <td style="text-align:right;padding:7px 6px;font-weight:700;color:${netColor};white-space:nowrap">${net>=0?'+':'−'}৳${fmtTk(Math.abs(net))}</td>
       </tr>`;
     });
+    // বাবুর্চির সারি — আলাদা বিভাজক সহ
+    const cookUsers=DB.users.filter(u=>u.type==='cook');
+    if(cookUsers.length){
+      html+=`<tr style="background:rgba(0,0,0,.05)">
+        <td colspan="7" style="padding:5px 8px;font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.5px;border-top:2px solid var(--primary)">👨‍🍳 বাবুর্চি (মিল রেটে অন্তর্ভুক্ত, বিল আলাদা)</td>
+      </tr>`;
+      cookUsers.forEach((u,ri)=>{
+        const myMeals=messMonthMeals(u.u,mmKey);
+        const bg=ri%2===0?'var(--bg)':'var(--card)';
+        html+=`<tr style="background:${bg};border-top:1px solid var(--border);opacity:.85">
+          <td style="padding:7px 8px;position:sticky;left:0;background:${bg};z-index:1;min-width:90px">
+            <div style="font-weight:600;font-size:11px;white-space:nowrap">${u.name}</div>
+            <div style="font-size:9px;color:var(--text-light);white-space:nowrap">বাবুর্চি${u.room?' · R'+u.room:''}</div>
+          </td>
+          <td style="text-align:right;padding:7px 6px;color:#f59e0b;font-weight:600;white-space:nowrap">${parseFloat(myMeals.toFixed(2))}</td>
+          <td style="text-align:right;padding:7px 6px;font-size:10px;color:var(--text-light);white-space:nowrap" colspan="5">মিল রেটে অন্তর্ভুক্ত</td>
+        </tr>`;
+      });
+    }
     html+=`</table></div>`;
   }
   content.innerHTML = safeHTML(html);
