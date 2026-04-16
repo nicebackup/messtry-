@@ -998,7 +998,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     </div>
     <div class="card"><div class="sec-title">📊 রিপোর্ট</div><div id="rpt-rows"><p class="muted tc">মাস নির্বাচন করুন</p></div></div>
     <button class="btn btn-primary" onclick="makePDF('report')">📄 মাসিক রিপোর্ট PDF</button>
-    <button class="btn btn-outline" onclick="makePDF('daily')">📄 আজকের রিপোর্ট PDF</button>
   </div>
 </div>
 
@@ -1350,8 +1349,8 @@ const LS_USER = 'mq7u';
 function safeHTML(html){
   if(typeof DOMPurify !== 'undefined'){
     return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em','button','input','a','select','option'],
-      ALLOWED_ATTR:['style','class','colspan','rowspan','type','value','data-id','data-uname','data-action','disabled','placeholder','readonly']
+      ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em','button','input','a','select','option','label'],
+      ALLOWED_ATTR:['id','style','class','colspan','rowspan','type','value','data-id','data-uname','data-action','disabled','placeholder','readonly','for','selected','checked']
     });
   }
   return html; // fallback if CDN fails
@@ -3445,7 +3444,7 @@ function makePDF(type){
 // ═══════════════════════════════════════════════
 function showAllMembersBill(){
   const mmKey=messMonthKey();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost}=calcMealRate(mmKey);
   const modal=document.getElementById('all-members-bill-modal');
   const content=document.getElementById('all-members-bill-content');
 
