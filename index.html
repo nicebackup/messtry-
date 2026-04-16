@@ -2178,7 +2178,8 @@ function calcMealRate(mmKey){
 
   // মিল রেট = বাজার ÷ নেট মিল (বাবুর্চির মিল বাদ, অফিস মিল বাদ)
   // বাবুর্চির খাবার খরচ = cookMeals × pm → সদস্যরা মাথাপিছু সমান ভাগে দেবে
-  const rateBase=bazar+others;
+  // others মিল রেটে ঢোকে না — আলাদাভাবে ভাগ হয়
+  const rateBase=bazar;
   const total=bazar+others+cookBillsTotal;
 
   const {totalMeals, cookMeals, officeMeals, netMeals}=getNetMeals(mmKey);
