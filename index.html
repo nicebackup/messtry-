@@ -3472,7 +3472,8 @@ function showAllMembersBill(){
       <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চির মিল</div><div style="font-weight:700;margin-top:1px;color:#fcd34d">${parseFloat(cookMeals.toFixed(2))}</div></div>
     </div>
     ${(()=>{
-      // মেস ফান্ড = সবার (জমা - বকেয়া বিল) এর সমষ্টি
+      // মেস ফান্ড = শুধু যাদের net positive, তাদের জমার সমষ্টি
+      // (manager এর কাছে যা আছে — বাজারে ব্যবহার করা যাবে)
       const ofRateInner=getOfficeMealRate(mmKey);
       let messBalance=0;
       DB.users.filter(u=>u.type!=='cook').forEach(u=>{
@@ -3482,11 +3483,12 @@ function showAllMembersBill(){
         const mealBill=myMeals*appliedRate;
         const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
         const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
-        messBalance+=(u.balance||0)-payable;
+        const net=(u.balance||0)-payable;
+        if(net>0) messBalance+=net; // শুধু জমা আছে যাদের
       });
-      const balColor=messBalance>=0?'#4ade80':'#f87171';
-      const balSign=messBalance>=0?'+':'−';
-      const balLabel=messBalance>=0?'🟢 মেস ফান্ড (জমা)':'🔴 মেস ফান্ড (ঘাটতি)';
+      const balColor='#4ade80';
+      const balSign='+';
+      const balLabel='🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)';
       return `<div style="margin-top:8px;background:rgba(0,0,0,.25);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:11px;opacity:.85">${balLabel}</div>
         <div style="font-size:19px;font-weight:700;color:${balColor}">${balSign}৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
@@ -3515,8 +3517,8 @@ function showAllMembersBill(){
       const isOff=isOfficeMealUser(u);
       const appliedRate=isOff?(ofRate||pm):pm;
       const mealBill=myMeals*appliedRate;
-      const {othersShare,cookBillShare}=isOff?{othersShare:0,cookBillShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll);
-      const payable=mealBill+othersShare+cookBillShare;
+      const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+      const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
       const bal=u.balance||0;
       const net=bal-payable;
       const bg=ri%2===0?'var(--bg)':'var(--card)';
