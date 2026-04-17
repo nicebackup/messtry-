@@ -1043,25 +1043,67 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-title">আমার প্রোফাইল</div>
   </div>
   <div class="content">
-    <div class="card">
+    <!-- Avatar & Name Display -->
+    <div class="card" style="text-align:center;padding-bottom:18px">
       <div class="prof-av" id="pf-av">?</div>
       <div class="prof-name" id="pf-name">-</div>
       <div class="prof-role" id="pf-role">-</div>
-      <div class="divider"></div>
-      <div class="prof-row"><span style="color:var(--text-light)">📱 Mobile</span><b id="pf-mob">-</b></div>
-      <div class="prof-row"><span style="color:var(--text-light)">🪪 Job ID</span><b id="pf-job">-</b></div>
-      <div class="prof-row"><span style="color:var(--text-light)">🏠 Room</span><b id="pf-room">-</b></div>
-      <div class="prof-row"><span style="color:var(--text-light)">🏡 ধরন</span><b id="pf-type">-</b></div>
-      <div class="prof-row"><span style="color:var(--text-light)">🍽️ এই মাসের মিল</span><b id="pf-meals">-</b></div>
-      <div class="prof-row"><span style="color:var(--text-light)">💰 মিল রেট</span><b id="pf-bill">-</b></div>
     </div>
-    <!-- Edit own profile -->
+
+    <!-- Balance Cards -->
     <div class="card">
-      <div class="sec-title">✏️ তথ্য পরিবর্তন</div>
-      <div class="form-group"><label class="form-label">নাম</label><input type="text" id="pf-edit-name" class="form-input"></div>
-      <div class="form-group"><label class="form-label">নতুন Password (খালি = পরিবর্তন নেই)</label><input type="password" id="pf-edit-pass" class="form-input" placeholder="নতুন পাসওয়ার্ড"></div>
-      <button class="btn btn-outline" style="margin-bottom:8px" onclick="saveProfile()">💾 সংরক্ষণ করুন</button>
+      <div class="sec-title">💰 ব্যালেন্স সারসংক্ষেপ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">📥 পূর্ববর্তী ব্যালেন্স</div>
+          <div style="font-size:18px;font-weight:700;color:var(--primary)" id="pf-prev-bal">৳ ০</div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:2px">Deposit Balance</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">📊 বর্তমান ব্যালেন্স</div>
+          <div style="font-size:18px;font-weight:700" id="pf-curr-bal" style="color:var(--success)">৳ ০</div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:2px">Current Balance</div>
+        </div>
+      </div>
+      <div id="pf-total-bal-card" class="balance-card positive" style="margin-bottom:0">
+        <div>
+          <div class="balance-label">মোট ব্যালেন্স (পূর্ববর্তী + বর্তমান)</div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:2px">Previous + Current = Total</div>
+        </div>
+        <div class="balance-amount" id="pf-total-bal">৳ ০</div>
+      </div>
     </div>
+
+    <!-- Edit Profile Form -->
+    <div class="card">
+      <div class="sec-title">✏️ প্রোফাইল আপডেট করুন</div>
+      <div class="form-group">
+        <label class="form-label">👤 নাম</label>
+        <input type="text" id="pf-edit-name" class="form-input" placeholder="আপনার নাম লিখুন">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🏠 রুম নম্বর</label>
+        <input type="text" id="pf-edit-room" class="form-input" placeholder="রুম নম্বর">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📱 মোবাইল নম্বর</label>
+        <input type="tel" id="pf-edit-mob" class="form-input" placeholder="01XXXXXXXXX">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📧 ইমেইল</label>
+        <input type="email" id="pf-edit-email" class="form-input" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🏡 ঠিকানা</label>
+        <input type="text" id="pf-edit-address" class="form-input" placeholder="আপনার ঠিকানা লিখুন">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔑 নতুন পাসওয়ার্ড <span style="color:var(--text-light);font-weight:400">(খালি = পরিবর্তন নেই)</span></label>
+        <input type="password" id="pf-edit-pass" class="form-input" placeholder="নতুন পাসওয়ার্ড (ঐচ্ছিক)">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveProfile()">✅ আপডেট করুন</button>
+    </div>
+
     <!-- TX History -->
     <div class="card">
       <div class="sec-title">💵 আমার লেনদেন ইতিহাস</div>
@@ -1436,7 +1478,7 @@ function migrateDB(){
     if(typeof DB.managers[k]==='string') DB.managers[k]=[DB.managers[k]];
   });
   // Ensure balance on all users, email field defaults
-  DB.users.forEach(u=>{ if(u.balance===undefined) u.balance=0; if(!u.type) u.type='inside'; if(!u.email) u.email=''; });
+  DB.users.forEach(u=>{ if(u.balance===undefined) u.balance=0; if(!u.type) u.type='inside'; if(!u.email) u.email=''; if(!u.address) u.address=''; });
   // Migrate meals
   Object.keys(DB.meals).forEach(k=>{
     const m=DB.meals[k];
@@ -1726,7 +1768,7 @@ function doRegister(){
   if(btn){ btn.disabled=true; btn.textContent='রেজিস্ট্রেশন হচ্ছে...'; }
   auth.createUserWithEmailAndPassword(email, pass)
     .then(()=>{
-      DB.users.push({u:uname,p:pass,name,mob,email,job,room,type,role:'member',joined:tod(),balance:0});
+      DB.users.push({u:uname,p:pass,name,mob,email,job,room,type,role:'member',joined:tod(),balance:0,address:''});
       saveDB();
       ok.textContent='✅ রেজিস্ট্রেশন সফল! Login করুন।';
       ok.className='alert alert-success show';
@@ -1740,7 +1782,7 @@ function doRegister(){
         if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
         return;
       }
-      DB.users.push({u:uname,p:pass,name,mob,email,job,room,type,role:'member',joined:tod(),balance:0});
+      DB.users.push({u:uname,p:pass,name,mob,email,job,room,type,role:'member',joined:tod(),balance:0,address:''});
       saveDB();
       ok.textContent='✅ রেজিস্ট্রেশন সফল! (Email reset সীমিত হতে পারে)';
       ok.className='alert alert-success show';
@@ -2822,20 +2864,53 @@ function toggleBlockMember(){
 function loadProfile(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
+
+  // Avatar & display
   document.getElementById('pf-av').textContent=cu.name[0];
   document.getElementById('pf-name').textContent=cu.name;
   document.getElementById('pf-role').textContent=roleLabel(cu.role,cu);
-  document.getElementById('pf-mob').textContent=cu.mob||'-';
-  document.getElementById('pf-job').textContent=cu.job||'-';
-  document.getElementById('pf-room').textContent=cu.room||'-';
-  document.getElementById('pf-type').textContent=cu.type==='inside'?'ইনসাইড (মেসে থাকেন)':cu.type==='cook'?'বাবুর্চি':'আউটসাইড (বাইরে থাকেন)';
-  document.getElementById('pf-edit-name').value=cu.name;
+
+  // Fill editable fields
+  document.getElementById('pf-edit-name').value=cu.name||'';
+  document.getElementById('pf-edit-room').value=cu.room||'';
+  document.getElementById('pf-edit-mob').value=cu.mob||'';
+  document.getElementById('pf-edit-email').value=cu.email||'';
+  document.getElementById('pf-edit-address').value=cu.address||'';
+
+  // Balance calculation
+  // পূর্ববর্তী ব্যালেন্স = deposit balance (cu.balance)
+  const prevBal = cu.balance||0;
+  // বর্তমান ব্যালেন্স = এই মাসের জমা - এই মাসের মিল বিল
   const mmKey=messMonthKey();
-  const my=messMonthMeals(cu.u,mmKey);
+  const myMeals=messMonthMeals(cu.u,mmKey);
   const {pm}=calcMealRate(mmKey);
-  document.getElementById('pf-meals').textContent=my.toFixed(2)+' মিল';
-  document.getElementById('pf-bill').textContent='৳ '+pm.toFixed(2)+' / মিল';
-  // TX history — use esc() on user-generated fields
+  const mealBill=myMeals*pm;
+  const monthDeposits=DB.transactions
+    .filter(t=>t.uname===cu.u && t.type==='deposit' && t.date && t.date.slice(0,7)===mmKey.slice(0,7))
+    .reduce((s,t)=>s+t.amount,0);
+  const monthWithdraws=DB.transactions
+    .filter(t=>t.uname===cu.u && t.type==='withdraw' && t.date && t.date.slice(0,7)===mmKey.slice(0,7))
+    .reduce((s,t)=>s+t.amount,0);
+  const currBal = monthDeposits - monthWithdraws - mealBill;
+  const totalBal = prevBal + currBal;
+
+  // Display prev balance
+  const prevEl=document.getElementById('pf-prev-bal');
+  prevEl.textContent='৳ '+Math.abs(prevBal).toLocaleString()+(prevBal<0?' (ঋণ)':'');
+  prevEl.style.color=prevBal>=0?'var(--primary)':'var(--danger)';
+
+  // Display current balance
+  const currEl=document.getElementById('pf-curr-bal');
+  currEl.textContent='৳ '+Math.abs(currBal).toLocaleString()+(currBal<0?' (ঋণ)':'');
+  currEl.style.color=currBal>=0?'var(--success)':'var(--danger)';
+
+  // Display total balance
+  const totalCard=document.getElementById('pf-total-bal-card');
+  const totalEl=document.getElementById('pf-total-bal');
+  totalEl.textContent='৳ '+Math.abs(totalBal).toLocaleString()+(totalBal<0?' (ঋণ)':'');
+  totalCard.className='balance-card '+(totalBal>=0?'positive':'negative');
+
+  // TX history
   const txs=DB.transactions.filter(t=>t.uname===cu.u).slice().reverse();
   document.getElementById('pf-tx-list').innerHTML = safeHTML(
     txs.length
@@ -2845,12 +2920,21 @@ function loadProfile(){
 }
 function saveProfile(){
   const cu=DB.users.find(x=>x.u===CU.u); if(!cu) return;
-  const newName=sanitizeInput(document.getElementById('pf-edit-name').value);
+  const newName=sanitizeInput(document.getElementById('pf-edit-name').value.trim());
+  const newRoom=sanitizeInput(document.getElementById('pf-edit-room').value.trim());
+  const newMob=sanitizeInput(document.getElementById('pf-edit-mob').value.trim());
+  const newEmail=sanitizeInput(document.getElementById('pf-edit-email').value.trim());
+  const newAddress=sanitizeInput(document.getElementById('pf-edit-address').value.trim());
   const newPass=document.getElementById('pf-edit-pass').value;
+
   if(newName){
     if(!validName(newName)){ toast('❌ নাম কমপক্ষে ২ অক্ষর হতে হবে!'); return; }
     cu.name=newName; CU.name=newName;
   }
+  if(newRoom) cu.room=newRoom;
+  if(newMob) cu.mob=newMob;
+  if(newEmail!==undefined) cu.email=newEmail;
+  if(newAddress!==undefined) cu.address=newAddress;
   if(newPass){
     if(!validPass(newPass)){ toast('❌ পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার!'); return; }
     cu.p=newPass;
