@@ -895,41 +895,71 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 <!-- ═══════════ DEPOSIT / WITHDRAW ═══════════ -->
 <div id="sc-deposit" class="screen">
   <div class="app-header">
-    <button class="header-back" onclick="goHome()">← Home</button>
+    <button class="header-back" onclick="goHome()">&#8592; Home</button>
     <div class="header-title">জমা / উত্তোলন</div>
     <div class="header-sub">Deposit / Withdraw</div>
   </div>
   <div class="content pb-nav">
-    <div class="card">
-      <div class="sec-title">💵 টাকা জমা / ফেরত</div>
-      <div class="form-group" style="position:relative;">
-        <label class="form-label">সদস্য নির্বাচন (নাম / ID / মোবাইল দিয়ে খুঁজুন)</label>
-        <input type="text" id="dep-mem-search" class="form-input" placeholder="🔍 নাম, Job ID বা মোবাইল নম্বর লিখুন..." autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
-        <input type="hidden" id="dep-mem" value="">
-        <div id="dep-mem-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(26,107,60,0.15);"></div>
-        <div id="dep-mem-selected" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);align-items:center;justify-content:space-between;">
-          <span id="dep-mem-selected-name">—</span>
-          <button onclick="clearDepMem()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;">✕</button>
+
+    <!-- নিজের ব্যালেন্স সারসংক্ষেপ (সকল সদস্য দেখবে) -->
+    <div id="dep-my-bal-section">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="card" style="text-align:center;padding:14px 10px">
+          <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">পূর্ববর্তী ব্যালেন্স</div>
+          <div id="dep-prev-bal" style="font-size:20px;font-weight:700;color:var(--primary)">&#2547; ০</div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:2px">আগের চক্রের অবশিষ্ট</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px 10px">
+          <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">Deposit ব্যালেন্স</div>
+          <div id="dep-dep-bal" style="font-size:20px;font-weight:700;color:var(--info)">&#2547; ০</div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:2px">এই চক্রে জমা</div>
         </div>
       </div>
-      <div id="dep-bal-info" class="alert alert-info" style="display:none"></div>
-      <div class="form-group">
-        <label class="form-label">ধরন</label>
-        <div style="display:flex;gap:10px">
-          <button class="btn btn-primary btn-sm" id="dep-type-btn-dep" onclick="setDepType('deposit')" style="flex:1">📥 জমা (Deposit)</button>
-          <button class="btn btn-outline btn-sm" id="dep-type-btn-with" onclick="setDepType('withdraw')" style="flex:1">📤 উত্তোলন (Withdraw)</button>
-        </div>
-        <input type="hidden" id="dep-type" value="deposit">
+      <div class="card" style="text-align:center;padding:14px;margin-bottom:10px;background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-radius:14px">
+        <div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:4px">বর্তমান মোট ব্যালেন্স</div>
+        <div id="dep-total-bal" style="font-size:28px;font-weight:700;color:#fff">&#2547; ০</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:3px">পূর্ববর্তী + Deposit</div>
       </div>
-      <div class="form-group"><label class="form-label">পরিমাণ ৳</label><input type="number" id="dep-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1"></div>
-      <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="dep-date" class="form-input"></div>
-      <div class="form-group"><label class="form-label">নোট (ঐচ্ছিক)</label><input type="text" id="dep-note" class="form-input" placeholder="মাসিক জমা, ফেরত..."></div>
-      <button class="btn btn-primary" onclick="saveDeposit()">✅ সম্পন্ন করুন</button>
+      <div class="card">
+        <div class="sec-title">&#128197; আমার লেনদেন ইতিহাস</div>
+        <div id="dep-my-history"><p class="muted tc">কোনো লেনদেন নেই</p></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="sec-title">📋 সাম্প্রতিক লেনদেন</div>
-      <div id="dep-history"><p class="muted tc">কোনো লেনদেন নেই</p></div>
+
+    <!-- ম্যানেজার / কন্ট্রোলার অংশ -->
+    <div id="dep-mgr-section" style="display:none">
+      <div class="card">
+        <div class="sec-title">&#128181; টাকা জমা / ফেরত</div>
+        <div class="form-group" style="position:relative;">
+          <label class="form-label">সদস্য নির্বাচন (নাম / ID / মোবাইল দিয়ে খুঁজুন)</label>
+          <input type="text" id="dep-mem-search" class="form-input" placeholder="&#128269; নাম, Job ID বা মোবাইল নম্বর লিখুন..." autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
+          <input type="hidden" id="dep-mem" value="">
+          <div id="dep-mem-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(26,107,60,0.15);"></div>
+          <div id="dep-mem-selected" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);align-items:center;justify-content:space-between;">
+            <span id="dep-mem-selected-name">&#8212;</span>
+            <button onclick="clearDepMem()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;">&#10005;</button>
+          </div>
+        </div>
+        <div id="dep-bal-info" class="alert alert-info" style="display:none"></div>
+        <div class="form-group">
+          <label class="form-label">ধরন</label>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-primary btn-sm" id="dep-type-btn-dep" onclick="setDepType('deposit')" style="flex:1">&#128229; জমা (Deposit)</button>
+            <button class="btn btn-outline btn-sm" id="dep-type-btn-with" onclick="setDepType('withdraw')" style="flex:1">&#128228; উত্তোলন (Withdraw)</button>
+          </div>
+          <input type="hidden" id="dep-type" value="deposit">
+        </div>
+        <div class="form-group"><label class="form-label">পরিমাণ &#2547;</label><input type="number" id="dep-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1"></div>
+        <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="dep-date" class="form-input"></div>
+        <div class="form-group"><label class="form-label">নোট (ঐচ্ছিক)</label><input type="text" id="dep-note" class="form-input" placeholder="মাসিক জমা, ফেরত..."></div>
+        <button class="btn btn-primary" onclick="saveDeposit()">&#9989; সম্পন্ন করুন</button>
+      </div>
+      <div class="card">
+        <div class="sec-title">&#128203; সাম্প্রতিক লেনদেন (সব সদস্য)</div>
+        <div id="dep-history"><p class="muted tc">কোনো লেনদেন নেই</p></div>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -1537,7 +1567,7 @@ function loadDB(){
       else if(activeId==='meal') loadMealDate();
       else if(activeId==='bazar') renderBazar();
       else if(activeId==='others'){ renderOthers(); renderCookBills(); }
-      else if(activeId==='deposit'){ renderDepHistory(); showMemberBalance(); }
+      else if(activeId==='deposit'){ renderDepMyBalance(); renderDepMyHistory(); if(isManagerOrCtrl()){ renderDepHistory(); showMemberBalance(); } }
       else if(activeId==='bill') loadBill();
       else if(activeId==='report') loadReport();
       else if(activeId==='members') loadMembers();
@@ -1917,7 +1947,7 @@ function refreshHome(){
   document.getElementById('menu-others').style.display=mgr?'block':'none';
   const omEl=document.getElementById('menu-officemeal');
   if(omEl) omEl.style.display=mgr?'block':'none';
-  document.getElementById('menu-deposit').style.display=mgr?'block':'none';
+  document.getElementById('menu-deposit').style.display='block';
   document.getElementById('admin-btn').style.display=isController()?'block':'none';
 
   // Auto-reset to today every time goHome is called fresh
@@ -2514,12 +2544,62 @@ function editCookBill(id){
 // DEPOSIT / WITHDRAW
 // ═══════════════════════════════════════════════
 function initDeposit(){
-  if(!document.getElementById('dep-date').value) document.getElementById('dep-date').value=tod();
-  // Reset search UI
-  clearDepMem();
-  document.getElementById('dep-mem-search').value='';
-  document.getElementById('dep-mem-dropdown').style.display='none';
-  renderDepHistory();
+  renderDepMyBalance();
+  renderDepMyHistory();
+  const mgr=isManagerOrCtrl();
+  document.getElementById('dep-mgr-section').style.display=mgr?'block':'none';
+  if(mgr){
+    if(!document.getElementById('dep-date').value) document.getElementById('dep-date').value=tod();
+    clearDepMem();
+    document.getElementById('dep-mem-search').value='';
+    document.getElementById('dep-mem-dropdown').style.display='none';
+    renderDepHistory();
+  }
+}
+function renderDepMyBalance(){
+  if(!CU) return;
+  const cu=DB.users.find(x=>x.u===CU.u)||CU;
+  const prevBal=cu.prevBalance||0;
+  const depBal=cu.balance||0;
+  const totalBal=prevBal+depBal;
+  const fmt=v=>{const r=Math.round(v*100)/100;return(r<0?'\u2212\u09F3':'\u09F3')+Math.abs(r).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  const col=v=>v>=0?'var(--primary)':'var(--danger)';
+  const infoCol=v=>v>=0?'var(--info)':'var(--danger)';
+  const pEl=document.getElementById('dep-prev-bal');
+  const dEl=document.getElementById('dep-dep-bal');
+  const tEl=document.getElementById('dep-total-bal');
+  if(pEl){pEl.textContent=fmt(prevBal);pEl.style.color=col(prevBal);}
+  if(dEl){dEl.textContent=fmt(depBal);dEl.style.color=infoCol(depBal);}
+  if(tEl){tEl.textContent=fmt(totalBal);}
+}
+function renderDepMyHistory(){
+  if(!CU) return;
+  const el=document.getElementById('dep-my-history'); if(!el) return;
+  const cu=DB.users.find(x=>x.u===CU.u)||CU;
+  const prevBal=cu.prevBalance||0;
+  const txsAsc=DB.transactions.filter(t=>t.uname===CU.u).slice().sort((a,b)=>a.id-b.id);
+  let running=prevBal;
+  const balMap={};
+  txsAsc.forEach(tx=>{running+=(tx.type==='deposit'?tx.amount:-tx.amount);balMap[tx.id]=running;});
+  const txs=txsAsc.slice().reverse();
+  const fmtAmt=v=>(v<0?'\u2212':'')+'\u09F3'+Math.abs(v).toLocaleString();
+  let html='';
+  html+=`<div style="background:var(--success-light);border:1px solid #c8e6c9;border-radius:8px;padding:9px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--primary)">\u{1F4C5} \u09AA\u09C2\u09B0\u09CD\u09AC\u09AC\u09B0\u09CD\u09A4\u09C0 \u09AC\u09CD\u09AF\u09BE\u09B2\u09C7\u09A8\u09CD\u09B8</div>
+      <div style="font-size:10px;color:var(--text-light)">\u0986\u0997\u09C7\u09B0 \u099A\u0995\u09CD\u09B0\u09C7\u09B0 \u0985\u09AC\u09B6\u09BF\u09B7\u09CD\u099F</div>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:${prevBal>=0?'var(--primary)':'var(--danger)'}">${fmtAmt(prevBal)}</div>
+  </div>`;
+  if(!txs.length){
+    html+='<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
+  } else {
+    txs.forEach(tx=>{
+      const bal=balMap[tx.id];
+      html+=`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'\u{1F4E5}':'\u{1F4E4}'}</div><div class="tx-info" style="flex:1"><div class="tx-name">${tx.type==='deposit'?'\u099C\u09AE\u09BE':'\u0989\u09A4\u09CD\u09A4\u09CB\u09B2\u09A8'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' \u00B7 '+esc(tx.note):''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'\u2212'}\u09F3${tx.amount.toLocaleString()}</div><div style="font-size:10px;color:${bal>=0?'var(--success)':'var(--danger)'};font-weight:600">\u09AC\u09CD\u09AF\u09BE\u09B2\u09C7\u09A8\u09CD\u09B8: \u09F3${Math.abs(bal).toLocaleString()}</div></div></div>`;
+    });
+  }
+  el.innerHTML=safeHTML(html)||'<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
 }
 function depMemSearch(){
   const q=(document.getElementById('dep-mem-search').value||'').trim().toLowerCase();
@@ -2605,7 +2685,7 @@ function saveDeposit(){
   const u=DB.users.find(x=>x.u===uname); if(!u){ toast('❌ সদস্য পাওয়া যায়নি!'); return; }
   DB.transactions.push({id:Date.now(),uname,type,amount,date,note,by:CU.u});
   u.balance = (u.balance||0) + (type==='deposit'?amount:-amount);
-  saveDB(); renderDepHistory(); showMemberBalance();
+  saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
   document.getElementById('dep-amt').value='';
   document.getElementById('dep-note').value='';
   toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(u.balance).toLocaleString()}`);
@@ -2630,7 +2710,7 @@ function renderDepHistory(){
       const u=DB.users.find(x=>x.u===tx.uname);
       if(u) u.balance=(u.balance||0)-(tx.type==='deposit'?tx.amount:-tx.amount);
       DB.transactions=DB.transactions.filter(x=>x.id!==id);
-      saveDB(); renderDepHistory(); showMemberBalance(); toast('✅ লেনদেন মুছে ফেলা হয়েছে!');
+      saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory(); toast('✅ লেনদেন মুছে ফেলা হয়েছে!');
     });
   };
 }
