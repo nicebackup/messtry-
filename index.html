@@ -1176,22 +1176,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="prof-role" id="pf-role">-</div>
     </div>
 
-    <!-- ── Balance Cards ── -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="card" style="text-align:center;padding:14px 10px">
-        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">পূর্ববর্তী ব্যালেন্স</div>
-        <div id="pf-prev-bal" style="font-size:20px;font-weight:700;color:var(--primary)">৳ ০</div>
-      </div>
-      <div class="card" style="text-align:center;padding:14px 10px">
-        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">Deposit ব্যালেন্স</div>
-        <div id="pf-dep-bal" style="font-size:20px;font-weight:700;color:var(--info)">৳ ০</div>
-      </div>
-    </div>
-    <div class="card" style="text-align:center;padding:14px;margin-bottom:4px;background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-radius:14px">
-      <div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:4px">বর্তমান মোট ব্যালেন্স</div>
-      <div id="pf-total-bal" style="font-size:28px;font-weight:700;color:#fff">৳ ০</div>
-      <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:3px">পূর্ববর্তী + Deposit</div>
-    </div>
+
 
     <!-- ── Profile Info (view mode) ── -->
     <div class="card" id="pf-view-card">
@@ -1200,6 +1185,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <button onclick="pfEditMode(true)" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✏️ Edit</button>
       </div>
       <div class="prof-row"><span style="color:var(--text-light)">📛 নাম</span><b id="pf-view-name">-</b></div>
+      <div class="prof-row"><span style="color:var(--text-light)">🪪 ID</span><b id="pf-view-id" style="font-family:monospace;letter-spacing:0.5px">-</b></div>
       <div class="prof-row"><span style="color:var(--text-light)">📱 মোবাইল</span><b id="pf-view-mob">-</b></div>
       <div class="prof-row"><span style="color:var(--text-light)">🏠 রুম নম্বর</span><b id="pf-view-room">-</b></div>
       <div class="prof-row"><span style="color:var(--text-light)">📧 ইমেইল</span><span id="pf-view-email" style="font-size:13px">-</span></div>
@@ -1215,6 +1201,10 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="form-group">
         <label class="form-label">নাম</label>
         <input type="text" id="pf-edit-name" class="form-input" placeholder="আপনার নাম">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID <span style="font-size:11px;color:var(--text-light)">(পরিবর্তনযোগ্য)</span></label>
+        <input type="text" id="pf-edit-id" class="form-input" placeholder="ইউজার ID" style="font-family:monospace;letter-spacing:0.5px">
       </div>
       <div class="form-group">
         <label class="form-label">মোবাইল নম্বর</label>
@@ -3052,21 +3042,9 @@ function loadProfile(){
   document.getElementById('pf-name').textContent=cu.name;
   document.getElementById('pf-role').textContent=roleLabel(cu.role,cu);
 
-  // Balance cards
-  const prevBal = cu.prevBalance||0;
-  const depBal  = cu.balance||0;
-  const totalBal= prevBal + depBal;
-  const fmtBal  = v=>{ const r=Math.round(v*100)/100; const s=r<0?'−৳':'৳'; return s+Math.abs(r).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-  const balColor= v=>v>=0?'var(--primary)':'var(--danger)';
-  const infoColor= v=>v>=0?'var(--info)':'var(--danger)';
-  document.getElementById('pf-prev-bal').textContent=fmtBal(prevBal);
-  document.getElementById('pf-prev-bal').style.color=balColor(prevBal);
-  document.getElementById('pf-dep-bal').textContent=fmtBal(depBal);
-  document.getElementById('pf-dep-bal').style.color=infoColor(depBal);
-  document.getElementById('pf-total-bal').textContent=fmtBal(totalBal);
-
   // View mode fields
   document.getElementById('pf-view-name').textContent=cu.name||'-';
+  document.getElementById('pf-view-id').textContent=cu.u||'-';
   document.getElementById('pf-view-mob').textContent=cu.mob||'-';
   document.getElementById('pf-view-room').textContent=cu.room||'-';
   // Email with verification badge
@@ -3079,6 +3057,7 @@ function loadProfile(){
 
   // Edit mode pre-fill
   document.getElementById('pf-edit-name').value=cu.name||'';
+  document.getElementById('pf-edit-id').value=cu.u||'';
   document.getElementById('pf-edit-mob').value=cu.mob||'';
   document.getElementById('pf-edit-room').value=cu.room||'';
   document.getElementById('pf-edit-email').value=cu.email||'';
@@ -3101,17 +3080,30 @@ function pfEditMode(on){
 function saveProfile(){
   const cu=DB.users.find(x=>x.u===CU.u); if(!cu) return;
   const newName=sanitizeInput(document.getElementById('pf-edit-name').value);
+  const newId=document.getElementById('pf-edit-id').value.trim().toLowerCase();
   const newMob=document.getElementById('pf-edit-mob').value.trim();
   const newRoom=sanitizeInput(document.getElementById('pf-edit-room').value);
   const newEmail=document.getElementById('pf-edit-email').value.trim().toLowerCase();
   const newAddr=sanitizeInput(document.getElementById('pf-edit-addr').value);
 
   if(!newName||newName.length<2){ toast('❌ নাম কমপক্ষে ২ অক্ষর হতে হবে!'); return; }
+  if(newId && newId.length<3){ toast('❌ ID কমপক্ষে ৩ অক্ষর হতে হবে!'); return; }
+  if(newId && newId !== cu.u && DB.users.find(x=>x.u===newId)){ toast('❌ এই ID ইতিমধ্যে ব্যবহৃত!'); return; }
   if(newMob && !validMobile(newMob)){ toast('❌ সঠিক মোবাইল নম্বর দিন! (01XXXXXXXXX)'); return; }
   if(newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){ toast('❌ সঠিক ইমেইল দিন!'); return; }
 
   // Check if email changed — reset verification
   if(newEmail && newEmail !== (cu.email||'')) cu.emailVerified=false;
+
+  // ID change — update all references
+  if(newId && newId !== cu.u){
+    const oldId=cu.u;
+    DB.transactions.forEach(t=>{ if(t.uname===oldId) t.uname=newId; });
+    DB.meals && Object.values(DB.meals).forEach(month=>{
+      if(month[oldId]){ month[newId]=month[oldId]; delete month[oldId]; }
+    });
+    cu.u=newId; CU.u=newId;
+  }
 
   cu.name=newName; CU.name=newName;
   if(newMob) cu.mob=newMob;
