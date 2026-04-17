@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="bn" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Midland Quarter - মেস ম্যানেজমেন্ট</title>
+    <meta name="theme-color" content="#0f4526">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Midland Quarter">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Bengali -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'bengali': ['"Hind Siliguri"', '"Noto Sans Bengali"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#0f4526',
+                        },
+                        secondary: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'bounce-slow': 'bounce 3s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .dark .glass-effect {
+            background: rgba(17, 24, 39, 0.95);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #0f4526 0%, #16a34a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .sidebar-link {
+            position: relative;
+            overflow: hidden;
+        }
+        .sidebar-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #0f4526;
+            transition: width 0.3s ease;
+        }
+        .sidebar-link:hover::after {
+            width: 100%;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #0f4526 0%, #15803d 100%);
+        }
+        @media (max-width: 768px) {
+            .mobile-bottom-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+            }
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0f4526;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #15803d;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300 font-bengali">
+    
+    <!-- Top Navigation -->
+    <nav class="glass-effect fixed top-0 left-0 right-0 z-40 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                        MQ
+                    </div>
+                    <div class="hidden sm:block">
+                        <h1 class="text-xl font-bold text-primary-900 dark:text-primary-400">Midland Quarter</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">মেস ম্যানেজমেন্ট সিস্টেম</p>
+                    </div>
+                </div>
+
+                <!-- Search Bar - Desktop -->
+                <div class="hidden md:flex flex-1 max-w-lg mx-8">
+                    <div class="relative w-full">
+                        <input type="text" placeholder="সদস্য খুঁজুন..." 
+                               class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center space-x-4">
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <button class="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <i class="fas fa-bell text-gray-600 dark:text-gray-300"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    </button>
+
+                    <!-- User Profile -->
+                    <div class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=0f4526&color=fff" alt="Admin" class="w-8 h-8 rounded-full">
+                        <span class="hidden sm:block text-sm font-medium">অ্যাডমিন</span>
+                        <i class="fas fa-chevron-down text-xs text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="pt-16 flex min-h-screen">
+        
+        <!-- Sidebar - Desktop -->
+        <aside class="hidden lg:block w-64 fixed left-0 top-16 bottom-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-30">
+            <div class="p-6">
+                <div class="stats-card rounded-2xl p-4 text-white mb-6 shadow-lg">
+                    <p class="text-sm opacity-90">মোট সদস্য</p>
+                    <h3 class="text-3xl font-bold">২৪</h3>
+                    <div class="flex items-center mt-2 text-sm">
+                        <i class="fas fa-arrow-up mr-1"></i>
+                        <span>২ নতুন এই মাসে</span>
+                    </div>
+                </div>
+
+                <nav class="space-y-2">
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-400 rounded-xl font-medium">
+                        <i class="fas fa-home w-5"></i>
+                        <span>ড্যাশবোর্ড</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                        <i class="fas fa-users w-5"></i>
+                        <span>সদস্য ব্যবস্থাপনা</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                        <i class="fas fa-utensils w-5"></i>
+                        <span>মিল ব্যবস্থাপনা</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                        <i class="fas fa-wallet w-5"></i>
+                        <span>বাজার খরচ</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                        <i class="fas fa-calculator w-5"></i>
+                        <span>হিসাব নিকাশ</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                        <i class="fas fa-chart-bar w-5"></i>
+                        <span>রিপোর্ট</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center space-x-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                        <i class="fas fa-cog w-5"></i>
+                        <span>সেটিংস</span>
+                    </a>
+                </nav>
+
+                <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <p class="text-xs text-gray-400 mb-3">দ্রুত লিংক</p>
+                    <div class="space-y-2">
+                        <button class="w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-plus mr-2"></i>নতুন সদস্য যোগ করুন
+                        </button>
+                        <button class="w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-file-export mr-2"></i>রিপোর্ট ডাউনলোড
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
+            
+            <!-- Welcome Section -->
+            <div class="mb-8 animate-fade-in">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
+                            স্বাগতম, <span class="gradient-text">অ্যাডমিন!</span>
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1">
+                            আজ <span id="currentDate" class="font-medium text-primary-600 dark:text-primary-400"></span>
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                            <i class="fas fa-filter mr-2"></i>ফিল্টার
+                        </button>
+                        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/30">
+                            <i class="fas fa-plus mr-2"></i>নতুন এন্ট্রি
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                <div class="card-hover bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-users text-blue-600 dark:text-blue-400 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">+২ জন</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white">২৪</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">মোট সদস্য</p>
+                </div>
+
+                <div class="card-hover bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-utensils text-orange-600 dark:text-orange-400 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-gray-500">এই মাসে</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white">৭২০</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">মোট মিল</p>
+                </div>
+
+                <div class="card-hover bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-wallet text-red-600 dark:text-red-400 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-red-600 bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded-full">-৫%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white">৳৪৫,০০০</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">মোট বাজার</p>
+                </div>
+
+                <div class="card-hover bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-piggy-bank text-green-600 dark:text-green-400 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">+১২%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white">৳৮,৫০০</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">জমা টাকা</p>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white">মাসিক মিল পরিসংখ্যান</h3>
+                        <select class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1 bg-white dark:bg-gray-700">
+                            <option>জানুয়ারি ২০২৪</option>
+                            <option>ফেব্রুয়ারি ২০২৪</option>
+                        </select>
+                    </div>
+                    <canvas id="mealChart" height="250"></canvas>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white">বাজার খরচ বিশ্লেষণ</h3>
+                        <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                            বিস্তারিত দেখুন <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                    <canvas id="expenseChart" height="250"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity & Members -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Recent Members -->
+                <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white">সাম্প্রতিক সদস্য</h3>
+                        <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium">সব দেখুন</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">সদস্য</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ফোন</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">যোগদান</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">স্ট্যাটাস</th>
+                                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">অ্যাকশন</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <img class="h-10 w-10 rounded-full object-cover" src="https://ui-avatars.com/api/?name=Rahim+Ahmed&background=random" alt="">
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">রহিম আহমেদ</div>
+                                                <div class="text-sm text-gray-500">রুম ১০১</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">০১৭১২৩৪৫৬৭৮</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">১৫ জানু, ২০২৪</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">সক্রিয়</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button class="text-gray-400 hover:text-primary-600 transition-colors">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <img class="h-10 w-10 rounded-full object-cover" src="https://ui-avatars.com/api/?name=Karim+Hossain&background=random" alt="">
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">করিম হোসেন</div>
+                                                <div class="text-sm text-gray-500">রুম ১০২</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">০১৮১২৩৪৫৬৭৯</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">১০ জানু, ২০২৪</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">বকেয়া</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button class="text-gray-400 hover:text-primary-600 transition-colors">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <img class="h-10 w-10 rounded-full object-cover" src="https://ui-avatars.com/api/?name=Jamal+Uddin&background=random" alt="">
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">জামাল উদ্দিন</div>
+                                                <div class="text-sm text-gray-500">রুম ১০৩</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">০১৯১২৩৪৫৬৮০</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">০৫ জানু, ২০২৪</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">সক্রিয়</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button class="text-gray-400 hover:text-primary-600 transition-colors">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="space-y-6">
+                    <!-- Today's Meal -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">আজকের মিল</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-sun text-orange-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white">সকাল</p>
+                                        <p class="text-xs text-gray-500">৮:০০ - ১০:০০</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-primary-600">১৮</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-cloud-sun text-yellow-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white">দুপুর</p>
+                                        <p class="text-xs text-gray-500">১২:০০ - ২:০০</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-primary-600">২২</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-moon text-indigo-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white">রাত</p>
+                                        <p class="text-xs text-gray-500">৮:০০ - ১০:০০</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-primary-600">২০</span>
+                            </div>
+                        </div>
+                        <button class="w-full mt-4 py-2 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors">
+                            মিল আপডেট করুন
+                        </button>
+                    </div>
+
+                    <!-- Notice Board -->
+                    <div class="bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-6 text-white shadow-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold">নোটিশ বোর্ড</h3>
+                            <i class="fas fa-bullhorn text-primary-200"></i>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="bg-white/10 backdrop-blur rounded-lg p-3">
+                                <p class="text-sm font-medium mb-1">মাসিক মিটিং</p>
+                                <p class="text-xs text-primary-100">২৫ জানুয়ারি, রাত ৮টায় সবার উপস্থিতি কাম্য</p>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur rounded-lg p-3">
+                                <p class="text-sm font-medium mb-1">বাজার খরচ আপডেট</p>
+                                <p class="text-xs text-primary-100">এই মাসের বাজার খরচ জমা দেওয়ার শেষ তারিখ ৩০ জানুয়ারি</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav lg:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-3">
+        <div class="flex justify-around items-center">
+            <a href="#" class="flex flex-col items-center text-primary-600 dark:text-primary-400">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-xs">হোম</span>
+            </a>
+            <a href="#" class="flex flex-col items-center text-gray-400 dark:text-gray-500 hover:text-primary-600">
+                <i class="fas fa-users text-xl mb-1"></i>
+                <span class="text-xs">সদস্য</span>
+            </a>
+            <div class="relative -top-8">
+                <button class="w-14 h-14 bg-primary-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-primary-600/40 hover:scale-110 transition-transform">
+                    <i class="fas fa-plus text-xl"></i>
+                </button>
+            </div>
+            <a href="#" class="flex flex-col items-center text-gray-400 dark:text-gray-500 hover:text-primary-600">
+                <i class="fas fa-wallet text-xl mb-1"></i>
+                <span class="text-xs">খরচ</span>
+            </a>
+            <a href="#" class="flex flex-col items-center text-gray-400 dark:text-gray-500 hover:text-primary-600">
+                <i class="fas fa-user text-xl mb-1"></i>
+                <span class="text-xs">প্রোফাইল</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Scripts -->
+    <script>
+        // Set current date in Bengali
+        const dateOptions = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('bn-BD', dateOptions);
+
+        // Theme Toggle
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        }
+
+        // Check saved theme
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // Meal Chart
+        const mealCtx = document.getElementById('mealChart').getContext('2d');
+        new Chart(mealCtx, {
+            type: 'line',
+            data: {
+                labels: ['১', '৫', '১০', '১৫', '২০', '২৫', '৩০'],
+                datasets: [{
+                    label: 'মিল সংখ্যা',
+                    data: [20, 22, 18, 24, 21, 23, 19],
+                    borderColor: '#0f4526',
+                    backgroundColor: 'rgba(15, 69, 38, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Expense Chart
+        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+        new Chart(expenseCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['বাজার', 'ভাড়া', 'ইউটিলিটি', 'অন্যান্য'],
+                datasets: [{
+                    data: [45000, 30000, 8000, 7000],
+                    backgroundColor: [
+                        '#0f4526',
+                        '#16a34a',
+                        '#22c55e',
+                        '#86efac'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
