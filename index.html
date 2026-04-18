@@ -1619,7 +1619,15 @@ function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length<
 function validPass(s){ return s && s.length>=6 && s.length<=100; }
 function validUsername(s){ return s && /^[a-zA-Z0-9_\-\.]{3,30}$/.test(s); }
 function validAmount(v){ return !isNaN(v) && v > 0 && v < 10000000; }
-function sanitizeInput(s){ return String(s||'').trim().slice(0,200); }
+function sanitizeInput(s){
+  return String(s||'').trim().slice(0,200)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;')
+    .replace(/\//g,'&#x2F;');
+}
 
 // ═══════════════════════════════════════════════
 // FIREBASE CONFIG & INIT
@@ -3189,10 +3197,10 @@ function pfEditMode(on){
 function saveProfile(){
   const cu=DB.users.find(x=>x.u===CU.u); if(!cu) return;
   const newName=sanitizeInput(document.getElementById('pf-edit-name').value);
-  const newId=document.getElementById('pf-edit-id').value.trim().toLowerCase();
-  const newMob=document.getElementById('pf-edit-mob').value.trim();
+  const newId=sanitizeInput(document.getElementById('pf-edit-id').value).toLowerCase();
+  const newMob=sanitizeInput(document.getElementById('pf-edit-mob').value);
   const newRoom=sanitizeInput(document.getElementById('pf-edit-room').value);
-  const newEmail=document.getElementById('pf-edit-email').value.trim().toLowerCase();
+  const newEmail=sanitizeInput(document.getElementById('pf-edit-email').value).toLowerCase();
   const newAddr=sanitizeInput(document.getElementById('pf-edit-addr').value);
 
   if(!newName||newName.length<2){ toast('❌ নাম কমপক্ষে ২ অক্ষর হতে হবে!'); return; }
