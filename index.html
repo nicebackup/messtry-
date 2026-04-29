@@ -223,6 +223,12 @@ html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
 .dark-mode ::-webkit-scrollbar-track{background:#0f0f1a;}
 .dark-mode ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#a78bfa);border-radius:4px;}
 .dark-mode ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#6d28d9,#8b5cf6);}
+/* Google Sign-In Button */
+.btn-google{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:inherit;font-weight:600;color:var(--text);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;margin-bottom:4px;}
+.btn-google:hover{border-color:#4285F4;background:rgba(66,133,244,0.05);box-shadow:0 2px 8px rgba(66,133,244,0.15);}
+.btn-google:active{transform:scale(.98);}
+.dark-mode .btn-google{background:rgba(255,255,255,0.05);border-color:rgba(167,139,250,0.25);color:#f1f5f9;}
+.dark-mode .btn-google:hover{border-color:#4285F4;background:rgba(66,133,244,0.1);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background-color .25s ease,color .25s ease,background .25s ease,border-color .25s ease,box-shadow .25s ease;}
 /* ── RESPONSIVE WRAPPER ── */
@@ -500,6 +506,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 .tab-strip{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;}
 .tab-btn{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg);color:var(--text-light);font-size:13px;font-family:inherit;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;}
 .tab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
 </style>
 </head>
 <body>
@@ -753,6 +760,15 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       </div>
       <label class="chk-row"><input type="checkbox" id="remember-me"><span>Login মনে রাখো (Stay signed in)</span></label>
       <button class="btn btn-primary" onclick="doLogin()">Login করুন</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 4px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:12px;color:var(--text-light);white-space:nowrap">অথবা</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <button class="btn btn-google" onclick="doGoogleSignIn()" id="google-login-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Google দিয়ে Login করুন
+      </button>
       <span class="link-txt" onclick="showSc('forgot')">🔑 Forgot Password?</span>
       <span class="link-txt" onclick="showSc('register')">নতুন অ্যাকাউন্ট তৈরি করুন →</span>
     </div>
@@ -792,7 +808,63 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         </select>
       </div>
       <button class="btn btn-primary" onclick="doRegister()">Register করুন</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 4px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:12px;color:var(--text-light);white-space:nowrap">অথবা</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <button class="btn btn-google" onclick="doGoogleSignIn()" id="google-reg-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Google দিয়ে Register করুন
+      </button>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════ GOOGLE PROFILE COMPLETE MODAL ═══════════ -->
+<div class="modal-bg" id="google-profile-modal">
+  <div class="modal" style="border-radius:20px 20px 0 0">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:42px;height:42px;border-radius:50%;overflow:hidden;flex-shrink:0" id="gpm-avatar-wrap">
+        <div style="width:42px;height:42px;background:linear-gradient(135deg,#4285F4,#34A853);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px">G</div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">প্রোফাইল সম্পূর্ণ করুন</div>
+        <div style="font-size:12px;color:var(--text-light)" id="gpm-email-show"></div>
+      </div>
+    </div>
+    <div id="gpm-alert" class="alert alert-danger"></div>
+    <div class="form-group">
+      <label class="form-label">পুরো নাম *</label>
+      <input type="text" id="gpm-name" class="form-input" placeholder="আপনার পুরো নাম">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mobile Number * (01XXXXXXXXX)</label>
+      <input type="tel" id="gpm-mobile" class="form-input" placeholder="01XXXXXXXXX" maxlength="11">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mess / Job ID *</label>
+      <input type="text" id="gpm-jobid" class="form-input" placeholder="যেমন: MQ-001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Username *</label>
+      <input type="text" id="gpm-uname" class="form-input" placeholder="ইউনিক ইউজারনেম (A-Z, 0-9, _, -)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">রুম নম্বর</label>
+      <input type="text" id="gpm-room" class="form-input" placeholder="যেমন: 101">
+    </div>
+    <div class="form-group">
+      <label class="form-label">সদস্যের ধরন</label>
+      <select id="gpm-type" class="form-input">
+        <option value="inside">ইনসাইড (মেসে থাকেন)</option>
+        <option value="outside">আউটসাইড (বাইরে থাকেন)</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="gpm-save-btn" onclick="saveGoogleProfile()">✅ সেভ করুন ও প্রবেশ করুন</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-light);text-align:center;margin-top:8px">Google অ্যাকাউন্ট দিয়ে একবার তথ্য দিলে পরে আর লাগবে না।</p>
   </div>
 </div>
 
@@ -1960,6 +2032,90 @@ function showModal(title,body,onOk,isHtml){
 function closeModal(){ document.getElementById('modal-bg').classList.remove('show'); }
 
 // ═══════════════════════════════════════════════
+// GOOGLE SIGN-IN
+// ═══════════════════════════════════════════════
+function doGoogleSignIn(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  auth.signInWithPopup(provider)
+    .then(result=>{
+      const gUser = result.user;
+      const email = gUser.email || '';
+      const displayName = gUser.displayName || '';
+      // Check if user already exists by email
+      let existing = DB.users.find(x=>x.email && x.email.toLowerCase()===email.toLowerCase());
+      if(existing){
+        if(existing.blocked){
+          toast('❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে।');
+          auth.signOut();
+          return;
+        }
+        CU = existing;
+        try{ localStorage.setItem(LS_USER, JSON.stringify({u:existing.u})); }catch(e){}
+        refreshHome(); showSc('home');
+        setTimeout(()=>showNoticePopup(),600);
+        toast('✅ Google দিয়ে Login সফল!');
+      } else {
+        // New Google user — show completion form
+        showGoogleCompleteForm(gUser);
+      }
+    })
+    .catch(err=>{
+      if(err.code==='auth/popup-closed-by-user'||err.code==='auth/cancelled-popup-request') return;
+      let msg = '❌ Google Login ব্যর্থ হয়েছে।';
+      if(err.code==='auth/popup-blocked') msg='❌ Popup ব্লক হয়েছে। Browser এর popup permission দিন।';
+      if(err.code==='auth/network-request-failed') msg='❌ ইন্টারনেট সংযোগ নেই।';
+      const al = document.getElementById('login-alert')||document.getElementById('reg-alert');
+      if(al){ al.textContent=msg; al.className='alert alert-danger show'; }
+      else toast(msg);
+    });
+}
+
+function showGoogleCompleteForm(gUser){
+  const html = `
+    <div class="google-signup-modal">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
+        ${gUser.photoURL?`<img src="${gUser.photoURL}" style="width:44px;height:44px;border-radius:50%;border:2px solid var(--primary)" referrerpolicy="no-referrer">`:'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700">'+(gUser.displayName||'G')[0]+'</div>'}
+        <div><div style="font-size:14px;font-weight:700;color:var(--text)">${esc(gUser.displayName||'')}</div><div style="font-size:12px;color:var(--text-light)">${esc(gUser.email||'')}</div></div>
+      </div>
+      <div class="form-group"><label class="form-label">মোবাইল নম্বর * (01XXXXXXXXX)</label><input type="tel" id="gsf-mobile" class="form-input" placeholder="01XXXXXXXXX" maxlength="11" value=""></div>
+      <div class="form-group"><label class="form-label">Mess / Job ID *</label><input type="text" id="gsf-jobid" class="form-input" placeholder="যেমন: MQ-001"></div>
+      <div class="form-group"><label class="form-label">Username * (A-Z, 0-9, _, -)</label><input type="text" id="gsf-uname" class="form-input" placeholder="ইউনিক ইউজারনেম"></div>
+      <div class="form-group"><label class="form-label">রুম নম্বর (ঐচ্ছিক)</label><input type="text" id="gsf-room" class="form-input" placeholder="যেমন: 101"></div>
+      <div class="form-group"><label class="form-label">সদস্যের ধরন</label><select id="gsf-type" class="form-input"><option value="inside">ইনসাইড (মেসে থাকেন)</option><option value="outside">আউটসাইড (বাইরে থাকেন)</option></select></div>
+      <div id="gsf-alert" class="alert alert-danger" style="margin-bottom:10px"></div>
+    </div>
+  `;
+  showModal('Google অ্যাকাউন্ট সম্পূর্ণ করুন', html, function(){
+    const mob = sanitizeInput(document.getElementById('gsf-mobile')?.value||'');
+    const job = sanitizeInput(document.getElementById('gsf-jobid')?.value||'');
+    const uname = sanitizeInput(document.getElementById('gsf-uname')?.value||'');
+    const room = sanitizeInput(document.getElementById('gsf-room')?.value||'');
+    const type = document.getElementById('gsf-type')?.value||'inside';
+    const gsfAl = document.getElementById('gsf-alert');
+    const name = gUser.displayName||uname||'Google User';
+    const email = (gUser.email||'').toLowerCase();
+    function gsfErr(msg){ if(gsfAl){gsfAl.textContent=msg;gsfAl.className='alert alert-danger show';} }
+    if(!mob||!job||!uname){ gsfErr('❌ * চিহ্নিত তথ্য পূরণ করুন!'); return; }
+    if(!validMobile(mob)){ gsfErr('❌ সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)!'); return; }
+    if(!validUsername(uname)){ gsfErr('❌ Username শুধু A-Z, 0-9, _, - এবং ৩-৩০ ক্যারেক্টার!'); return; }
+    if(DB.users.find(x=>x.u===uname)){ gsfErr('❌ Username ইতোমধ্যে নেওয়া হয়েছে!'); return; }
+    if(DB.users.find(x=>x.mob===mob)){ gsfErr('❌ এই মোবাইলে অ্যাকাউন্ট আছে!'); return; }
+    if(DB.users.find(x=>x.email&&x.email===email)){ gsfErr('❌ এই Email দিয়ে অ্যাকাউন্ট আছে!'); return; }
+    // Create user
+    const newUser = {u:uname,p:'',name:sanitizeInput(name),mob,email,job,room,type,role:'member',joined:tod(),balance:0,googleAuth:true};
+    DB.users.push(newUser);
+    saveDB();
+    CU = newUser;
+    try{ localStorage.setItem(LS_USER, JSON.stringify({u:uname})); }catch(e){}
+    closeModal();
+    refreshHome(); showSc('home');
+    setTimeout(()=>showNoticePopup(),600);
+    toast('✅ Google অ্যাকাউন্ট সফলভাবে তৈরি!');
+  }, true);
+}
+
+// ═══════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════
 function doLogin(){
@@ -2050,7 +2206,125 @@ function doForgot(){
     });
 }
 function confirmLogout(){
-  showModal('Logout','আপনি কি নিশ্চিতভাবে লগআউট করতে চান?',()=>{ CU=null; localStorage.removeItem(LS_USER); showSc('login'); toast('Logout সফল'); });
+  showModal('Logout','আপনি কি নিশ্চিতভাবে লগআউট করতে চান?',()=>{
+    auth.signOut().catch(()=>{});
+    CU=null; localStorage.removeItem(LS_USER); showSc('login'); toast('Logout সফল');
+  });
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE SIGN-IN
+// ═══════════════════════════════════════════════
+let _googlePendingUser = null; // holds Firebase Google user while profile modal open
+
+function doGoogleSignIn(){
+  // Disable buttons to prevent double-click
+  ['google-login-btn','google-reg-btn'].forEach(id=>{
+    const b=document.getElementById(id); if(b){ b.disabled=true; b.style.opacity='.6'; }
+  });
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  auth.signInWithPopup(provider)
+    .then(result=>{
+      const firebaseUser = result.user;
+      const email = (firebaseUser.email||'').toLowerCase();
+      // Check if user already exists in our DB by email
+      const existing = DB.users.find(x=>x.email && x.email.toLowerCase()===email);
+      if(existing){
+        // Known user — log in directly
+        if(existing.blocked){
+          toast('❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।');
+          auth.signOut().catch(()=>{});
+          _resetGoogleBtns(); return;
+        }
+        CU = existing;
+        try{ localStorage.setItem(LS_USER, JSON.stringify({u:existing.u})); }catch(e){}
+        _resetGoogleBtns();
+        refreshHome(); showSc('home');
+        setTimeout(()=>showNoticePopup(), 600);
+        toast('✅ Google দিয়ে Login সফল!');
+      } else {
+        // New Google user — show profile completion modal
+        _googlePendingUser = firebaseUser;
+        _openGoogleProfileModal(firebaseUser);
+        _resetGoogleBtns();
+      }
+    })
+    .catch(err=>{
+      _resetGoogleBtns();
+      if(err.code==='auth/popup-closed-by-user'||err.code==='auth/cancelled-popup-request') return;
+      if(err.code==='auth/popup-blocked'){
+        toast('❌ Popup ব্লক হয়েছে। ব্রাউজারে Popup অনুমতি দিন।'); return;
+      }
+      toast('❌ Google Sign-In ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+      console.error('Google Sign-In error:', err);
+    });
+}
+
+function _resetGoogleBtns(){
+  ['google-login-btn','google-reg-btn'].forEach(id=>{
+    const b=document.getElementById(id); if(b){ b.disabled=false; b.style.opacity='1'; }
+  });
+}
+
+function _openGoogleProfileModal(firebaseUser){
+  // Pre-fill name from Google
+  const nameEl = document.getElementById('gpm-name');
+  if(nameEl) nameEl.value = firebaseUser.displayName || '';
+  // Show email
+  const emailEl = document.getElementById('gpm-email-show');
+  if(emailEl) emailEl.textContent = firebaseUser.email || '';
+  // Show Google profile photo if available
+  if(firebaseUser.photoURL){
+    const wrap = document.getElementById('gpm-avatar-wrap');
+    if(wrap) wrap.innerHTML = `<img src="${firebaseUser.photoURL}" style="width:42px;height:42px;border-radius:50%;object-fit:cover" onerror="this.parentElement.innerHTML='<div style=\\'width:42px;height:42px;background:linear-gradient(135deg,#4285F4,#34A853);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px\\'>G</div>'" alt="G">`;
+  }
+  // Clear fields
+  ['gpm-mobile','gpm-jobid','gpm-uname','gpm-room'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('gpm-alert').className='alert';
+  document.getElementById('google-profile-modal').classList.add('show');
+}
+
+function saveGoogleProfile(){
+  if(!_googlePendingUser){ toast('❌ Google session হারিয়ে গেছে। আবার চেষ্টা করুন।'); return; }
+  const name    = sanitizeInput((document.getElementById('gpm-name')?.value||'').trim());
+  const mob     = sanitizeInput((document.getElementById('gpm-mobile')?.value||'').trim());
+  const job     = sanitizeInput((document.getElementById('gpm-jobid')?.value||'').trim());
+  const uname   = sanitizeInput((document.getElementById('gpm-uname')?.value||'').trim());
+  const room    = sanitizeInput((document.getElementById('gpm-room')?.value||'').trim());
+  const type    = document.getElementById('gpm-type')?.value || 'inside';
+  const email   = (_googlePendingUser.email||'').toLowerCase();
+  const al      = document.getElementById('gpm-alert');
+  al.className  = 'alert';
+
+  if(!name||!mob||!job||!uname){ al.textContent='❌ সব * চিহ্নিত তথ্য পূরণ করুন!'; al.className='alert alert-danger show'; return; }
+  if(!validName(name)){ al.textContent='❌ নাম কমপক্ষে ২ অক্ষর হতে হবে!'; al.className='alert alert-danger show'; return; }
+  if(!validMobile(mob)){ al.textContent='❌ সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)!'; al.className='alert alert-danger show'; return; }
+  if(!validUsername(uname)){ al.textContent='❌ Username শুধু A-Z, 0-9, _, - এবং ৩-৩০ ক্যারেক্টার!'; al.className='alert alert-danger show'; return; }
+  if(DB.users.find(x=>x.u===uname)){ al.textContent='❌ Username ইতোমধ্যে নেওয়া হয়েছে!'; al.className='alert alert-danger show'; return; }
+  if(DB.users.find(x=>x.mob===mob)){ al.textContent='❌ এই মোবাইলে অ্যাকাউন্ট আছে!'; al.className='alert alert-danger show'; return; }
+
+  const btn = document.getElementById('gpm-save-btn');
+  if(btn){ btn.disabled=true; btn.textContent='সেভ হচ্ছে...'; }
+
+  // Create user with no password (Google auth only)
+  const newUser = {
+    u: uname, p: '', name, mob, email, job, room, type,
+    role: 'member', joined: tod(), balance: 0, googleUID: _googlePendingUser.uid
+  };
+  DB.users.push(newUser);
+  saveDB();
+
+  CU = newUser;
+  try{ localStorage.setItem(LS_USER, JSON.stringify({u:uname})); }catch(e){}
+  if(btn){ btn.disabled=false; btn.textContent='✅ সেভ করুন ও প্রবেশ করুন'; }
+  document.getElementById('google-profile-modal').classList.remove('show');
+  _googlePendingUser = null;
+  refreshHome(); showSc('home');
+  setTimeout(()=>showNoticePopup(), 600);
+  toast('✅ Google দিয়ে Registration সফল!');
 }
 
 // ═══════════════════════════════════════════════
