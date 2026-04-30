@@ -3260,9 +3260,10 @@ function loadProfile(){
   document.getElementById('pf-view-id').textContent=cu.u||'-';
   document.getElementById('pf-view-mob').textContent=cu.mob||'-';
   document.getElementById('pf-view-room').textContent=cu.room||'-';
-  // Email with verification badge
+  // Email with verification badge — always use Firebase Auth live status
   const email=cu.email||'';
-  const emailVerified=cu.emailVerified||false;
+  const fbCurrentUser = auth.currentUser;
+  const emailVerified = fbCurrentUser ? fbCurrentUser.emailVerified : (CU.emailVerified||false);
   document.getElementById('pf-view-email').innerHTML=email
     ? esc(email)+(emailVerified?' <span style="font-size:10px;background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 5px">✓ যাচাই</span>':' <span style="font-size:10px;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px">⚠ অযাচাই</span>')
     : '-';
