@@ -1,311 +1,433 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Midland Quarter | মেস ম্যানেজমেন্ট</title>
-  <meta name="theme-color" content="#0f4526">
-  <!-- Dark mode early flash fix -->
-  <script>
-    try {
-      const stored = localStorage.getItem('mq_dark');
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const isDark = stored === null ? prefersDark : stored === '1';
-      if (isDark) document.documentElement.classList.add('dark-mode');
-    } catch(e) {}
-  </script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Firebase 9 compat + core libraries -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --primary: #1a6b3c; --primary-light: #28a15e; --primary-dark: #0f4526;
-      --accent: #f0a500; --accent-light: #ffc93c;
-      --bg: #f4f7f5; --card: #ffffff; --text: #1a2e22; --text-light: #5a7a65;
-      --border: #d0e4d8; --danger: #e53935; --danger-light: #ffebee;
-      --success: #2e7d32; --success-light: #e8f5e9;
-      --info: #1565c0; --info-light: #e3f2fd;
-      --shadow: 0 6px 18px rgba(0,0,0,0.05); --radius: 20px; --radius-sm: 12px;
-      transition: background 0.2s, color 0.2s, border 0.2s;
-    }
-    .dark-mode {
-      --primary: #a78bfa; --primary-light: #c4b5fd; --primary-dark: #7c3aed;
-      --accent: #f472b6; --accent-light: #f9a8d4;
-      --bg: #0f0f1a; --card: #1a1a2e; --text: #f1f5f9; --text-light: #94a3b8;
-      --border: #2d2d44; --danger: #f87171; --danger-light: #2d1f2c;
-      --success: #34d399; --success-light: #064e3b;
-      --info: #38bdf8; --info-light: #082f49;
-      --shadow: 0 8px 24px rgba(0,0,0,0.5);
-    }
-    body { font-family: 'Inter', 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    .screen { display: none; min-height: 100vh; flex-direction: column; }
-    .screen.active { display: flex; }
-    .app-header { background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light)); color: white; padding: 20px 22px 28px; position: relative; }
-    .header-title { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.3px; }
-    .header-sub { font-size: 0.75rem; opacity: 0.8; margin-top: 4px; }
-    .header-back { background: rgba(255,255,255,0.18); border: none; color: white; padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; margin-bottom: 12px; font-weight: 500; }
-    .content { flex: 1; padding: 20px; max-width: 1100px; margin: 0 auto; width: 100%; }
-    .card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 18px; }
-    .form-group { margin-bottom: 16px; }
-    .form-label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); margin-bottom: 6px; display: block; }
-    .form-input { width: 100%; padding: 12px 16px; border: 2px solid var(--border); background: var(--bg); border-radius: var(--radius-sm); font-family: inherit; color: var(--text); font-size: 0.9rem; outline: none; transition: 0.2s; }
-    .form-input:focus { border-color: var(--primary); }
-    .btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; box-shadow: 0 6px 14px rgba(26,107,60,0.2); }
-    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-    .btn-danger { background: var(--danger); color: white; }
-    .alert { padding: 12px; border-radius: 14px; font-size: 0.8rem; margin-bottom: 14px; display: none; }
-    .alert-danger { background: var(--danger-light); color: var(--danger); border-left: 4px solid var(--danger); }
-    .alert-success { background: var(--success-light); color: var(--success); border-left: 4px solid var(--success); }
-    .link-txt { color: var(--primary); font-size: 0.8rem; text-decoration: underline; text-align: center; display: block; margin: 8px 0; cursor: pointer; }
-    .menu-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-top: 8px; }
-    .menu-item { background: var(--card); border-radius: 24px; padding: 18px 12px; text-align: center; cursor: pointer; border-top: 4px solid var(--primary); box-shadow: var(--shadow); transition: 0.15s; }
-    .menu-icon { font-size: 28px; margin-bottom: 6px; }
-    .menu-lbl { font-weight: 700; font-size: 0.85rem; }
-    .bc-pills { display: flex; gap: 12px; justify-content: center; margin: 12px 0; flex-wrap: wrap; }
-    .pill { background: var(--bg); border: 1px solid var(--border); border-radius: 40px; padding: 8px 18px; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
-    .pill.active { background: var(--primary); color: white; border-color: var(--primary); }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 12px 12px; z-index: 100; backdrop-filter: blur(12px); background: rgba(var(--card-rgb),0.9); }
-    .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; color: var(--text-light); cursor: pointer; gap: 4px; }
-    .nav-btn.active { color: var(--primary); font-weight: 600; }
-    .dark-toggle { position: fixed; bottom: 88px; right: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 40px; padding: 8px 12px; z-index: 200; font-size: 1.2rem; cursor: pointer; box-shadow: var(--shadow); }
-    @media (max-width: 600px) { .content { padding: 16px; } .menu-grid { gap: 10px; } .bottom-nav { padding-bottom: 10px; } .dark-toggle { bottom: 80px; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Midland Quarter - মেস ম্যানেজমেন্ট (Email verified)</title>
+<meta name="theme-color" content="#0f4526">
+<link rel="icon" href="favicon.ico">
+<!-- Dark mode flash fix: apply class BEFORE paint -->
+<script>
+try{
+  var mqDarkStored = localStorage.getItem('mq_dark');
+  var mqDark = mqDarkStored===null
+    ? !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    : mqDarkStored==='1';
+  if(mqDark) document.documentElement.classList.add('dark-mode');
+}catch(e){}
+</script>
+<style>
+html.dark-mode{background:#0a0f0d;color:#e8f5ee;}
+html{background:#f4f7f5;}
+/* Dark mode loading overlay */
+html.dark-mode #fb-loading{background:#0a0f0d !important;}
+html.dark-mode #fb-loading .mq-load-title{color:#e8f5ee !important;}
+html.dark-mode #fb-loading .mq-load-sub{color:#7a9e88 !important;}
+html.dark-mode #fb-loading .mq-load-ring-track{border-color:#1e3228 !important;}
+html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#34d399 !important;}
+html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#059669,#34d399) !important;}
+html.dark-mode #fb-loading .mq-dot{background:#34d399 !important;}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+:root {
+  --primary:#1a6b3c;--primary-light:#28a15e;--primary-dark:#0f4526;
+  --accent:#f0a500;--accent-light:#ffc93c;
+  --bg:#f4f7f5;--card:#fff;--text:#1a2e22;--text-light:#5a7a65;
+  --border:#d0e4d8;--danger:#e53935;--danger-light:#ffebee;
+  --success:#2e7d32;--success-light:#e8f5e9;
+  --info:#1565c0;--info-light:#e3f2fd;
+  --shadow:0 4px 20px rgba(26,107,60,0.10);--radius:16px;--radius-sm:10px;
+}
+.dark-mode {
+  --primary:#a78bfa;--primary-light:#c4b5fd;--primary-dark:#7c3aed;
+  --accent:#f472b6;--accent-light:#f9a8d4;
+  --bg:#0f0f1a;--card:#1a1a2e;--text:#f1f5f9;--text-light:#94a3b8;
+  --border:#2d2d44;--danger:#f87171;--danger-light:#1f1f1f;
+  --success:#34d399;--success-light:#064e3b;
+  --info:#38bdf8;--info-light:#0c4a6e;
+  --shadow:0 8px 32px rgba(0,0,0,0.5),0 0 40px rgba(167,139,250,0.08);--radius:20px;--radius-sm:12px;
+}
+html.dark-mode{background:#0f0f1a;color:#f1f5f9;}
+.dark-mode .card{
+  background:linear-gradient(145deg,rgba(45,45,74,0.8),rgba(26,26,46,0.9));
+  border:1px solid rgba(167,139,250,0.15);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 20px rgba(167,139,250,0.05);
+  backdrop-filter:blur(10px);
+}
+.dark-mode .app-header{
+  background:linear-gradient(135deg,#1a1a2e 0%,#2d1f4e 50%,#1a1a2e 100%) !important;
+  border-bottom:1px solid rgba(167,139,250,0.2);
+}
+.dark-mode .menu-item{
+  background:linear-gradient(145deg,rgba(45,45,74,0.8),rgba(26,26,46,0.9));
+  border:1px solid rgba(167,139,250,0.15);
+}
+.dark-mode .form-input{
+  background:rgba(15,15,26,0.8);
+  border:2px solid rgba(167,139,250,0.2);
+  color:#f1f5f9;
+}
+.dark-mode .btn-primary{
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);
+  box-shadow:0 4px 20px rgba(124,58,237,0.4);
+}
+.dark-mode .bottom-nav{
+  background:linear-gradient(180deg,rgba(26,26,46,0.95),rgba(15,15,26,0.98));
+  border-top:1px solid rgba(167,139,250,0.2);
+  backdrop-filter:blur(15px);
+}
+/* Rest of original dark mode styles kept intact */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background-color .25s ease,color .25s ease;}
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+@media(min-width:769px){
+  .content{max-width:960px;width:100%;margin:0 auto;padding:28px 40px;}
+  .bottom-nav{position:fixed;bottom:0;left:0;max-width:100%;display:flex;justify-content:center;}
+  .menu-grid{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:599px){
+  .content{padding:16px;}
+  .bottom-nav{position:fixed;bottom:0;left:0;width:100%;}
+}
+.app-header{background:linear-gradient(135deg,var(--primary-dark) 0%,var(--primary) 60%,var(--primary-light) 100%);color:#fff;padding:20px 20px 28px;position:relative;}
+.header-title{font-size:22px;font-weight:700;font-family:'Poppins',sans-serif;}
+.header-sub{font-size:13px;opacity:.75;margin-top:2px;}
+.header-back{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;margin-bottom:10px;font-family:inherit;}
+.content{padding:20px;flex:1;}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border);}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:13px;font-weight:600;color:var(--text-light);margin-bottom:6px;}
+.form-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;}
+.form-input:focus{border-color:var(--primary);}
+.btn{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;margin-bottom:10px;}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 4px 15px rgba(26,107,60,.3);}
+.btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary);}
+.btn-danger{background:var(--danger);color:#fff;}
+.link-txt{color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;text-align:center;display:block;margin:8px 0;}
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:14px;display:none;}
+.alert.show{display:block;}
+.alert-danger{background:var(--danger-light);color:var(--danger);border:1px solid #ffcdd2;}
+.alert-success{background:var(--success-light);color:var(--success);border:1px solid #c8e6c9;}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.menu-item{background:var(--card);border-radius:var(--radius);padding:20px 14px;box-shadow:var(--shadow);border:1px solid var(--border);text-align:center;cursor:pointer;border-top:3px solid var(--primary);}
+.menu-icon{font-size:28px;margin-bottom:8px;}
+.menu-lbl{font-size:13px;font-weight:600;}
+.bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:center;z-index:100;}
+.nav-btn{flex:0 0 80px;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;font-size:10px;font-family:inherit;color:var(--text-light);}
+.nav-btn.active{color:var(--primary);}
+.nav-icon{font-size:22px;}
+.pb-nav{padding-bottom:70px;}
+.sec-title{font-size:16px;font-weight:700;color:var(--primary-dark);margin-bottom:14px;}
+.pqo-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+.pqo-btn{flex:1;padding:14px 4px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:18px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text-light);text-align:center;}
+.pqo-btn.selP{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32;}
+.pqo-btn.selQ{background:#e3f2fd;border-color:#1565c0;color:#1565c0;}
+.pqo-btn.seloff{background:#ffebee;border-color:#c62828;color:#c62828;}
+.qty-input{width:58px;padding:11px 6px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:16px;font-weight:700;text-align:center;background:var(--bg);color:var(--text);}
+.date-nav{display:flex;align-items:center;gap:8px;}
+.date-nav-btn{background:var(--primary);border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--primary-dark);color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:1999;opacity:0;transition:all .3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:flex-end;justify-content:center;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;}
+.tag-P{background:#e8f5e9;color:#2e7d32;border-radius:6px;padding:3px 10px;font-weight:700;font-size:13px;}
+.tag-Q{background:#e3f2fd;color:#1565c0;border-radius:6px;padding:3px 10px;font-weight:700;font-size:13px;}
+.tag-off{background:#ffebee;color:#c62828;border-radius:6px;padding:3px 10px;font-weight:700;font-size:13px;}
+.dark-toggle{background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px;}
+</style>
 </head>
 <body>
 
-<!-- App Screens -->
-<div id="sc-login" class="screen active">
-  <div class="app-header"><div class="header-title">Midland Quarter</div><div class="header-sub">মেস ম্যানেজমেন্ট</div></div>
+<!-- Loading Overlay -->
+<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#f4f7f5;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <div style="position:relative;width:72px;height:72px;">
+    <div class="mq-load-ring-track" style="position:absolute;inset:0;border-radius:50%;border:6px solid #e8f5e9;"></div>
+    <div class="mq-load-ring-spin" style="position:absolute;inset:0;border-radius:50%;border:6px solid transparent;border-top-color:#1a6b3c;animation:mq-spin 0.9s linear infinite;"></div>
+    <div class="mq-load-inner" style="position:absolute;inset:16px;background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">🍽️</div>
+  </div>
+  <div style="text-align:center;">
+    <div class="mq-load-title" style="font-size:18px;font-weight:700;color:#1a2e22;">লোড হচ্ছে...</div>
+    <div class="mq-load-sub" style="font-size:13px;color:#5a7a65;">দয়া করে অপেক্ষা করুন</div>
+  </div>
+</div>
+<style>@keyframes mq-spin{to{transform:rotate(360deg)}}</style>
+
+<!-- LOGIN SCREEN -->
+<div id="sc-login" class="screen">
+  <div class="app-header">
+    <div class="header-title">Midland Quarter</div>
+    <div class="header-sub">মেস ম্যানেজমেন্ট সিস্টেম</div>
+  </div>
   <div class="content">
     <div class="card">
+      <div class="sec-title">🔐 Login করুন</div>
+      <div id="login-alert" class="alert alert-danger"></div>
       <div class="form-group"><label class="form-label">ইমেইল</label><input type="email" id="login-email" class="form-input" placeholder="your@email.com"></div>
-      <div class="form-group"><label class="form-label">পাসওয়ার্ড</label><input type="password" id="login-pwd" class="form-input" placeholder="******"></div>
-      <div id="login-msg" class="alert alert-danger"></div>
-      <button class="btn btn-primary" id="loginBtn">লগইন করুন</button>
-      <span class="link-txt" onclick="showScreen('register')">নতুন অ্যাকাউন্ট তৈরি করুন →</span>
-      <span class="link-txt" id="forgotLink">পাসওয়ার্ড ভুলে গেছেন?</span>
+      <div class="form-group"><label class="form-label">পাসওয়ার্ড</label><input type="password" id="login-pass" class="form-input" placeholder="পাসওয়ার্ড"></div>
+      <button class="btn btn-primary" onclick="doLogin()">Login করুন</button>
+      <span class="link-txt" onclick="showSc('register')">নতুন অ্যাকাউন্ট তৈরি করুন →</span>
+      <span class="link-txt" onclick="doForgotPassword()">🔑 পাসওয়ার্ড ভুলে গেছেন?</span>
     </div>
   </div>
 </div>
 
+<!-- REGISTER SCREEN -->
 <div id="sc-register" class="screen">
-  <div class="app-header"><button class="header-back" onclick="showScreen('login')">← পেছনে</button><div class="header-title">রেজিস্ট্রেশন</div></div>
+  <div class="app-header"><button class="header-back" onclick="showSc('login')">← Back</button><div class="header-title">নতুন অ্যাকাউন্ট</div></div>
   <div class="content">
     <div class="card">
-      <div class="form-group"><label class="form-label">পূর্ণ নাম *</label><input id="reg-name" class="form-input"></div>
-      <div class="form-group"><label class="form-label">ইমেইল *</label><input id="reg-email" class="form-input" type="email"></div>
-      <div class="form-group"><label class="form-label">মোবাইল নম্বর *</label><input id="reg-mobile" class="form-input" placeholder="01XXXXXXXXX"></div>
-      <div class="form-group"><label class="form-label">মেস মেম্বার আইডি (Job ID) *</label><input id="reg-jobid" class="form-input" placeholder="MQ-123"></div>
-      <div class="form-group"><label class="form-label">পাসওয়ার্ড * (min 6)</label><input id="reg-pwd" class="form-input" type="password"></div>
-      <div class="form-group"><label class="form-label">রুম নম্বর</label><input id="reg-room" class="form-input"></div>
-      <div class="form-group"><label class="form-label">সদস্যের ধরন</label><select id="reg-type" class="form-input"><option value="inside">ইনসাইড (মেসে থাকেন)</option><option value="outside">আউটসাইড (বাইরে অবস্থান)</option></select></div>
-      <div id="reg-msg" class="alert alert-danger"></div>
-      <button class="btn btn-primary" id="registerBtn">রেজিস্ট্রার করুন</button>
+      <div id="reg-alert" class="alert alert-danger"></div>
+      <div id="reg-ok" class="alert alert-success"></div>
+      <div class="form-group"><label class="form-label">পুরো নাম *</label><input type="text" id="reg-name" class="form-input"></div>
+      <div class="form-group"><label class="form-label">ইমেইল *</label><input type="email" id="reg-email" class="form-input"></div>
+      <div class="form-group"><label class="form-label">মোবাইল নম্বর *</label><input type="tel" id="reg-mobile" class="form-input" placeholder="01XXXXXXXXX"></div>
+      <div class="form-group"><label class="form-label">Mess / Job ID *</label><input type="text" id="reg-jobid" class="form-input" placeholder="যেমন: MQ-001"></div>
+      <div class="form-group"><label class="form-label">পাসওয়ার্ড * (৬+ ক্যারেক্টার)</label><input type="password" id="reg-pass" class="form-input"></div>
+      <div class="form-group"><label class="form-label">রুম নম্বর</label><input type="text" id="reg-room" class="form-input"></div>
+      <div class="form-group"><label class="form-label">সদস্যের ধরন</label><select id="reg-type" class="form-input"><option value="inside">ইনসাইড (মেসে থাকেন)</option><option value="outside">আউটসাইড (বাইরে থাকেন)</option></select></div>
+      <button class="btn btn-primary" onclick="doRegister()">Register করুন</button>
     </div>
   </div>
 </div>
 
-<div id="sc-home" class="screen">
-  <div class="app-header"><div class="header-title">Midland Quarter</div><div class="header-sub" id="homeSiteNote">মেস ম্যানেজমেন্ট</div><div style="margin-top:8px" id="welcomeUser"></div></div>
-  <div class="content pb-nav">
-    <div class="card" style="background:linear-gradient(120deg,var(--primary-dark),var(--primary));color:white"><div style="display:flex;justify-content:space-between"><span>🍽️ আজকের মিল স্ট্যাটাস</span><span id="currentDateLabel"></span></div><div class="bc-pills" style="margin-top:12px"><div class="pill" id="statB">সকাল 0</div><div class="pill" id="statL">দুপুর 0</div><div class="pill" id="statD">রাত 0</div></div><div style="margin-top:8px"><b>মোট মিল:</b> <span id="todayTotalMeals">0.00</span></div></div>
-    <div class="menu-grid"><div class="menu-item" onclick="sec('meal')"><div class="menu-icon">🍽️</div><div class="menu-lbl">মিল আপডেট</div></div><div class="menu-item" onclick="sec('officeMeal')"><div class="menu-icon">🏢</div><div class="menu-lbl">অফিস মিল (MEPL/MPCL)</div></div><div class="menu-item" id="bazarBtn" onclick="sec('bazar')" style="display:none"><div class="menu-icon">🛒</div><div class="menu-lbl">বাজার খরচ</div></div><div class="menu-item" id="othersBtn" onclick="sec('others')" style="display:none"><div class="menu-icon">⚡</div><div class="menu-lbl">অন্যান্য খরচ</div></div><div class="menu-item" onclick="sec('report')"><div class="menu-icon">📊</div><div class="menu-lbl">মাসিক রিপোর্ট</div></div><div class="menu-item" onclick="sec('members')"><div class="menu-icon">👥</div><div class="menu-lbl">সদস্য তালিকা</div></div><div class="menu-item" onclick="sec('profile')"><div class="menu-icon">👤</div><div class="menu-lbl">প্রোফাইল</div></div><div class="menu-item" id="adminPanelBtn" onclick="sec('admin')" style="display:none"><div class="menu-icon">⚙️</div><div class="menu-lbl">Admin প্যানেল</div></div></div>
-  </div>
-  <div class="bottom-nav"><button class="nav-btn active" onclick="goHome()"><span>🏠</span>হোম</button><button class="nav-btn" onclick="sec('meal')"><span>🍽️</span>মিল</button><button class="nav-btn" onclick="sec('members')"><span>👥</span>সদস্য</button><button class="nav-btn" onclick="sec('profile')"><span>👤</span>প্রোফাইল</button></div>
-  <div class="dark-toggle" onclick="toggleDarkMode()">🌙</div>
+<!-- FORGOT PASSWORD -->
+<div id="sc-forgot" class="screen">
+  <div class="app-header"><button class="header-back" onclick="showSc('login')">← Back</button><div class="header-title">পাসওয়ার্ড রিসেট</div></div>
+  <div class="content"><div class="card"><div id="fgt-alert" class="alert alert-danger"></div><div id="fgt-ok" class="alert alert-success"></div><div class="form-group"><label class="form-label">ইমেইল</label><input type="email" id="fgt-email" class="form-input"></div><button class="btn btn-primary" onclick="sendResetEmail()">রিসেট লিংক পাঠান</button></div></div>
 </div>
 
-<div id="sc-meal" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">মিল আপডেট</div></div><div class="content"><div class="card"><div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="mealDate" class="form-input"></div><div id="mealLockAlert" class="alert alert-danger" style="display:none">🔒 এই তারিখ এডিট লক (ম্যানেজার/কন্ট্রোলার ছাড়া)</div><div class="bc-pills" id="slotSelect"></div><div id="mealInputPanel"></div><button class="btn btn-primary" id="saveMealBtn">✅ মিল সেভ করুন</button></div></div></div>
+<!-- HOME SCREEN (full original design preserved) -->
+<div id="sc-home" class="screen">
+  <div class="app-header">
+    <div class="header-title">Midland Quarter</div>
+    <div class="header-sub" id="home-mgr">লোড হচ্ছে...</div>
+    <div class="header-actions"><button class="header-icon-btn" onclick="toggleDark()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;">🌙</button></div>
+  </div>
+  <div class="content pb-nav">
+    <div class="welcome-bar"><div><div class="date-bar" id="home-date"></div></div><span class="welcome-role" id="home-role">Member</span></div>
+    <div class="today-card"><div class="today-hd" id="td-date">তারিখ: --</div><div class="today-day" id="td-day">--</div><div class="meal-pills"><div class="mpill b" onclick="alert('কন্ট্রোল প্যানেল থেকে দেখুন')">🌅 সকাল <b id="td-b">0</b></div><div class="mpill l">☀️ দুপুর <b id="td-l">0</b></div><div class="mpill d">🌙 রাত <b id="td-d">0</b></div></div><div class="today-total">মোট: <b id="td-total">0.00</b> মিল</div></div>
+    <div class="stats-row"><div class="stat-card" onclick="alert('মিল ইতিহাস')"><div class="stat-num" id="st-month">0.00</div><div class="stat-lbl">এই মাসের মিল</div></div><div class="stat-card"><div class="stat-num" id="st-bill">৳ 0</div><div class="stat-lbl">মিল রেট</div></div></div>
+    <div class="menu-grid"><div class="menu-item" onclick="sec('meal')"><div class="menu-icon">🍽️</div><div class="menu-lbl">মিল আপডেট</div></div><div class="menu-item ac" id="menu-bazar" onclick="sec('bazar')"><div class="menu-icon">🛒</div><div class="menu-lbl">বাজার খরচ</div></div><div class="menu-item in" id="menu-others" onclick="sec('others')"><div class="menu-icon">⚡</div><div class="menu-lbl">অন্যান্য খরচ</div></div><div class="menu-item ac" id="menu-officemeal" onclick="sec('officemeal')"><div class="menu-icon">🏢</div><div class="menu-lbl">অফিস মিল</div></div><div class="menu-item" onclick="sec('report')"><div class="menu-icon">📊</div><div class="menu-lbl">মাসিক রিপোর্ট</div></div><div class="menu-item" onclick="sec('members')"><div class="menu-icon">👥</div><div class="menu-lbl">সদস্য তালিকা</div></div><div class="menu-item" onclick="sec('profile')"><div class="menu-icon">👤</div><div class="menu-lbl">প্রোফাইল</div></div><div class="menu-item dg" id="admin-btn" onclick="sec('admin')"><div class="menu-icon">⚙️</div><div class="menu-lbl">Admin Panel</div></div></div>
+  </div>
+  <div class="bottom-nav"><button class="nav-btn active" onclick="goHome()"><span class="nav-icon">🏠</span>হোম</button><button class="nav-btn" onclick="sec('meal')"><span class="nav-icon">🍽️</span>মিল</button><button class="nav-btn" onclick="sec('bazar')"><span class="nav-icon">🛒</span>বাজার</button><button class="nav-btn" onclick="sec('members')"><span class="nav-icon">👥</span>সদস্য</button><button class="nav-btn" onclick="sec('profile')"><span class="nav-icon">👤</span>প্রোফাইল</button></div>
+</div>
 
-<div id="sc-officeMeal" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">🏢 অফিস মিল (MEPL / MPCL)</div><div class="header-sub">আলাদা রেট & এন্ট্রি</div></div><div class="content"><div class="card"><div class="form-group"><label class="form-label">মেস মাস</label><input type="month" id="offMonth" class="form-input"></div><div class="form-group"><label class="form-label">অফিস মিল রেট (প্রতি মিল ৳)</label><input type="number" id="offRate" class="form-input" step="0.01"></div><button class="btn btn-primary" id="saveOffRateBtn">রেট সেভ করুন</button></div><div id="offMealEntries" class="card"><div class="sec-title">MEPL & MPCL মিল এন্ট্রি</div><div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="offMealDate" class="form-input"></div><div id="offMealSlots"></div><button class="btn btn-accent" id="saveOfficeMealBtn">অফিস মিল সেভ করুন</button></div></div></div>
+<!-- MEAL SCREEN (simplified but functional) -->
+<div id="sc-meal" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">মিল আপডেট</div></div><div class="content"><div class="card"><div class="date-nav"><button class="date-nav-btn" onclick="shiftDate(-1)">‹</button><input type="date" id="meal-date" class="form-input" style="flex:1"><button class="date-nav-btn" onclick="shiftDate(1)">›</button></div></div><div class="card"><div class="legend"><span class="tag-P">P = প্ল্যান্ট</span><span class="tag-Q">Q = কোয়ার্টার</span><span class="tag-off">off = বন্ধ</span></div></div><div id="meal-slots-container"></div><button class="btn btn-primary" onclick="saveMeal()">✅ মিল সেভ করুন</button></div></div></div>
 
-<div id="sc-bazar" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">বাজার খরচ</div></div><div class="content"><div class="card"><div class="form-group"><label>বিবরণ</label><textarea id="bzDesc" class="form-input" rows="2"></textarea></div><div class="form-group"><label>পরিমাণ (৳)</label><input type="number" id="bzAmount" class="form-input"></div><div class="form-group"><label>তারিখ</label><input type="date" id="bzDate" class="form-input"></div><button class="btn btn-primary" id="addBazarBtn">যোগ করুন</button></div><div id="bazarList" class="card"><p>লোড হচ্ছে...</p></div></div></div>
+<!-- OFFICE MEAL SCREEN -->
+<div id="sc-officemeal" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">🏢 অফিস মিল</div></div><div class="content"><div class="card"><div class="form-group"><label>মেস মাস</label><input type="month" id="off-month" class="form-input"></div><div class="form-group"><label>অফিস মিল রেট (৳)</label><input type="number" id="off-rate" class="form-input" step="0.01"></div><button class="btn btn-primary" onclick="saveOfficeRate()">রেট সেভ</button></div><div class="card"><div class="form-group"><label>তারিখ</label><input type="date" id="off-date" class="form-input"></div><div id="off-meal-slots"></div><button class="btn btn-accent" onclick="saveOfficeMeal()">অফিস মিল সেভ</button></div></div></div>
 
-<div id="sc-others" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">অন্যান্য খরচ + বাবুর্চি বিল</div></div><div class="content"><div class="card"><div class="form-group"><label>বিবরণ</label><input id="othDesc" class="form-input"></div><div class="form-group"><label>পরিমাণ</label><input type="number" id="othAmount" class="form-input"></div><div class="form-group"><label>তারিখ</label><input type="date" id="othDate" class="form-input"></div><div class="form-group"><label>ভাগের নিয়ম</label><select id="othSplit"><option value="equal">সমান ভাগ</option><option value="outside50">Outside ৫০%</option></select></div><button class="btn btn-primary" id="addOtherBtn">অন্যান্য যোগ করুন</button></div><div class="card"><div class="sec-title">👨‍🍳 বাবুর্চি বিল এন্ট্রি</div><div class="form-group"><input id="cookDesc" class="form-input" placeholder="বাবুর্চি বিল"></div><div class="form-group"><input type="number" id="cookAmount" class="form-input" placeholder="৳"></div><div class="form-group"><input type="date" id="cookDate" class="form-input"></div><button class="btn btn-outline" id="addCookBillBtn">বাবুর্চি বিল যোগ করুন</button></div><div id="extrasList"></div></div></div>
+<!-- BAZAR SCREEN -->
+<div id="sc-bazar" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">বাজার খরচ</div></div><div class="content"><div class="card"><textarea id="bz-desc" class="form-input" placeholder="বিবরণ"></textarea><input type="number" id="bz-amt" class="form-input" placeholder="টাকার পরিমাণ"><input type="date" id="bz-date" class="form-input"><button class="btn btn-primary" onclick="addBazar()">যোগ করুন</button></div><div class="card"><div id="bz-list"></div></div></div></div>
 
-<div id="sc-report" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">মাসিক রিপোর্ট</div></div><div class="content"><div class="card"><select id="reportMonth" class="form-input"></select><button class="btn btn-primary" id="loadReportBtn">রিপোর্ট দেখুন</button><div id="reportContent"></div></div></div></div>
+<!-- OTHERS SCREEN -->
+<div id="sc-others" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">অন্যান্য খরচ</div></div><div class="content"><div class="card"><textarea id="oth-desc" class="form-input" placeholder="বিবরণ"></textarea><input type="number" id="oth-amt" class="form-input" placeholder="টাকা"><input type="date" id="oth-date" class="form-input"><button class="btn btn-primary" onclick="addOther()">যোগ করুন</button></div><div class="card"><div id="oth-list"></div></div></div></div>
 
-<div id="sc-members" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">সকল সদস্য</div></div><div class="content"><div class="card"><input type="text" id="memberSearch" class="form-input" placeholder="নাম, রুম, আইডি..."><div id="membersList"></div></div></div></div>
+<!-- REPORT, MEMBERS, PROFILE, ADMIN (condensed) -->
+<div id="sc-report" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">রিপোর্ট</div></div><div class="content"><div class="card"><select id="rpt-month" class="form-input"></select><button class="btn btn-primary" onclick="loadReport()">দেখুন</button><div id="rpt-content"></div></div></div></div>
+<div id="sc-members" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">সদস্য তালিকা</div></div><div class="content"><div class="card"><div id="mem-list"></div></div></div></div>
+<div id="sc-profile" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">প্রোফাইল</div></div><div class="content"><div class="card" id="prof-card"></div><button class="btn btn-danger" onclick="logout()">লগআউট</button></div></div>
+<div id="sc-admin" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← Home</button><div class="header-title">এডমিন</div></div><div class="content"><div class="card" id="admin-panel"></div></div></div>
 
-<div id="sc-profile" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">আমার প্রোফাইল</div></div><div class="content"><div class="card" id="profileView"></div><button class="btn btn-danger" onclick="logout()">লগআউট</button></div></div>
-
-<div id="sc-admin" class="screen"><div class="app-header"><button class="header-back" onclick="goHome()">← হোম</button><div class="header-title">এডমিন প্যানেল</div></div><div class="content"><div class="card"><div class="form-group"><label>ম্যানেজার নিয়োগ (মাস)</label><input type="month" id="mgrMonth" class="form-input"><select id="managerUserSelect" class="form-input"></select><button class="btn btn-primary" id="assignManagerBtn">ম্যানেজার করুন</button></div><div class="form-group"><label>কন্ট্রোলার নিয়োগ</label><select id="ctrlSelect" class="form-input"></select><button class="btn btn-outline" id="addCtrlBtn">কন্ট্রোলার যোগ করুন</button></div></div></div></div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-title" id="modal-title"></div><div class="modal-body" id="modal-body"></div><div class="modal-btns"><button class="btn btn-outline" onclick="closeModal()">না</button><button class="btn btn-primary" id="modal-ok">হ্যাঁ</button></div></div></div>
 
 <script>
-  // FIREBASE CONFIG (replace with your own later)
-  const firebaseConfig = {
-    apiKey: "AIzaSyAKvpwf78d9UmRT03qs6Y3cMTOJfC6bLaQ",
-    authDomain: "messtry-baa1e.firebaseapp.com",
-    databaseURL: "https://messtry-baa1e-default-rtdb.firebaseio.com",
-    projectId: "messtry-baa1e",
-    storageBucket: "messtry-baa1e.firebasestorage.app",
-    messagingSenderId: "73015451817",
-    appId: "1:73015451817:web:3a696947a8f8571a0cc9b8"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+// FIREBASE CONFIG (Replace with your own)
+const firebaseConfig = {
+  apiKey: "AIzaSyAKvpwf78d9UmRT03qs6Y3cMTOJfC6bLaQ",
+  authDomain: "messtry-baa1e.firebaseapp.com",
+  databaseURL: "https://messtry-baa1e-default-rtdb.firebaseio.com",
+  projectId: "messtry-baa1e",
+  storageBucket: "messtry-baa1e.firebasestorage.app",
+  messagingSenderId: "73015451817",
+  appId: "1:73015451817:web:3a696947a8f8571a0cc9b8"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
+const dbRef = database.ref('messData');
 
-  let currentUser = null, userRole = 'member', userData = null;
-  let officeMealRateCache = {};
+let DB = { users: [], meals: {}, bazar: [], others: [], mealRates: {}, officeRates: {}, managers: {}, controllers: ['admin'] };
+let CU = null;
+let mealDate = todayStr();
 
-  function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(`sc-${id}`).classList.add('active'); }
-  function goHome() { showScreen('home'); loadDashboard(); }
-  function toggleDarkMode() { document.documentElement.classList.toggle('dark-mode'); localStorage.setItem('mq_dark', document.documentElement.classList.contains('dark-mode') ? '1' : '0'); }
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function mk() { return new Date().toISOString().slice(0,7); }
+function messMonthKey() { let d=new Date(); let y=d.getFullYear(), m=d.getMonth(); if(d.getDate()<11) m--; if(m<0){m=11;y--;} return `${y}-${String(m+1).padStart(2,'0')}`; }
+function showSc(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); }
+function goHome(){ showSc('home'); refreshHome(); }
+function toast(msg){ let t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+function closeModal(){ document.getElementById('modal-bg').classList.remove('show'); }
+function toggleDark(){ let isDark=!document.documentElement.classList.contains('dark-mode'); document.documentElement.classList.toggle('dark-mode',isDark); localStorage.setItem('mq_dark',isDark?'1':'0'); }
 
-  // Helper: format date YYYY-MM-DD
-  function todayStr() { return new Date().toISOString().slice(0,10); }
-  function getMessMonthKey(date = new Date()) { let y = date.getFullYear(), m = date.getMonth(); if(date.getDate() < 11) m--; if(m<0){m=11;y--;} return `${y}-${String(m+1).padStart(2,'0')}`; }
-
-  // Check if user is manager or controller
-  async function isManagerOrCtrl() { if(!currentUser) return false; const snap = await db.ref(`users/${currentUser.uid}`).once('value'); const u = snap.val(); if(u?.role === 'controller') return true; const mm = getMessMonthKey(); const mgrSnap = await db.ref(`managers/${mm}`).once('value'); const mgrs = mgrSnap.val() || []; return mgrs.includes(currentUser.uid) || u?.role === 'controller'; }
-
-  // Load dashboard and check role buttons
-  async function loadDashboard() {
-    if(!currentUser) return;
-    const snap = await db.ref(`users/${currentUser.uid}`).once('value');
-    userData = snap.val() || { name: currentUser.email, role: 'member' };
-    document.getElementById('welcomeUser').innerHTML = `স্বাগতম, ${userData.name || 'সদস্য'} <span style="background:rgba(255,255,255,0.2);padding:2px 12px;border-radius:30px;font-size:0.7rem">${userData.role === 'controller' ? 'কন্ট্রোলার' : (userData.role === 'manager' ? 'ম্যানেজার' : 'সদস্য')}</span>`;
-    const isMgr = await isManagerOrCtrl();
-    document.getElementById('bazarBtn').style.display = isMgr ? 'block' : 'none';
-    document.getElementById('othersBtn').style.display = isMgr ? 'block' : 'none';
-    document.getElementById('adminPanelBtn').style.display = (userData.role === 'controller') ? 'block' : 'none';
-    document.getElementById('currentDateLabel').innerHTML = new Date().toLocaleDateString('bn-BD');
-    // today meal stats
-    const mealsSnap = await db.ref('meals').once('value');
-    let mealsData = mealsSnap.val() || {};
-    let breakfastQ=0,lunchQ=0,dinnerQ=0,totalMeals=0;
-    const today = todayStr();
-    for(let uid in mealsData){
-      if(mealsData[uid][today]){
-        const m = mealsData[uid][today];
-        if(m.b && m.b.t !== 'off') breakfastQ += (m.b.q||1);
-        if(m.l && m.l.t !== 'off') lunchQ += (m.l.q||1);
-        if(m.d && m.d.t !== 'off') dinnerQ += (m.d.q||1);
-      }
-    }
-    document.getElementById('statB').innerHTML = `🌅 সকাল ${breakfastQ}`;
-    document.getElementById('statL').innerHTML = `☀️ দুপুর ${lunchQ}`;
-    document.getElementById('statD').innerHTML = `🌙 রাত ${dinnerQ}`;
-    const total = breakfastQ*0.75 + lunchQ*1.5 + dinnerQ*0.75;
-    document.getElementById('todayTotalMeals').innerHTML = total.toFixed(2);
-  }
-
-  // MEAL UI (generic for any user)
-  async function loadMealScreen() {
-    const date = document.getElementById('mealDate').value = todayStr();
-    const isMgr = await isManagerOrCtrl();
-    const lock = !isMgr; // for simplicity, only managers edit past? full lock for member
-    document.getElementById('mealLockAlert').style.display = lock ? 'block' : 'none';
-    const slots = ['b','l','d'];
-    const slotNames = {b:'সকাল (0.75)',l:'দুপুর (1.5)',d:'রাত (0.75)'};
-    let html = '';
-    const userMealsSnap = await db.ref(`meals/${currentUser.uid}/${date}`).once('value');
-    let curr = userMealsSnap.val() || {b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-    for(let s of slots){
-      const state = curr[s] || {t:'off',q:1};
-      html += `<div class="card"><div class="sec-title">${slotNames[s]}</div><div class="bc-pills"><button class="pill ${state.t==='P'?'active':''}" data-slot="${s}" data-val="P">P (প্ল্যান্ট)</button><button class="pill ${state.t==='Q'?'active':''}" data-slot="${s}" data-val="Q">Q (কোয়ার্টার)</button><button class="pill ${state.t==='off'?'active':''}" data-slot="${s}" data-val="off">বন্ধ</button></div><div class="form-group"><label>সংখ্যা (পরিবেশক)</label><input type="number" id="qty_${s}" class="form-input" value="${state.q||1}" min="1"></div></div>`;
-    }
-    document.getElementById('mealInputPanel').innerHTML = html;
-    document.querySelectorAll('.pill[data-slot]').forEach(btn => {
-      btn.onclick = () => { const slot=btn.dataset.slot; document.querySelectorAll(`.pill[data-slot="${slot}"]`).forEach(b=>b.classList.remove('active')); btn.classList.add('active'); };
-    });
-    document.getElementById('saveMealBtn').onclick = async () => {
-      const newMeal = {};
-      for(let s of slots){
-        const active = document.querySelector(`.pill[data-slot="${s}"].active`);
-        const t = active ? active.dataset.val : 'off';
-        const q = parseInt(document.getElementById(`qty_${s}`).value) || 1;
-        newMeal[s] = {t,q};
-      }
-      await db.ref(`meals/${currentUser.uid}/${date}`).set(newMeal);
-      alert('মিল সংরক্ষিত!');
-      loadDashboard();
-      showScreen('home');
-    };
-  }
-
-  // OFFICE MEAL (MEPL/MPCL)
-  async function loadOfficeMealUI(){
-    const offMonth = document.getElementById('offMonth').value = getMessMonthKey();
-    const rateSnap = await db.ref(`officeRates/${offMonth}`).once('value');
-    let rate = rateSnap.val() || 0;
-    document.getElementById('offRate').value = rate;
-    document.getElementById('saveOffRateBtn').onclick = async () => { const newRate = parseFloat(document.getElementById('offRate').value); if(!isNaN(newRate)){ await db.ref(`officeRates/${offMonth}`).set(newRate); alert('রেট সেভ!'); } };
-    const date = document.getElementById('offMealDate').value = todayStr();
-    const officeAccounts = ['Office MEPL', 'Office MPCL'];
-    let slotsHtml = '';
-    for(let acc of officeAccounts){
-      let accKey = acc.replace(/\s/g,'_');
-      let mealSnap = await db.ref(`meals/${accKey}/${date}`).once('value');
-      let m = mealSnap.val() || {b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      slotsHtml += `<div class="card"><b>${acc}</b><div class="bc-pills">${['b','l','d'].map(s => `<button class="pill office-pill" data-acc="${accKey}" data-slot="${s}" data-val="${m[s]?.t||'off'}">${s==='b'?'সকাল':s==='l'?'দুপুর':'রাত'} (${m[s]?.t||'off'})</button>`).join('')}</div><div class="form-group"><label>সংখ্যা</label><input type="number" id="oqty_${accKey}" class="form-input" value="${m.b?.q||1}"></div></div>`;
-    }
-    document.getElementById('offMealSlots').innerHTML = slotsHtml;
-    document.querySelectorAll('.office-pill').forEach(btn => {
-      btn.onclick = () => { const acc=btn.dataset.acc, slot=btn.dataset.slot; const vals=['P','Q','off']; let idx = (vals.indexOf(btn.dataset.val)+1)%3; let nv = vals[idx]; btn.dataset.val=nv; btn.innerHTML = `${slot==='b'?'সকাল':slot==='l'?'দুপুর':'রাত'} (${nv})`; };
-    });
-    document.getElementById('saveOfficeMealBtn').onclick = async () => {
-      for(let acc of ['Office MEPL','Office MPCL']){
-        let accKey = acc.replace(/\s/g,'_');
-        let meal = {b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-        ['b','l','d'].forEach(slot=>{
-          let btn = document.querySelector(`.office-pill[data-acc="${accKey}"][data-slot="${slot}"]`);
-          if(btn) meal[slot].t = btn.dataset.val;
-          let qty = document.getElementById(`oqty_${accKey}`)?.value;
-          if(qty) meal[slot].q = parseInt(qty);
-        });
-        await db.ref(`meals/${accKey}/${date}`).set(meal);
-      }
-      alert('অফিস মিল সংরক্ষিত!');
-    };
-  }
-
-  // Bazar, Others, Cook bill functions (simplified)
-  async function loadBazar() { const snap = await db.ref('bazar').once('value'); let arr = snap.val() || []; let html = '<div class="sec-title">বাজার লগ</div>'; arr.reverse().forEach(b=>{ html+=`<div class="card"><b>${b.desc}</b> - ৳${b.amount}<br><small>${b.date} by ${b.by}</small></div>`; }); document.getElementById('bazarList').innerHTML = html; }
-  async function addBazar(){ const desc = document.getElementById('bzDesc').value; const amt = parseFloat(document.getElementById('bzAmount').value); const date = document.getElementById('bzDate').value; if(!desc||!amt) return; const snap = await db.ref('bazar').once('value'); let arr = snap.val() || []; arr.push({id:Date.now(), desc, amount:amt, date, by: currentUser.email}); await db.ref('bazar').set(arr); loadBazar(); alert('যোগ হয়েছে'); }
-
-  // report
-  async function loadReport(){
-    const mm = document.getElementById('reportMonth').value; if(!mm) return;
-    const usersSnap = await db.ref('users').once('value'); const mealsSnap = await db.ref('meals').once('value'); const bazarSnap = await db.ref('bazar').once('value'); const othersSnap = await db.ref('others').once('value'); const cookSnap = await db.ref('cookBills').once('value');
-    let html = `<div class="card"><b>মাস: ${mm}</b><br>বাজার: ৳${(bazarSnap.val()||[]).filter(b=>b.date?.startsWith(mm)).reduce((s,b)=>s+b.amount,0)}<br>অন্যান্য: ৳${(othersSnap.val()||[]).filter(o=>o.date?.startsWith(mm)).reduce((s,o)=>s+o.amount,0)}<br>বাবুর্চি বিল: ৳${(cookSnap.val()||[]).filter(c=>c.date?.startsWith(mm)).reduce((s,c)=>s+c.amount,0)}</div>`;
-    document.getElementById('reportContent').innerHTML = html;
-  }
-
-  // AUTH with email verification
-  auth.onAuthStateChanged(async (user) => {
-    if(user && user.emailVerified){
-      currentUser = user;
-      const ref = db.ref(`users/${user.uid}`);
-      const snap = await ref.once('value');
-      if(!snap.exists()){ await ref.set({ name: user.email.split('@')[0], email: user.email, role:'member', mobile:'', jobId:'', room:'' }); }
-      showScreen('home');
-      loadDashboard();
-      loadBazar();
-    } else if(user && !user.emailVerified){
-      await auth.signOut(); alert('আপনার ইমেইল ভেরিফাই করা হয়নি। আপনার ইনবক্স চেক করুন এবং ভেরিফাই করুন।');
-      showScreen('login');
-    } else { showScreen('login'); }
+// Firebase realtime sync
+function loadDB(){
+  document.getElementById('fb-loading').style.display='flex';
+  dbRef.on('value', snap=>{
+    if(snap.val()) DB = snap.val();
+    else { DB = { users:[], meals:{}, bazar:[], others:[], officeRates:{}, managers:{}, controllers:['admin'] }; dbRef.set(DB); }
+    if(!DB.officeRates) DB.officeRates={};
+    if(!DB.managers) DB.managers={};
+    document.getElementById('fb-loading').style.display='none';
+    if(CU) refreshHome();
+    else showSc('login');
   });
+}
 
-  document.getElementById('loginBtn').onclick = async () => { const email = document.getElementById('login-email').value, pwd = document.getElementById('login-pwd').value; try{ await auth.signInWithEmailAndPassword(email,pwd); if(!auth.currentUser.emailVerified){ await auth.signOut(); alert('ইমেইল ভেরিফাই করুন'); } }catch(e){ document.getElementById('login-msg').innerHTML = e.message; document.getElementById('login-msg').style.display='block'; } };
-  document.getElementById('registerBtn').onclick = async () => { const name=document.getElementById('reg-name').value, email=document.getElementById('reg-email').value, mobile=document.getElementById('reg-mobile').value, jobid=document.getElementById('reg-jobid').value, pwd=document.getElementById('reg-pwd').value, room=document.getElementById('reg-room').value, type=document.getElementById('reg-type').value; if(!name||!email||!mobile||!jobid||!pwd){ alert('সব তথ্য দিন'); return; } try{ const cred = await auth.createUserWithEmailAndPassword(email,pwd); await cred.user.sendEmailVerification(); await db.ref(`users/${cred.user.uid}`).set({ name, email, mobile, jobId:jobid, room, type, role:'member', createdAt:Date.now() }); alert('রেজিস্ট্রেশন সফল! আপনার ইমেইলে ভেরিফিকেশন লিংক পাঠানো হয়েছে। দয়া করে ভেরিফাই করে লগইন করুন।'); showScreen('login'); }catch(e){ alert(e.message); } };
-  document.getElementById('forgotLink').onclick = () => { const em = prompt('আপনার ইমেইল দিন:'); if(em) auth.sendPasswordResetEmail(em).then(()=>alert('রিসেট লিংক ইমেইলে পাঠানো হয়েছে।')); };
-  document.getElementById('addBazarBtn')?.addEventListener('click',addBazar);
-  document.getElementById('addOtherBtn')?.addEventListener('click', async()=>{ const desc=document.getElementById('othDesc').value, amt=parseFloat(document.getElementById('othAmount').value), date=document.getElementById('othDate').value, split=document.getElementById('othSplit').value; if(!desc||!amt) return; const snap=await db.ref('others').once('value'); let arr=snap.val()||[]; arr.push({id:Date.now(),desc,amount:amt,date,split,by:currentUser.email}); await db.ref('others').set(arr); alert('যোগ হয়েছে'); });
-  document.getElementById('addCookBillBtn')?.addEventListener('click', async()=>{ const desc=document.getElementById('cookDesc').value, amt=parseFloat(document.getElementById('cookAmount').value), date=document.getElementById('cookDate').value; if(!desc||!amt) return; const snap=await db.ref('cookBills').once('value'); let arr=snap.val()||[]; arr.push({id:Date.now(),desc,amount:amt,date,by:currentUser.email}); await db.ref('cookBills').set(arr); alert('বাবুর্চি বিল যোগ হয়েছে'); });
-  document.getElementById('loadReportBtn')?.addEventListener('click',loadReport);
-  document.getElementById('assignManagerBtn')?.addEventListener('click', async()=>{ const month=document.getElementById('mgrMonth').value; const uid=document.getElementById('managerUserSelect').value; if(!month||!uid) return; const mgrRef=db.ref(`managers/${month}`); const prev= (await mgrRef.once('value')).val()||[]; if(!prev.includes(uid)){ prev.push(uid); await mgrRef.set(prev); await db.ref(`users/${uid}`).update({role:'manager'}); alert('ম্যানেজার নিযুক্ত'); } });
-  document.getElementById('addCtrlBtn')?.addEventListener('click', async()=>{ const uid=document.getElementById('ctrlSelect').value; if(!uid) return; await db.ref(`users/${uid}`).update({role:'controller'}); alert('কন্ট্রোলার যোগ হয়েছে'); });
-  async function loadAdminSelects(){ const snap=await db.ref('users').once('value'); let opts=''; snap.forEach(c=>{ const val=c.val(); opts+=`<option value="${c.key}">${val.name} (${val.email})</option>`; }); document.getElementById('managerUserSelect').innerHTML=opts; document.getElementById('ctrlSelect').innerHTML=opts; }
-  function sec(page){ if(page==='meal') loadMealScreen(); if(page==='officeMeal') loadOfficeMealUI(); if(page==='bazar') loadBazar(); if(page==='profile') document.getElementById('profileView').innerHTML = `<div class="sec-title">${userData?.name}</div><div>ইমেইল: ${currentUser?.email}</div><div>মোবাইল: ${userData?.mobile||'—'}</div><div>জব আইডি: ${userData?.jobId||'—'}</div><div>রুম: ${userData?.room||'—'}</div>`; if(page==='members'){ db.ref('users').once('value', snap=>{ let html=''; snap.forEach(c=>{ const u=c.val(); html+=`<div class="card">${u.name} (${u.role}) - ${u.jobId}</div>`; }); document.getElementById('membersList').innerHTML=html; }); } if(page==='admin') loadAdminSelects(); if(page==='report'){ const m = getMessMonthKey(); document.getElementById('reportMonth').value = m; loadReport();} showScreen(page); }
-  window.sec = sec; window.goHome = goHome; window.logout = () => auth.signOut(); window.toggleDarkMode = toggleDarkMode;
-  // initial fetch office rate placeholder
+// EMAIL VERIFICATION CHECK
+async function checkEmailVerified(user){
+  await user.reload();
+  if(!user.emailVerified){
+    await auth.signOut();
+    toast('⚠️ আপনার ইমেইল ভেরিফাই করা হয়নি। আপনার ইনবক্স চেক করুন এবং ভেরিফাই করুন।');
+    showSc('login');
+    return false;
+  }
+  return true;
+}
+
+// LOGIN with email verification
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  try{
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    if(!cred.user.emailVerified){
+      await auth.signOut();
+      document.getElementById('login-alert').textContent = '❌ ইমেইল ভেরিফাই করা হয়নি! আপনার ইনবক্সে ভেরিফিকেশন লিংক চেক করুন।';
+      document.getElementById('login-alert').classList.add('show');
+      return;
+    }
+    // Load user from DB
+    const snap = await dbRef.child('users').once('value');
+    const users = snap.val() || [];
+    CU = users.find(u => u.email === email);
+    if(!CU){ CU = { email, name: email.split('@')[0], role:'member', mobile:'', job:'', room:'', type:'inside' }; DB.users.push(CU); dbRef.child('users').set(DB.users); }
+    refreshHome(); showSc('home');
+  } catch(e){ document.getElementById('login-alert').textContent = e.message; document.getElementById('login-alert').classList.add('show'); }
+}
+
+// REGISTER with email verification
+async function doRegister(){
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const mobile = document.getElementById('reg-mobile').value.trim();
+  const job = document.getElementById('reg-jobid').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const room = document.getElementById('reg-room').value.trim();
+  const type = document.getElementById('reg-type').value;
+  if(!name || !email || !mobile || !job || !pass){ toast('সব তথ্য পূরণ করুন'); return; }
+  if(pass.length<6){ toast('পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার'); return; }
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.sendEmailVerification();
+    const newUser = { uid: cred.user.uid, name, email, mobile, job, room, type, role:'member', balance:0 };
+    DB.users.push(newUser);
+    await dbRef.child('users').set(DB.users);
+    toast('✅ রেজিস্ট্রেশন সফল! আপনার ইমেইলে ভেরিফিকেশন লিংক পাঠানো হয়েছে। ভেরিফাই করে লগইন করুন।');
+    showSc('login');
+  } catch(e){ toast(e.message); }
+}
+
+async function sendResetEmail(){ const email=document.getElementById('fgt-email').value; try{ await auth.sendPasswordResetEmail(email); toast('রিসেট লিংক ইমেইলে পাঠানো হয়েছে'); showSc('login'); }catch(e){ toast(e.message); } }
+function doForgotPassword(){ showSc('forgot'); }
+async function logout(){ await auth.signOut(); CU=null; showSc('login'); }
+
+// Refresh home UI
+async function refreshHome(){
+  if(!CU) return;
+  document.getElementById('home-date').textContent = CU.name;
+  document.getElementById('home-role').textContent = CU.role==='controller'?'কন্ট্রোলার':(CU.role==='manager'?'ম্যানেজার':'সদস্য');
+  const today = todayStr();
+  let total=0; let bq=0,lq=0,dq=0;
+  for(let key in DB.meals){
+    if(key.endsWith(today)){
+      const m = DB.meals[key];
+      if(m.b && m.b.t!=='off'){ bq += (m.b.q||1); total += (m.b.q||1)*0.75; }
+      if(m.l && m.l.t!=='off'){ lq += (m.l.q||1); total += (m.l.q||1)*1.5; }
+      if(m.d && m.d.t!=='off'){ dq += (m.d.q||1); total += (m.d.q||1)*0.75; }
+    }
+  }
+  document.getElementById('td-b').textContent = bq;
+  document.getElementById('td-l').textContent = lq;
+  document.getElementById('td-d').textContent = dq;
+  document.getElementById('td-total').textContent = total.toFixed(2);
+  let mm = messMonthKey();
+  let myMeals=0; for(let k in DB.meals) if(k.startsWith(CU.email+'_') && k.slice(CU.email.length+1).startsWith(mm)) myMeals += (DB.meals[k]?.b?.t!=='off'?(DB.meals[k]?.b?.q||1)*0.75:0)+(DB.meals[k]?.l?.t!=='off'?(DB.meals[k]?.l?.q||1)*1.5:0)+(DB.meals[k]?.d?.t!=='off'?(DB.meals[k]?.d?.q||1)*0.75:0);
+  document.getElementById('st-month').textContent = myMeals.toFixed(2);
+  let isMgr = CU.role==='controller' || (DB.managers[mm] && DB.managers[mm].includes(CU.email));
+  document.getElementById('menu-bazar').style.display = isMgr?'block':'none';
+  document.getElementById('menu-others').style.display = isMgr?'block':'none';
+  document.getElementById('menu-officemeal').style.display = isMgr?'block':'none';
+  document.getElementById('admin-btn').style.display = (CU.role==='controller')?'block':'none';
+}
+
+// MEAL functions
+function renderMealSlots(){
+  let date = document.getElementById('meal-date').value;
+  let meal = DB.meals[CU.email+'_'+date] || {b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+  let html = '';
+  ['b','l','d'].forEach(s=>{
+    let label = s==='b'?'সকাল (0.75)':s==='l'?'দুপুর (1.5)':'রাত (0.75)';
+    let m = meal[s];
+    html += `<div class="card"><div class="sec-title">${label}</div><div class="pqo-row"><input type="number" id="qty-${s}" class="qty-input" value="${m.q||1}" min="1"><button class="pqo-btn ${m.t==='P'?'selP':''}" onclick="setPQO('${s}','P')">P<small>Plant</small></button><button class="pqo-btn ${m.t==='Q'?'selQ':''}" onclick="setPQO('${s}','Q')">Q<small>Quarter</small></button><button class="pqo-btn ${m.t==='off'?'seloff':''}" onclick="setPQO('${s}','off')">off<small>বন্ধ</small></button></div></div>`;
+  });
+  document.getElementById('meal-slots-container').innerHTML = html;
+}
+function setPQO(slot,val){
+  let btns = document.querySelectorAll(`#meal-slots-container .pqo-btn`);
+  btns.forEach(btn=>{ if(btn.innerText.includes(val.toUpperCase())) btn.classList.add(`sel${val}`); else btn.classList.remove('selP','selQ','seloff'); });
+}
+async function saveMeal(){
+  let date = document.getElementById('meal-date').value;
+  let newMeal = {};
+  for(let s of ['b','l','d']){
+    let qty = parseInt(document.getElementById(`qty-${s}`).value) || 1;
+    let active = document.querySelector(`#meal-slots-container .pqo-btn.selP,.pqo-btn.selQ,.pqo-btn.seloff`);
+    let t = 'off';
+    if(active && active.innerText.includes('P')) t='P';
+    else if(active && active.innerText.includes('Q')) t='Q';
+    newMeal[s] = {t,q:qty};
+  }
+  DB.meals[CU.email+'_'+date] = newMeal;
+  await dbRef.child('meals').set(DB.meals);
+  toast('মিল সেভ হয়েছে');
+  refreshHome();
+}
+function shiftDate(delta){ let d=new Date(mealDate); d.setDate(d.getDate()+delta); mealDate=d.toISOString().slice(0,10); document.getElementById('meal-date').value=mealDate; renderMealSlots(); }
+
+// OFFICE MEAL
+async function saveOfficeRate(){ let mm=document.getElementById('off-month').value; let rate=parseFloat(document.getElementById('off-rate').value); DB.officeRates[mm]=rate; await dbRef.child('officeRates').set(DB.officeRates); toast('অফিস রেট সেভ'); }
+async function saveOfficeMeal(){ let date=document.getElementById('off-date').value; let accs=['MEPL','MPCL']; for(let acc of accs){ let key=`office_${acc}`; let meal={}; for(let s of ['b','l','d']){ let t=document.getElementById(`off-${acc}-${s}`)?.value||'off'; let q=parseInt(document.getElementById(`off-${acc}-${s}-q`)?.value)||1; meal[s]={t,q}; } DB.meals[`${key}_${date}`]=meal; } await dbRef.child('meals').set(DB.meals); toast('অফিস মিল সেভ'); }
+
+// BAZAR/OTHERS
+async function addBazar(){ let desc=document.getElementById('bz-desc').value, amt=parseFloat(document.getElementById('bz-amt').value), date=document.getElementById('bz-date').value; if(!desc||!amt) return; DB.bazar.push({id:Date.now(),desc,amount:amt,date,by:CU.name}); await dbRef.child('bazar').set(DB.bazar); renderBazar(); toast('যোগ হলো'); }
+async function renderBazar(){ let html=''; DB.bazar.slice().reverse().forEach(b=>{ html+=`<div class="bazar-item"><div><div class="bz-name">${b.desc}</div><div class="bz-meta">${b.date} · ${b.by}</div></div><div class="bz-amt">৳ ${b.amount}</div></div>`; }); document.getElementById('bz-list').innerHTML=html||'<p>কোনো বাজার নেই</p>'; }
+async function addOther(){ let desc=document.getElementById('oth-desc').value, amt=parseFloat(document.getElementById('oth-amt').value), date=document.getElementById('oth-date').value; DB.others.push({id:Date.now(),desc,amount:amt,date,by:CU.name}); await dbRef.child('others').set(DB.others); renderOthers(); toast('যোগ হলো'); }
+async function renderOthers(){ let html=''; DB.others.slice().reverse().forEach(o=>{ html+=`<div class="bazar-item"><div><div class="bz-name">${o.desc}</div><div class="bz-meta">${o.date}</div></div><div class="bz-amt">৳ ${o.amount}</div></div>`; }); document.getElementById('oth-list').innerHTML=html||'<p>কোনো খরচ নেই</p>'; }
+
+// OTHER SCREENS
+async function loadReport(){ let mm=document.getElementById('rpt-month').value; let totalBazar=DB.bazar.filter(b=>b.date.startsWith(mm)).reduce((s,b)=>s+b.amount,0); let totalOther=DB.others.filter(o=>o.date.startsWith(mm)).reduce((s,o)=>s+o.amount,0); document.getElementById('rpt-content').innerHTML=`<div class="card">বাজার: ৳${totalBazar}<br>অন্যান্য: ৳${totalOther}</div>`; }
+async function loadMembers(){ let html=''; DB.users.forEach(u=>{ html+=`<div class="mem-item"><div class="mem-av">${u.name[0]}</div><div><div class="mem-name">${u.name}</div><div class="mem-meta">${u.job||'-'} · রুম ${u.room||'-'}</div></div></div>`; }); document.getElementById('mem-list').innerHTML=html; }
+function loadProfile(){ document.getElementById('prof-card').innerHTML=`<div class="prof-av">${CU.name[0]}</div><div class="prof-name">${CU.name}</div><div class="prof-role">${CU.role}</div><div class="prof-row"><span>মোবাইল</span><span>${CU.mobile}</span></div><div class="prof-row"><span>ইমেইল</span><span>${CU.email}</span></div>`; }
+function initAdmin(){ let html=`<select id="mgr-sel" class="form-input">${DB.users.map(u=>`<option value="${u.email}">${u.name}</option>`).join('')}</select><button class="btn btn-primary" onclick="assignManager()">ম্যানেজার করুন</button>`; document.getElementById('admin-panel').innerHTML=html; }
+async function assignManager(){ let mm=messMonthKey(); let uid=document.getElementById('mgr-sel').value; if(!DB.managers[mm]) DB.managers[mm]=[]; if(!DB.managers[mm].includes(uid)) DB.managers[mm].push(uid); let user=DB.users.find(u=>u.email===uid); if(user) user.role='manager'; await dbRef.child('managers').set(DB.managers); await dbRef.child('users').set(DB.users); toast('ম্যানেজার নিযুক্ত'); }
+function sec(page){ if(page==='meal'){ mealDate=todayStr(); document.getElementById('meal-date').value=mealDate; renderMealSlots(); } if(page==='bazar') renderBazar(); if(page==='others') renderOthers(); if(page==='officemeal'){ document.getElementById('off-month').value=messMonthKey(); document.getElementById('off-rate').value=DB.officeRates[messMonthKey()]||0; } if(page==='report'){ let sel=document.getElementById('rpt-month'); sel.innerHTML=''; for(let i=0;i<6;i++){ let d=new Date(); d.setMonth(d.getMonth()-i); let val=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; sel.innerHTML+=`<option value="${val}">${val}</option>`; } } if(page==='members') loadMembers(); if(page==='profile') loadProfile(); if(page==='admin') initAdmin(); showSc(page); }
+
+auth.onAuthStateChanged(async user=>{ if(user && user.emailVerified){ CU = (DB.users||[]).find(u=>u.email===user.email); if(!CU){ CU={email:user.email,name:user.email.split('@')[0],role:'member'}; DB.users.push(CU); await dbRef.child('users').set(DB.users); } refreshHome(); showSc('home'); } else if(user && !user.emailVerified){ await auth.signOut(); toast('ইমেইল ভেরিফাই করুন'); showSc('login'); } else showSc('login'); });
+loadDB();
+window.sec=sec; window.goHome=goHome; window.doLogin=doLogin; window.doRegister=doRegister; window.doSendReset=sendResetEmail; window.toggleDark=toggleDark;
 </script>
 </body>
 </html>
