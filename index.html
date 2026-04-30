@@ -739,8 +739,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="sec-title">🔐 Login করুন</div>
       <div id="login-alert" class="alert alert-danger"></div>
       <div class="form-group">
-        <label class="form-label">Mobile / Job ID / Username</label>
-        <input type="text" id="login-user" class="form-input" placeholder="মোবাইল, Job ID বা Username">
+        <label class="form-label">Email Address</label>
+        <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন">
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
@@ -1558,12 +1558,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 // DATABASE
 // ═══════════════════════════════════════════════
 let DB = {
-  users:[
-    {u:'admin',p:'1234',name:'Admin User',mob:'01700000000',job:'MQ-ADM',room:'101',role:'controller',type:'inside',joined:'2024-01-01',balance:2500},
-    {u:'manager',p:'1234',name:'মেস ম্যানেজার',mob:'01711111111',job:'MQ-MGR',room:'102',role:'manager',type:'inside',joined:'2024-01-01',balance:1200},
-    {u:'karim',p:'1234',name:'আব্দুল করিম',mob:'01722222222',job:'MQ-003',room:'103',role:'member',type:'inside',joined:'2024-01-01',balance:-300},
-    {u:'cook1',p:'1234',name:'রান্নাঘর করিম',mob:'',job:'COOK-01',room:'—',role:'member',type:'cook',joined:'2024-01-01',balance:0},
-  ],
+  users:[],
   meals:{},
   bazar:[],
   others:[],      // NEW: অন্যান্য খরচ
@@ -1571,7 +1566,7 @@ let DB = {
   managers:{},    // {"YYYY-MM": [uname,...]}
   mealRates:{},   // {"YYYY-MM": finalRate}
   cfg:{def:{b:0.75,l:1.5,d:0.75}, byDate:{}},
-  controllers:['admin'],
+  controllers:[],
   siteNote: 'আশুগঞ্জ, ব্রাহ্মণবাড়িয়া',
   notice: {text:'', popupEnabled:false},
   officeMealRates:{},  // {"YYYY-MM": rate}  — আলাদা রেট
@@ -1685,7 +1680,7 @@ function migrateDB(){
   if(!DB.users) DB.users=[];
   if(!DB.bazar) DB.bazar=[];
   if(!DB.managers) DB.managers={};
-  if(!DB.controllers) DB.controllers=['admin'];
+  if(!DB.controllers) DB.controllers=[];
   // Migrate managers to array format
   Object.keys(DB.managers).forEach(k=>{
     if(typeof DB.managers[k]==='string') DB.managers[k]=[DB.managers[k]];
@@ -1721,27 +1716,17 @@ function loadDB(){
       delete DB.darkMode;
       migrateDB();
     } else {
-      // First-ever run: push default DB to Firebase
+      // First-ever run: push default structure to Firebase
       migrateDB();
       const initialDB = JSON.parse(JSON.stringify(DB));
       delete initialDB.darkMode;
       dbRef.set(initialDB);
     }
-    // Hide loading overlay
-    document.getElementById('fb-loading').style.display='none';
-    // Restore logged-in user from localStorage session
-    try{
-      const u=localStorage.getItem(LS_USER);
-      if(u){ const cu=JSON.parse(u); CU=DB.users.find(x=>x.u===cu.u)||null; }
-    }catch(e){}
     applyDark();
-    // Refresh current active screen
-    const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
+    // Refresh current active screen if already logged in
     if(CU){
-      refreshHome();
-      showSc('home');
-      setTimeout(()=>showNoticePopup(), 800);
-      if(activeId==='home'||activeId==='login'||!activeId) { /* already on home */ }
+      const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
+      if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
       else if(activeId==='meal') loadMealDate();
       else if(activeId==='bazar') renderBazar();
       else if(activeId==='others'){ renderOthers(); renderCookBills(); }
@@ -1751,15 +1736,69 @@ function loadDB(){
       else if(activeId==='members') loadMembers();
       else if(activeId==='profile') loadProfile();
       else if(activeId==='notice') initNotice();
-    } else {
-      showSc('login');
     }
+    // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
     document.getElementById('fb-loading').style.display='none';
     toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
     console.error('Firebase read error:', err);
   });
 }
+
+// ═══════════════════════════════════════════════
+// onAuthStateChanged — Session Management
+// ═══════════════════════════════════════════════
+auth.onAuthStateChanged(fbUser=>{
+  if(!fbUser){
+    // Not logged in
+    document.getElementById('fb-loading').style.display='none';
+    CU = null;
+    showSc('login');
+    return;
+  }
+  if(!fbUser.emailVerified){
+    // Logged in but email not verified
+    document.getElementById('fb-loading').style.display='none';
+    auth.signOut();
+    CU = null;
+    showSc('login');
+    const al = document.getElementById('login-alert');
+    if(al){ al.innerHTML='⚠️ ইমেইল যাচাই করা হয়নি। <b>'+esc(fbUser.email)+'</b> ইনবক্স চেক করুন।'; al.className='alert alert-danger show'; }
+    return;
+  }
+  // Verified user — load their RTDB profile
+  const uid = fbUser.uid;
+  firebase.database().ref('users/' + uid).once('value').then(snap=>{
+    const userData = snap.val();
+    if(!userData){
+      document.getElementById('fb-loading').style.display='none';
+      auth.signOut(); CU=null; showSc('login');
+      const al = document.getElementById('login-alert');
+      if(al){ al.textContent='❌ প্রোফাইল পাওয়া যায়নি। Admin-এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
+      return;
+    }
+    if(userData.blocked){
+      document.getElementById('fb-loading').style.display='none';
+      auth.signOut(); CU=null; showSc('login');
+      const al = document.getElementById('login-alert');
+      if(al){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
+      return;
+    }
+    // Check role from RTDB roles/{uid}
+    firebase.database().ref('roles/' + uid).once('value').then(rsnap=>{
+      const roleData = rsnap.val();
+      const role = roleData?.role || userData.role || 'member';
+      CU = { uid, u: userData.u||uid, name: userData.name||fbUser.email, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role, type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
+      document.getElementById('fb-loading').style.display='none';
+      refreshHome(); showSc('home');
+      setTimeout(()=>showNoticePopup(), 800);
+    });
+  }).catch(err=>{
+    document.getElementById('fb-loading').style.display='none';
+    console.error('RTDB profile load error:', err);
+    auth.signOut(); CU=null; showSc('login');
+  });
+});
 
 // ═══════════════════════════════════════════════
 // BST TIME HELPERS (Asia/Dhaka = UTC+6)
@@ -1926,9 +1965,17 @@ function toggleDark(){
 // ═══════════════════════════════════════════════
 // ROLE HELPERS
 // ═══════════════════════════════════════════════
-function isController(u){ u=u||CU; return u&&(DB.controllers.includes(u.u)||u.role==='controller'); }
-function isManager(u){ u=u||CU; return u&&(u.role==='manager'||u.role==='controller'||isController(u)||DB.controllers.includes(u.u)); }
+// Sync check — uses CU.role (already loaded from RTDB on login)
+function isController(u){ u=u||CU; return u&&(u.role==='controller'||(DB.controllers&&DB.controllers.includes(u.u))); }
+function isManager(u){ u=u||CU; return u&&(u.role==='manager'||u.role==='controller'||isController(u)); }
 function isManagerOrCtrl(u){ return isManager(u)||isController(u); }
+
+// Async RTDB role check (use when real-time accuracy needed)
+function checkRoleFromRTDB(uid){
+  if(!uid) return Promise.resolve('member');
+  return firebase.database().ref('roles/'+uid).once('value').then(snap=>{ const d=snap.val(); return d?.role||'member'; });
+}
+
 function roleLabel(r,u){
   if(u&&isController(u)) return '⭐ Controller';
   if(r==='controller') return '⭐ Controller';
@@ -1963,28 +2010,74 @@ function closeModal(){ document.getElementById('modal-bg').classList.remove('sho
 // AUTH
 // ═══════════════════════════════════════════════
 function doLogin(){
-  const u=sanitizeInput(V('login-user')), p=V('login-pass');
-  const al=document.getElementById('login-alert'); al.className='alert';
-  if(!u||!p){ al.textContent='❌ সব তথ্য পূরণ করুন!'; al.className='alert alert-danger show'; return; }
-  if(u.length>100||p.length>100){ al.textContent='❌ ইনপুট অনেক বড়!'; al.className='alert alert-danger show'; return; }
-  const user=DB.users.find(x=>(x.u===u||x.mob===u||x.job===u)&&x.p===p);
-  if(!user){ al.textContent='❌ ভুল Username, Mobile, Job ID বা Password!'; al.className='alert alert-danger show'; return; }
-  if(user.blocked){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; return; }
-  CU=user;
-  if(document.getElementById('remember-me').checked) try{ localStorage.setItem(LS_USER,JSON.stringify({u:user.u})); }catch(e){}
-  refreshHome(); showSc('home');
-  setTimeout(()=>showNoticePopup(), 600);
+  const email = V('login-user').trim().toLowerCase();
+  const pass = V('login-pass');
+  const al = document.getElementById('login-alert');
+  al.className = 'alert';
+  if(!email || !pass){ al.textContent='❌ Email এবং পাসওয়ার্ড দিন!'; al.className='alert alert-danger show'; return; }
+  if(!validEmail(email)){ al.textContent='❌ সঠিক Email Address দিন!'; al.className='alert alert-danger show'; return; }
+  const btn = document.querySelector('#sc-login .btn-primary');
+  if(btn){ btn.disabled=true; btn.textContent='লগইন হচ্ছে...'; }
+
+  // Firebase Persistence: LOCAL or SESSION
+  const persistence = document.getElementById('remember-me').checked
+    ? firebase.auth.Auth.Persistence.LOCAL
+    : firebase.auth.Auth.Persistence.SESSION;
+
+  auth.setPersistence(persistence).then(()=>{
+    return auth.signInWithEmailAndPassword(email, pass);
+  }).then(cred=>{
+    const fbUser = cred.user;
+    if(!fbUser.emailVerified){
+      // Block unverified users — show resend button
+      auth.signOut();
+      al.innerHTML = `❌ ইমেইল যাচাই করা হয়নি! আপনার <b>${esc(email)}</b> ইনবক্স চেক করুন।<br>
+        <button onclick="resendVerificationEmail('${esc(email)}','${esc(pass)}')" style="margin-top:10px;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;width:100%">
+          📧 Verification Email পুনরায় পাঠান
+        </button>`;
+      al.className='alert alert-danger show';
+      if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+      return;
+    }
+    // Find user in RTDB by uid
+    const uid = fbUser.uid;
+    const userRef = firebase.database().ref('users/' + uid);
+    userRef.once('value').then(snap=>{
+      const userData = snap.val();
+      if(!userData){ al.textContent='❌ RTDB-তে আপনার প্রোফাইল পাওয়া যায়নি। Admin এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; auth.signOut(); if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } return; }
+      if(userData.blocked){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; auth.signOut(); if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } return; }
+      // Set CU from RTDB data — no password stored in CU
+      CU = { uid, u: userData.u||uid, name: userData.name, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role: userData.role||'member', type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
+      if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+      refreshHome(); showSc('home');
+      setTimeout(()=>showNoticePopup(), 600);
+    }).catch(err=>{ al.textContent='❌ ডেটা লোড ব্যর্থ: '+err.message; al.className='alert alert-danger show'; if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } });
+  }).catch(err=>{
+    let msg = '❌ Login ব্যর্থ!';
+    if(err.code==='auth/user-not-found'||err.code==='auth/wrong-password'||err.code==='auth/invalid-credential') msg='❌ Email বা পাসওয়ার্ড ভুল!';
+    else if(err.code==='auth/too-many-requests') msg='❌ অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+    else if(err.code==='auth/network-request-failed') msg='❌ ইন্টারনেট সংযোগ চেক করুন!';
+    al.textContent = msg; al.className='alert alert-danger show';
+    if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+  });
+}
+
+function resendVerificationEmail(email, pass){
+  // Sign in temporarily to get the user object for resend
+  auth.signInWithEmailAndPassword(email, pass).then(cred=>{
+    return cred.user.sendEmailVerification().then(()=>{ auth.signOut(); toast('✅ Verification email পাঠানো হয়েছে! ইনবক্স চেক করুন।'); });
+  }).catch(err=>{ toast('❌ Email পাঠানো যায়নি: '+(err.message||'')); });
 }
 function doRegister(){
-  const name=sanitizeInput(V('reg-name')),
-        mob=sanitizeInput(V('reg-mobile')),
-        email=sanitizeInput(V('reg-email')).toLowerCase(),
-        job=sanitizeInput(V('reg-jobid')),
-        uname=sanitizeInput(V('reg-uname')),
-        pass=V('reg-pass'),
-        room=sanitizeInput(V('reg-room')),
-        type=document.getElementById('reg-type').value;
-  const al=document.getElementById('reg-alert'),ok=document.getElementById('reg-ok');
+  const name    = sanitizeInput(V('reg-name')),
+        mob     = sanitizeInput(V('reg-mobile')),
+        email   = sanitizeInput(V('reg-email')).toLowerCase(),
+        job     = sanitizeInput(V('reg-jobid')),
+        uname   = sanitizeInput(V('reg-uname')),
+        pass    = V('reg-pass'),
+        room    = sanitizeInput(V('reg-room')),
+        type    = document.getElementById('reg-type').value;
+  const al=document.getElementById('reg-alert'), ok=document.getElementById('reg-ok');
   al.className='alert'; ok.className='alert';
   if(!name||!mob||!email||!job||!uname||!pass){
     al.textContent='❌ * চিহ্নিত তথ্য পূরণ করুন!'; al.className='alert alert-danger show'; return;
@@ -1994,44 +2087,46 @@ function doRegister(){
   if(!validEmail(email)){ al.textContent='❌ সঠিক Email Address দিন!'; al.className='alert alert-danger show'; return; }
   if(!validUsername(uname)){ al.textContent='❌ Username শুধু A-Z, 0-9, _, - এবং ৩-৩০ ক্যারেক্টার!'; al.className='alert alert-danger show'; return; }
   if(!validPass(pass)){ al.textContent='❌ পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার!'; al.className='alert alert-danger show'; return; }
-  if(DB.users.find(x=>x.u===uname)){ al.textContent='❌ Username ইতোমধ্যে নেওয়া হয়েছে!'; al.className='alert alert-danger show'; return; }
-  if(DB.users.find(x=>x.mob===mob)){ al.textContent='❌ এই মোবাইলে অ্যাকাউন্ট আছে!'; al.className='alert alert-danger show'; return; }
-  if(DB.users.find(x=>x.email&&x.email===email)){ al.textContent='❌ এই Email দিয়ে অ্যাকাউন্ট আছে!'; al.className='alert alert-danger show'; return; }
-  const btn=document.querySelector('#sc-register .btn-primary');
+
+  const btn = document.querySelector('#sc-register .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='রেজিস্ট্রেশন হচ্ছে...'; }
+
   auth.createUserWithEmailAndPassword(email, pass)
-    .then(()=>{
-      DB.users.push({u:uname,p:pass,name,mob,email,job,room,type,role:'member',joined:tod(),balance:0});
-      saveDB();
-      ok.textContent='✅ রেজিস্ট্রেশন সফল! Login করুন।';
-      ok.className='alert alert-success show';
-      if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-      setTimeout(()=>showSc('login'),1500);
+    .then(cred=>{
+      const uid = cred.user.uid;
+      // Save extra info in RTDB under users/{uid} — NO password stored
+      const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
+      return firebase.database().ref('users/' + uid).set(userData)
+        .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
+        .then(()=> cred.user.sendEmailVerification())
+        .then(()=>{
+          // Also add to DB.users array in messData for backward compat with meal/bazar logic
+          if(!DB.users) DB.users=[];
+          DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
+          saveDB();
+          ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+          ok.className='alert alert-success show';
+          al.className='alert';
+          if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+          auth.signOut();
+          setTimeout(()=>showSc('login'), 2500);
+        });
     })
     .catch(err=>{
-      if(err.code==='auth/email-already-in-use'){
-        al.textContent='❌ এই Email Firebase Auth-এ আছে। অন্য Email ব্যবহার করুন।';
-        al.className='alert alert-danger show';
-        if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-        return;
-      }
-      DB.users.push({u:uname,p:pass,name,mob,email,job,room,type,role:'member',joined:tod(),balance:0});
-      saveDB();
-      ok.textContent='✅ রেজিস্ট্রেশন সফল! (Email reset সীমিত হতে পারে)';
-      ok.className='alert alert-success show';
+      let msg = '❌ রেজিস্ট্রেশন ব্যর্থ!';
+      if(err.code==='auth/email-already-in-use') msg='❌ এই Email দিয়ে ইতিমধ্যে অ্যাকাউন্ট আছে!';
+      else if(err.code==='auth/weak-password') msg='❌ পাসওয়ার্ড দুর্বল! কমপক্ষে ৬ ক্যারেক্টার দিন।';
+      else if(err.code==='auth/network-request-failed') msg='❌ ইন্টারনেট সংযোগ চেক করুন!';
+      al.textContent=msg; al.className='alert alert-danger show';
       if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-      setTimeout(()=>showSc('login'),1800);
     });
 }
 function doForgot(){
-  const email=V('fgt-email');
+  const email=V('fgt-email').trim().toLowerCase();
   const al=document.getElementById('fgt-alert'),ok=document.getElementById('fgt-ok');
   al.className='alert'; ok.className='alert';
   if(!email){ al.textContent='❌ Email Address দিন!'; al.className='alert alert-danger show'; return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ al.textContent='❌ সঠিক Email দিন!'; al.className='alert alert-danger show'; return; }
-  // Check if email exists in our DB
-  const user=DB.users.find(x=>x.email===email);
-  if(!user){ al.textContent='❌ এই Email দিয়ে কোনো অ্যাকাউন্ট নেই!'; al.className='alert alert-danger show'; return; }
+  if(!validEmail(email)){ al.textContent='❌ সঠিক Email দিন!'; al.className='alert alert-danger show'; return; }
   const btn=document.getElementById('fgt-btn');
   btn.disabled=true; btn.textContent='পাঠানো হচ্ছে...';
   auth.sendPasswordResetEmail(email)
@@ -2043,14 +2138,21 @@ function doForgot(){
     })
     .catch(err=>{
       let msg='❌ Reset Email পাঠানো যায়নি।';
-      if(err.code==='auth/user-not-found') msg='❌ এই Email Firebase-এ নেই। Admin এর সাথে যোগাযোগ করুন।';
+      if(err.code==='auth/user-not-found') msg='❌ এই Email দিয়ে কোনো অ্যাকাউন্ট নেই।';
       if(err.code==='auth/too-many-requests') msg='❌ অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
       al.textContent=msg; al.className='alert alert-danger show';
       btn.disabled=false; btn.textContent='📧 Reset Link পাঠান';
     });
 }
 function confirmLogout(){
-  showModal('Logout','আপনি কি নিশ্চিতভাবে লগআউট করতে চান?',()=>{ CU=null; localStorage.removeItem(LS_USER); showSc('login'); toast('Logout সফল'); });
+  showModal('Logout','আপনি কি নিশ্চিতভাবে লগআউট করতে চান?',()=>{
+    auth.signOut().then(()=>{
+      CU=null;
+      try{ localStorage.removeItem(LS_USER); }catch(e){}
+      showSc('login');
+      toast('Logout সফল');
+    }).catch(()=>{ CU=null; showSc('login'); toast('Logout সফল'); });
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -3329,7 +3431,9 @@ function setManager(){
   if(!DB.managers[month]) DB.managers[month]=[];
   if(DB.managers[month].length>=10){ toast('❌ সর্বোচ্চ ১০ জন ম্যানেজার রাখা যাবে!'); return; }
   if(!DB.managers[month].includes(uname)) DB.managers[month].push(uname);
-  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='member') u.role='manager';
+  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='member'){ u.role='manager';
+    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'manager'}).catch(e=>console.warn('Role update:',e));
+  }
   saveDB(); renderManagerInfo();
   // refresh remove list
   const sel=document.getElementById('mgr-remove');
@@ -3341,7 +3445,9 @@ function removeManager(){
   const month=document.getElementById('mgr-month').value, uname=document.getElementById('mgr-remove').value;
   if(!month||!uname){ toast('❌ ম্যানেজার নির্বাচন করুন!'); return; }
   if(DB.managers[month]) DB.managers[month]=DB.managers[month].filter(u=>u!==uname);
-  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='manager') u.role='member';
+  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='manager'){ u.role='member';
+    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'member'}).catch(e=>console.warn('Role update:',e));
+  }
   saveDB(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
 function saveCfg(){
@@ -3447,14 +3553,18 @@ function addController(){
   const uname=document.getElementById('ctrl-add-sel').value; if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
   if(DB.controllers.length>=5){ toast('❌ সর্বোচ্চ ৫ জন Controller রাখা যাবে!'); return; }
   if(!DB.controllers.includes(uname)) DB.controllers.push(uname);
-  const u=DB.users.find(x=>x.u===uname); if(u) u.role='controller';
+  const u=DB.users.find(x=>x.u===uname); if(u){ u.role='controller';
+    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'controller'}).catch(e=>console.warn('Role update:',e));
+  }
   saveDB(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
 }
 function removeController(){
   const uname=document.getElementById('ctrl-rem-sel').value; if(!uname){ toast('❌ Controller নির্বাচন করুন!'); return; }
   if(uname===CU.u){ toast('❌ নিজেকে Controller থেকে বাদ দেওয়া যাবে না!'); return; }
   DB.controllers=DB.controllers.filter(c=>c!==uname);
-  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='controller') u.role='member';
+  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='controller'){ u.role='member';
+    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'member'}).catch(e=>console.warn('Role update:',e));
+  }
   saveDB(); renderControllerList(); toast('✅ Controller বাদ দেওয়া হয়েছে!');
 }
 
@@ -4095,8 +4205,7 @@ document.addEventListener('click', function(e){
 });
 // Firebase loadDB handles initialization and real-time sync
 document.getElementById('fb-loading').style.display='flex';
-showSc('login'); // default while Firebase loads
-loadDB();        // Firebase listener redirects after data loads
+loadDB();        // Firebase RTDB real-time listener
 
 // ═══════════════════════════════════════════════
 // OFFICE MEAL — MEPL / MPCL
