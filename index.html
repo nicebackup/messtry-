@@ -272,4 +272,40 @@
   // report
   async function loadReport(){
     const mm = document.getElementById('reportMonth').value; if(!mm) return;
-    const usersSnap = await db.ref('users').once
+    const usersSnap = await db.ref('users').once('value'); const mealsSnap = await db.ref('meals').once('value'); const bazarSnap = await db.ref('bazar').once('value'); const othersSnap = await db.ref('others').once('value'); const cookSnap = await db.ref('cookBills').once('value');
+    let html = `<div class="card"><b>মাস: ${mm}</b><br>বাজার: ৳${(bazarSnap.val()||[]).filter(b=>b.date?.startsWith(mm)).reduce((s,b)=>s+b.amount,0)}<br>অন্যান্য: ৳${(othersSnap.val()||[]).filter(o=>o.date?.startsWith(mm)).reduce((s,o)=>s+o.amount,0)}<br>বাবুর্চি বিল: ৳${(cookSnap.val()||[]).filter(c=>c.date?.startsWith(mm)).reduce((s,c)=>s+c.amount,0)}</div>`;
+    document.getElementById('reportContent').innerHTML = html;
+  }
+
+  // AUTH with email verification
+  auth.onAuthStateChanged(async (user) => {
+    if(user && user.emailVerified){
+      currentUser = user;
+      const ref = db.ref(`users/${user.uid}`);
+      const snap = await ref.once('value');
+      if(!snap.exists()){ await ref.set({ name: user.email.split('@')[0], email: user.email, role:'member', mobile:'', jobId:'', room:'' }); }
+      showScreen('home');
+      loadDashboard();
+      loadBazar();
+    } else if(user && !user.emailVerified){
+      await auth.signOut(); alert('আপনার ইমেইল ভেরিফাই করা হয়নি। আপনার ইনবক্স চেক করুন এবং ভেরিফাই করুন।');
+      showScreen('login');
+    } else { showScreen('login'); }
+  });
+
+  document.getElementById('loginBtn').onclick = async () => { const email = document.getElementById('login-email').value, pwd = document.getElementById('login-pwd').value; try{ await auth.signInWithEmailAndPassword(email,pwd); if(!auth.currentUser.emailVerified){ await auth.signOut(); alert('ইমেইল ভেরিফাই করুন'); } }catch(e){ document.getElementById('login-msg').innerHTML = e.message; document.getElementById('login-msg').style.display='block'; } };
+  document.getElementById('registerBtn').onclick = async () => { const name=document.getElementById('reg-name').value, email=document.getElementById('reg-email').value, mobile=document.getElementById('reg-mobile').value, jobid=document.getElementById('reg-jobid').value, pwd=document.getElementById('reg-pwd').value, room=document.getElementById('reg-room').value, type=document.getElementById('reg-type').value; if(!name||!email||!mobile||!jobid||!pwd){ alert('সব তথ্য দিন'); return; } try{ const cred = await auth.createUserWithEmailAndPassword(email,pwd); await cred.user.sendEmailVerification(); await db.ref(`users/${cred.user.uid}`).set({ name, email, mobile, jobId:jobid, room, type, role:'member', createdAt:Date.now() }); alert('রেজিস্ট্রেশন সফল! আপনার ইমেইলে ভেরিফিকেশন লিংক পাঠানো হয়েছে। দয়া করে ভেরিফাই করে লগইন করুন।'); showScreen('login'); }catch(e){ alert(e.message); } };
+  document.getElementById('forgotLink').onclick = () => { const em = prompt('আপনার ইমেইল দিন:'); if(em) auth.sendPasswordResetEmail(em).then(()=>alert('রিসেট লিংক ইমেইলে পাঠানো হয়েছে।')); };
+  document.getElementById('addBazarBtn')?.addEventListener('click',addBazar);
+  document.getElementById('addOtherBtn')?.addEventListener('click', async()=>{ const desc=document.getElementById('othDesc').value, amt=parseFloat(document.getElementById('othAmount').value), date=document.getElementById('othDate').value, split=document.getElementById('othSplit').value; if(!desc||!amt) return; const snap=await db.ref('others').once('value'); let arr=snap.val()||[]; arr.push({id:Date.now(),desc,amount:amt,date,split,by:currentUser.email}); await db.ref('others').set(arr); alert('যোগ হয়েছে'); });
+  document.getElementById('addCookBillBtn')?.addEventListener('click', async()=>{ const desc=document.getElementById('cookDesc').value, amt=parseFloat(document.getElementById('cookAmount').value), date=document.getElementById('cookDate').value; if(!desc||!amt) return; const snap=await db.ref('cookBills').once('value'); let arr=snap.val()||[]; arr.push({id:Date.now(),desc,amount:amt,date,by:currentUser.email}); await db.ref('cookBills').set(arr); alert('বাবুর্চি বিল যোগ হয়েছে'); });
+  document.getElementById('loadReportBtn')?.addEventListener('click',loadReport);
+  document.getElementById('assignManagerBtn')?.addEventListener('click', async()=>{ const month=document.getElementById('mgrMonth').value; const uid=document.getElementById('managerUserSelect').value; if(!month||!uid) return; const mgrRef=db.ref(`managers/${month}`); const prev= (await mgrRef.once('value')).val()||[]; if(!prev.includes(uid)){ prev.push(uid); await mgrRef.set(prev); await db.ref(`users/${uid}`).update({role:'manager'}); alert('ম্যানেজার নিযুক্ত'); } });
+  document.getElementById('addCtrlBtn')?.addEventListener('click', async()=>{ const uid=document.getElementById('ctrlSelect').value; if(!uid) return; await db.ref(`users/${uid}`).update({role:'controller'}); alert('কন্ট্রোলার যোগ হয়েছে'); });
+  async function loadAdminSelects(){ const snap=await db.ref('users').once('value'); let opts=''; snap.forEach(c=>{ const val=c.val(); opts+=`<option value="${c.key}">${val.name} (${val.email})</option>`; }); document.getElementById('managerUserSelect').innerHTML=opts; document.getElementById('ctrlSelect').innerHTML=opts; }
+  function sec(page){ if(page==='meal') loadMealScreen(); if(page==='officeMeal') loadOfficeMealUI(); if(page==='bazar') loadBazar(); if(page==='profile') document.getElementById('profileView').innerHTML = `<div class="sec-title">${userData?.name}</div><div>ইমেইল: ${currentUser?.email}</div><div>মোবাইল: ${userData?.mobile||'—'}</div><div>জব আইডি: ${userData?.jobId||'—'}</div><div>রুম: ${userData?.room||'—'}</div>`; if(page==='members'){ db.ref('users').once('value', snap=>{ let html=''; snap.forEach(c=>{ const u=c.val(); html+=`<div class="card">${u.name} (${u.role}) - ${u.jobId}</div>`; }); document.getElementById('membersList').innerHTML=html; }); } if(page==='admin') loadAdminSelects(); if(page==='report'){ const m = getMessMonthKey(); document.getElementById('reportMonth').value = m; loadReport();} showScreen(page); }
+  window.sec = sec; window.goHome = goHome; window.logout = () => auth.signOut(); window.toggleDarkMode = toggleDarkMode;
+  // initial fetch office rate placeholder
+</script>
+</body>
+</html>
