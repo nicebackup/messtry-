@@ -218,8 +218,35 @@ html.dark-mode #fb-loading .mq-load-ring-track{border-color:#2d2d44 !important;}
 html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#a78bfa !important;}
 html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#7c3aed,#a78bfa) !important;}
 html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
-/* Scrollbar */
-.dark-mode ::-webkit-scrollbar{width:6px;}
+/* ── SUMMARY HERO CARD (মিল রেট + মাসিক রিপোর্ট) ── */
+.summary-hero-card{
+  background:linear-gradient(135deg,#0f4526 0%,#1a6b3c 60%,#28a15e 100%);
+  color:#fff;
+}
+.dark-mode .summary-hero-card{
+  background:linear-gradient(135deg,#0a1628 0%,#0f2444 50%,#1a3a6b 100%);
+  border:1px solid rgba(56,189,248,0.18) !important;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 30px rgba(56,189,248,0.08);
+}
+.summary-sub-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;
+  background:rgba(0,0,0,.15);border-radius:10px;padding:10px;
+  font-size:12px;text-align:center;
+}
+.dark-mode .summary-sub-grid{
+  background:rgba(56,189,248,0.07);
+  border:1px solid rgba(56,189,248,0.12);
+}
+.hero-cell{background:rgba(255,255,255,0.12);}
+.dark-mode .hero-cell{background:rgba(56,189,248,0.10);}
+/* report inner grid rows */
+.summary-hero-card .rpt-inner-row{
+  background:rgba(255,255,255,0.12);
+}
+.dark-mode .summary-hero-card .rpt-inner-row{
+  background:rgba(56,189,248,0.10);
+}
+
 .dark-mode ::-webkit-scrollbar-track{background:#0f0f1a;}
 .dark-mode ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#a78bfa);border-radius:4px;}
 .dark-mode ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#6d28d9,#8b5cf6);}
@@ -1115,7 +1142,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   </div>
   <div class="content">
     <!-- Current month rate summary -->
-    <div class="card" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border:none;padding:22px;">
+    <div class="card summary-hero-card" style="border:none;padding:22px;">
       <div style="font-size:11px;opacity:.75;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px" id="bill-month-sub">মেস মাস</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div>
@@ -1127,7 +1154,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
           <div style="font-size:11px;opacity:.75;margin-top:2px">মোট খরচ</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.15);border-radius:10px;padding:10px;font-size:12px;text-align:center">
+      <div class="summary-sub-grid">
         <div><div style="opacity:.7">বাজার</div><div style="font-weight:700;font-size:13px;margin-top:2px" id="bl-bazar-s">৳0</div></div>
         <div style="border-left:1px solid rgba(255,255,255,.2);border-right:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">অন্যান্য</div><div style="font-weight:700;font-size:13px;margin-top:2px" id="bl-others-s">৳0</div></div>
         <div><div style="opacity:.7">মোট মিল</div><div style="font-weight:700;font-size:13px;margin-top:2px" id="bl-meals-s">0</div></div>
@@ -3026,7 +3053,7 @@ function loadReport(){
   const officeMealBill=getOfficeMealUsers().reduce((s,u)=>s+messMonthMeals(u.u,mmKey)*officeRate,0);
 
   const html=`
-  <div style="background:linear-gradient(135deg,#6c3de0,#8b5cf6);color:#fff;border-radius:14px;padding:18px 18px 14px;">
+  <div class="summary-hero-card" style="border-radius:14px;padding:18px 18px 14px;">
     <div style="font-size:12px;opacity:.8;margin-bottom:6px">${monthRangeLabel}</div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
       <div>
@@ -3039,29 +3066,29 @@ function loadReport(){
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;margin-bottom:8px">
-      <div style="background:rgba(255,255,255,0.12);padding:10px;text-align:center">
+      <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:15px;font-weight:700">৳${bazar.toLocaleString()}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">বাজার</div>
       </div>
-      <div style="background:rgba(255,255,255,0.12);padding:10px;text-align:center">
+      <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:15px;font-weight:700">৳${others.toLocaleString()}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">অন্যান্য</div>
       </div>
-      <div style="background:rgba(255,255,255,0.12);padding:10px;text-align:center">
+      <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:15px;font-weight:700">৳${(cookFoodCost||0).toFixed(0)}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">বাবুর্চি বিল</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden">
-      <div style="background:rgba(255,255,255,0.10);padding:10px;text-align:center">
+      <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:16px;font-weight:700">${(R||netMeals).toFixed(2)}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">নেট মিল (সবার)</div>
       </div>
-      <div style="background:rgba(255,255,255,0.10);padding:10px;text-align:center">
+      <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:16px;font-weight:700;color:#fcd34d">${cookMeals.toFixed(2)}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">বাবুর্চির মিল</div>
       </div>
-      <div style="background:rgba(255,255,255,0.10);padding:10px;text-align:center">
+      <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:12px;font-weight:700;color:#7dd3fc">MEPL+MPCL</div>
         <div style="font-size:13px;font-weight:700;color:#7dd3fc">${officeMeals.toFixed(1)}মিল</div>
         <div style="font-size:12px;font-weight:700;color:#7dd3fc">৳${officeMealBill.toFixed(0)}</div>
