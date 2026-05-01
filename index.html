@@ -1787,8 +1787,25 @@ auth.onAuthStateChanged(fbUser=>{
     // Check role from RTDB roles/{uid}
     firebase.database().ref('roles/' + uid).once('value').then(rsnap=>{
       const roleData = rsnap.val();
-      const role = roleData?.role || userData.role || 'member';
+      // Sanitize: remove any extra quotes Firebase Console might have added
+      let role = roleData?.role || userData.role || 'member';
+      role = String(role).replace(/^"+|"+$/g,'').trim().toLowerCase();
+      if(!['controller','manager','member'].includes(role)) role='member';
+
       CU = { uid, u: userData.u||uid, name: userData.name||fbUser.email, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role, type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
+
+      // Sync CU into DB.users array so role checks & meal data work correctly
+      if(DB.users){
+        const idx = DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
+        if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; }
+        else { DB.users.push({...CU}); }
+      }
+      // Also fix role in RTDB if it had extra quotes
+      if(roleData?.role !== role){
+        firebase.database().ref('roles/'+uid).set({role}).catch(()=>{});
+        firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
+      }
+
       document.getElementById('fb-loading').style.display='none';
       refreshHome(); showSc('home');
       setTimeout(()=>showNoticePopup(), 800);
@@ -2046,11 +2063,21 @@ function doLogin(){
       const userData = snap.val();
       if(!userData){ al.textContent='❌ RTDB-তে আপনার প্রোফাইল পাওয়া যায়নি। Admin এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; auth.signOut(); if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } return; }
       if(userData.blocked){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; auth.signOut(); if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } return; }
-      // Set CU from RTDB data — no password stored in CU
-      CU = { uid, u: userData.u||uid, name: userData.name, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role: userData.role||'member', type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
-      if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
-      refreshHome(); showSc('home');
-      setTimeout(()=>showNoticePopup(), 600);
+      // Load role from roles/{uid} and sanitize (remove any accidental extra quotes)
+      firebase.database().ref('roles/'+uid).once('value').then(rsnap=>{
+        const roleData = rsnap.val();
+        let role = roleData?.role || userData.role || 'member';
+        role = String(role).replace(/^"+|"+$/g,'').trim().toLowerCase();
+        if(!['controller','manager','member'].includes(role)) role='member';
+        CU = { uid, u: userData.u||uid, name: userData.name, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role, type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
+        // Sync into DB.users so meal/bazar/role checks work
+        if(DB.users){ const idx=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u); if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; } else { DB.users.push({...CU}); } }
+        // Auto-fix bad role value in RTDB if needed
+        if(roleData?.role !== role){ firebase.database().ref('roles/'+uid).set({role}).catch(()=>{}); firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{}); }
+        if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+        refreshHome(); showSc('home');
+        setTimeout(()=>showNoticePopup(), 600);
+      });
     }).catch(err=>{ al.textContent='❌ ডেটা লোড ব্যর্থ: '+err.message; al.className='alert alert-danger show'; if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } });
   }).catch(err=>{
     let msg = '❌ Login ব্যর্থ!';
