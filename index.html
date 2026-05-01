@@ -2574,29 +2574,54 @@ function getNetMeals(mmKey){
   return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-cookMeals-officeMeals};
 }
 function calcMealRate(mmKey){
-  const bazar=DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
-  const othersAll=DB.others.filter(o=>dateInMessMonth(o.date,mmKey));
-  const others=othersAll.reduce((s,o)=>s+o.amount,0);
-  const cookBillsAll=(DB.cookBills||[]).filter(c=>dateInMessMonth(c.date,mmKey));
-  const cookBillsTotal=cookBillsAll.reduce((s,c)=>s+c.amount,0);
+  const bazar      = DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
+  const othersAll  = DB.others.filter(o=>dateInMessMonth(o.date,mmKey));
+  const others     = othersAll.reduce((s,o)=>s+o.amount,0);
+  const cookBillsAll = (DB.cookBills||[]).filter(c=>dateInMessMonth(c.date,mmKey));
+  const cookBillsTotal = cookBillsAll.reduce((s,c)=>s+c.amount,0);
 
-  // মিল রেট = বাজার ÷ (totalMeals - officeMeals)
-  // বাবুর্চির মিল বাদ দেওয়া হয় না — তাদের খাওয়া বাজারেই absorbed
-  // অফিস মিল বাদ — তারা আলাদা রেটে বিল দেয়
-  // others মিল রেটে ঢোকে না — আলাদাভাবে ভাগ হয়
-  const rateBase=bazar;
-  const total=bazar+others+cookBillsTotal;
+  const total = bazar + others + cookBillsTotal;
 
-  const {totalMeals, cookMeals, officeMeals, netMeals}=getNetMeals(mmKey);
-  // rateBase ÷ (total - office) — cook সহ কিন্তু office বাদ
-  const rateMeals = totalMeals - officeMeals;
-  const pm = DB.mealRates[mmKey] || (rateMeals>0 ? rateBase/rateMeals : 0);
+  const {totalMeals, cookMeals, officeMeals, netMeals} = getNetMeals(mmKey);
 
-  // cookFoodCost = 0 — কারণ cook এর খাওয়া রেটেই absorbed
-  const cookFoodCost = 0;
+  // ════════════════════════════════════════════════
+  // সঠিক মিল রেট সূত্র:
+  //   B  = বাজার খরচ
+  //   O  = অফিস মিল বিল (MEPL+MPCL)
+  //   M  = মোট মিল (অফিস বাদে, বাবুর্চি সহ)
+  //   C  = বাবুর্চির মিল
+  //   R  = রেগুলার মিল (M − C)
+  //
+  //   X   = B − O
+  //   r₁  = X ÷ M
+  //   CB  = r₁ × C   (বাবুর্চির খাবার খরচ)
+  //   FR  = (X − CB) ÷ R  =  X ÷ M  (গাণিতিকভাবে সমান)
+  // ════════════════════════════════════════════════
+
+  // অফিস মিল বিল O = officeMeals × officeRate
+  const officeRate = DB.officeMealRates[mmKey] || 0;
+  const officeBil  = officeMeals * officeRate;
+
+  // M = totalMeals − officeMeals (বাবুর্চি সহ, কিন্তু অফিস বাদ)
+  const M = totalMeals - officeMeals;
+  const C = cookMeals;
+  const R = M - C; // রেগুলার সদস্যদের মিল
+
+  const X  = bazar - officeBil;          // বাকি বাজার
+  const r1 = M > 0 ? X / M : 0;         // প্রাথমিক রেট
+  const CB = r1 * C;                     // বাবুর্চির খাবার খরচ (rateBase থেকে)
+  const FR = R > 0 ? (X - CB) / R : r1; // ফাইনাল মিল রেট (= X/M)
+
+  const rateBase = X; // UI-তে "বাকি বাজার" দেখানোর জন্য
+  const cookFoodCost = CB;
+
+  // Override দিয়ে manual rate সেট থাকলে সেটা ব্যবহার হবে
+  const pm = DB.mealRates[mmKey] || FR;
 
   return {bazar, others, othersAll, cookBillsTotal, cookBillsAll,
-          total, rateBase, totalMeals, cookMeals, officeMeals, netMeals, pm, cookFoodCost};
+          total, rateBase, officeBil,
+          totalMeals, cookMeals, officeMeals, netMeals, M, C, R,
+          X, r1, cookFoodCost, pm};
 }
 
 // Calculate a single member's share of others + cookBills
@@ -3049,7 +3074,7 @@ function loadBill(){
   const sub=document.getElementById('bill-month-sub');
   if(lbl) lbl.textContent='মিল রেট — '+messMonthLabel();
   if(sub) sub.textContent=messMonthLabel();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost}=calcMealRate(mmKey);
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
   const myMeals=messMonthMeals(CU.u,mmKey);
   const mealBill=myMeals*pm;
@@ -3092,7 +3117,7 @@ function loadBill(){
 // ═══════════════════════════════════════════════
 function loadReport(){
   const mmKey=document.getElementById('rpt-month').value; if(!mmKey) return;
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost}=calcMealRate(mmKey);
 
   // Parse mess month label for header
   const [my,mm]=mmKey.split('-').map(Number);
@@ -3105,15 +3130,16 @@ function loadReport(){
     <div style="font-size:12px;opacity:.75;margin-bottom:4px">হিসাবকাল</div>
     <div style="font-size:15px;font-weight:700">${monthRangeLabel}</div>
   </div>
-  <div class="rep-row"><span class="rep-key">মোট বাজার</span><span class="rep-val">৳ ${bazar.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">মোট অন্যান্য</span><span class="rep-val">৳ ${others.toLocaleString()}</span></div>
+  <div class="rep-row"><span class="rep-key">মোট বাজার (B)</span><span class="rep-val">৳ ${bazar.toLocaleString()}</span></div>
+  <div class="rep-row"><span class="rep-key">অফিস মিল বিল (O) <span style="font-size:10px;opacity:.7">(বাদ)</span></span><span class="rep-val" style="color:var(--info)">−৳ ${(X!==undefined?(bazar-X):0).toLocaleString()}</span></div>
+  <div class="rep-row"><span class="rep-key">বাকি বাজার (X = B−O)</span><span class="rep-val" style="color:var(--primary)">৳ ${(X||bazar).toLocaleString()}</span></div>
+  <div class="rep-row"><span class="rep-key">মোট অন্যান্য <span style="font-size:10px;opacity:.7">(মিলরেটে নয়)</span></span><span class="rep-val">৳ ${others.toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">মোট বাবুর্চি বিল <span style="font-size:10px;opacity:.7">(মিলরেটে নয়)</span></span><span class="rep-val">৳ ${cookBillsTotal.toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">সর্বমোট খরচ</span><span class="rep-val">৳ ${total.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">সবার মোট মিল</span><span class="rep-val">${totalMeals.toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key">বাবুর্চির মিল <span style="font-size:10px;opacity:.7">(বাদ)</span></span><span class="rep-val" style="color:var(--text-light)">−${cookMeals.toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key">অফিস মিল MEPL/MPCL <span style="font-size:10px;opacity:.7">(বাদ — আলাদা রেট)</span></span><span class="rep-val" style="color:var(--info)">−${(getOfficeMealUsers().reduce((s,u)=>s+messMonthMeals(u.u,mmKey),0)).toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key">নেট মিল <span style="font-size:10px;opacity:.7">(রেট নির্ধারণে)</span></span><span class="rep-val">${netMeals.toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key" style="color:var(--primary);font-weight:700">প্রতি মিল রেট</span><span class="rep-val" style="font-size:18px">৳ ${pm.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">মোট মিল (M) <span style="font-size:10px;opacity:.7">অফিস বাদে, বাবুর্চি সহ</span></span><span class="rep-val">${(M||0).toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">বাবুর্চির মিল (C)</span><span class="rep-val" style="color:var(--text-light)">${cookMeals.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">রেগুলার মিল (R = M−C)</span><span class="rep-val">${(R||netMeals).toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key" style="color:var(--primary);font-weight:700">প্রতি মিল রেট (FR = X÷M)</span><span class="rep-val" style="font-size:18px">৳ ${pm.toFixed(2)}</span></div>
   <div class="rep-row"><span class="rep-key" style="color:var(--info);font-weight:700">🏢 অফিস মিল রেট</span><span class="rep-val" style="font-size:16px;color:var(--info)">৳ ${getOfficeMealRate(mmKey).toFixed(2)}</span></div>
   <div class="divider"></div>`;
 
