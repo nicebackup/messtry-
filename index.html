@@ -3747,7 +3747,7 @@ function makePDF(type){
         <div style="font-size:18px;font-weight:700;color:#1565c0;">৳ ${others.toLocaleString()}</div>
       </div>
       <div style="background:#fff3e0;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #e65100;">
-        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">বাবুর্চি খাবার (CB)</div>
+        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">বাবুর্চি বিল</div>
         <div style="font-size:18px;font-weight:700;color:#e65100;">৳ ${(cookFoodCost||0).toFixed(2)}</div>
       </div>
       <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:8px;padding:12px;text-align:center;">
@@ -3912,7 +3912,7 @@ function showAllMembersBill(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.15);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:10px">
       <div><div style="opacity:.7">বাজার</div><div style="font-weight:700;margin-top:1px">৳${bazar.toLocaleString()}</div></div>
       <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">অন্যান্য</div><div style="font-weight:700;margin-top:1px">৳${others.toLocaleString()}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চি (CB)</div><div style="font-weight:700;margin-top:1px">৳${(cookFoodCost||0).toFixed(0)}</div></div>
+      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চি বিল</div><div style="font-weight:700;margin-top:1px">৳${(cookFoodCost||0).toFixed(0)}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.1);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:4px">
       <div><div style="opacity:.7">নেট মিল (সবার)</div><div style="font-weight:700;margin-top:1px">${parseFloat(netMeals.toFixed(2))}</div></div>
@@ -3959,7 +3959,7 @@ function showAllMembersBill(){
         <th style="text-align:right;padding:7px 6px;white-space:nowrap">মিল</th>
         <th style="text-align:right;padding:7px 6px;white-space:nowrap">মিল বিল</th>
         <th style="text-align:right;padding:7px 6px;white-space:nowrap">অন্যান্য</th>
-        <th style="text-align:right;padding:7px 6px;white-space:nowrap">বাবুর্চি</th>
+        <th style="text-align:right;padding:7px 6px;white-space:nowrap">বাবুর্চি বিল</th>
         <th style="text-align:right;padding:7px 6px;font-weight:700;white-space:nowrap">মোট বিল</th>
         <th style="text-align:right;padding:7px 6px;white-space:nowrap">বাকি/জমা</th>
       </tr>`;
@@ -3983,7 +3983,7 @@ function showAllMembersBill(){
         <td style="text-align:right;padding:7px 6px;color:var(--primary);font-weight:600;white-space:nowrap">${parseFloat(myMeals.toFixed(2))}${rateLabel}</td>
         <td style="text-align:right;padding:7px 6px;white-space:nowrap">৳${fmtTk(mealBill)}</td>
         <td style="text-align:right;padding:7px 6px;color:var(--info);white-space:nowrap">${isOff?'—':'৳'+fmtTk(othersShare)}</td>
-        <td style="text-align:right;padding:7px 6px;color:var(--accent);white-space:nowrap">${isOff?'—':'৳'+fmtTk(cookBillShare)}</td>
+        <td style="text-align:right;padding:7px 6px;color:var(--accent);white-space:nowrap">${isOff?'—':'৳'+fmtTk(cookFoodShare)}</td>
         <td style="text-align:right;padding:7px 6px;font-weight:700;color:var(--danger);white-space:nowrap">৳${fmtTk(payable)}</td>
         <td style="text-align:right;padding:7px 6px;font-weight:700;color:${netColor};white-space:nowrap">${net>=0?'+':'−'}৳${fmtTk(Math.abs(net))}</td>
       </tr>`;
