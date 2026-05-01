@@ -1002,13 +1002,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-sub">Others Expense</div>
   </div>
   <div class="content pb-nav">
-    <!-- Tab: Others | বাবুর্চি বিল -->
-    <div style="display:flex;gap:0;margin-bottom:14px;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--border);">
-      <button id="oth-tab-others" onclick="switchOthTab('others')" style="flex:1;padding:11px;font-size:14px;font-weight:600;font-family:inherit;border:none;background:var(--primary);color:#fff;cursor:pointer;transition:all .15s;">⚡ অন্যান্য খরচ</button>
-      <button id="oth-tab-cook" onclick="switchOthTab('cook')" style="flex:1;padding:11px;font-size:14px;font-weight:600;font-family:inherit;border:none;background:var(--bg);color:var(--text-light);cursor:pointer;transition:all .15s;">👨‍🍳 বাবুর্চি বিল</button>
-    </div>
 
-    <!-- OTHERS TAB -->
+    <!-- OTHERS PANEL — একমাত্র tab -->
     <div id="oth-panel-others">
       <div id="others-form-wrap">
         <div class="card">
@@ -1035,32 +1030,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <div id="oth-list"><p class="muted tc">কোনো এন্ট্রি নেই</p></div>
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between;align-items:center"><b>মোট:</b><span style="font-weight:700;font-size:20px;color:var(--info)" id="oth-total">৳ ০</span></div>
-      </div>
-    </div>
-
-    <!-- BABURCHHI BILL TAB -->
-    <div id="oth-panel-cook" style="display:none">
-      <div id="cook-form-wrap">
-        <div class="card">
-          <div class="sec-title">👨‍🍳 বাবুর্চি বিল এন্ট্রি</div>
-          <div class="alert alert-info show" style="font-size:12px;line-height:1.5">
-            বাবুর্চি বিল = বাবুর্চির সার্ভিস চার্জ বা অতিরিক্ত খরচ। <br>
-            <b>ইনসাইড সদস্য</b> পূর্ণ অংশ দেবে, <b>আউটসাইড সদস্য</b> অর্ধেক দেবে।
-          </div>
-          <div class="form-group"><label class="form-label">বিবরণ</label><input type="text" id="cook-bill-desc" class="form-input" placeholder="বাবুর্চি মাসিক বিল, বোনাস..."></div>
-          <div class="form-group"><label class="form-label">পরিমাণ ৳</label><input type="number" id="cook-bill-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1" step="0.01"></div>
-          <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="cook-bill-date" class="form-input"></div>
-          <button class="btn btn-accent" onclick="addCookBill()">➕ বাবুর্চি বিল যোগ করুন</button>
-        </div>
-      </div>
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <div class="sec-title" style="margin:0">📋 এই মাসের বাবুর্চি বিল</div>
-          <input type="month" id="cook-month-sel" class="form-input" style="width:auto;padding:6px 10px;font-size:13px" onchange="renderCookBills()">
-        </div>
-        <div id="cook-bill-list"><p class="muted tc">কোনো এন্ট্রি নেই</p></div>
-        <div class="divider"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center"><b>মোট বাবুর্চি বিল:</b><span style="font-weight:700;font-size:20px;color:var(--accent)" id="cook-bill-total">৳ ০</span></div>
       </div>
     </div>
   </div>
@@ -1170,8 +1139,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="rep-row"><span class="rep-key">আমার মিল</span><span class="rep-val" id="bl-my-meals">০</span></div>
       <div class="rep-row"><span class="rep-key">মিল বিল</span><span class="rep-val" id="bl-meal-bill">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">অন্যান্য শেয়ার <span style="font-size:10px;color:var(--text-light)">(split নিয়ম অনুযায়ী)</span></span><span class="rep-val" id="bl-other-share">৳ ০</span></div>
-      <div class="rep-row"><span class="rep-key">বাবুর্চি খাবার ভাগ <span style="font-size:10px;color:var(--text-light)">(সমান ভাগ, ০ মিলেও)</span></span><span class="rep-val" id="bl-cook-food-share">৳ ০</span></div>
-      <div class="rep-row"><span class="rep-key">বাবুর্চি বেতন ভাগ <span style="font-size:10px;color:var(--text-light)">(In=পূর্ণ, Out=৫০%)</span></span><span class="rep-val" id="bl-cook-share">৳ ০</span></div>
+      <div class="rep-row"><span class="rep-key">বাবুর্চি খাবার ভাগ <span style="font-size:10px;color:var(--text-light)">(In=পূর্ণ, Out=৫০%)</span></span><span class="rep-val" id="bl-cook-food-share">৳ ০</span></div>
+      <div class="rep-row" style="display:none"><span class="rep-key">বাবুর্চি বেতন ভাগ</span><span class="rep-val" id="bl-cook-share">৳ ০</span></div>
       <div class="divider"></div>
       <div class="rep-row"><span class="rep-key" style="color:var(--danger);font-weight:700">মোট বিল</span><span class="rep-val" style="color:var(--danger);font-size:22px" id="bl-my-bill">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">জমা আছে</span><span class="rep-val" style="color:var(--success)" id="bl-balance">৳ ০</span></div>
@@ -2577,10 +2546,10 @@ function calcMealRate(mmKey){
   const bazar      = DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
   const othersAll  = DB.others.filter(o=>dateInMessMonth(o.date,mmKey));
   const others     = othersAll.reduce((s,o)=>s+o.amount,0);
-  const cookBillsAll = (DB.cookBills||[]).filter(c=>dateInMessMonth(c.date,mmKey));
-  const cookBillsTotal = cookBillsAll.reduce((s,c)=>s+c.amount,0);
+  const cookBillsAll  = []; // বাবুর্চির আলাদা বিল নেই — বাজারের সাথেই খায়
+  const cookBillsTotal = 0;
 
-  const total = bazar + others + cookBillsTotal;
+  const total = bazar + others; // cookBills আর নেই
 
   const {totalMeals, cookMeals, officeMeals, netMeals} = getNetMeals(mmKey);
 
@@ -2624,22 +2593,22 @@ function calcMealRate(mmKey){
           X, r1, cookFoodCost, pm};
 }
 
-// Calculate a single member's share of others + cookBills
+// Calculate a single member's share of others + cook food cost
 function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
   // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
-  if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0};
-  const nonCookMembers=DB.users.filter(x=>x.type!=='cook'&&!isOfficeMealUser(x));
-  const insideCount=DB.users.filter(x=>x.type==='inside'&&!isOfficeMealUser(x)).length;
-  const outsideCount=DB.users.filter(x=>x.type==='outside'&&!isOfficeMealUser(x)).length;
+  if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0, cookFoodShare:0};
+  const nonCookMembers = DB.users.filter(x=>x.type!=='cook'&&!isOfficeMealUser(x));
+  const insideCount    = nonCookMembers.filter(x=>x.type==='inside').length;
+  const outsideCount   = nonCookMembers.filter(x=>x.type==='outside').length;
 
-  // Others share — per entry, each has its own split rule
-  let othersShare=0;
+  // অন্যান্য খরচ — প্রতি entry-র split rule অনুযায়ী
+  let othersShare = 0;
   othersAll.forEach(o=>{
-    const split=o.split||'equal';
+    const split = o.split||'equal';
     if(split==='equal'){
       othersShare += o.amount / (nonCookMembers.length||1);
     } else {
-      // outside50: inside pays full unit, outside pays 0.5 unit
+      // outside50: inside = full unit, outside = 0.5 unit
       const denom = insideCount + outsideCount*0.5;
       if(denom>0){
         const unit = o.amount / denom;
@@ -2648,20 +2617,18 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0
     }
   });
 
-  // Cook bills (salary) — inside=full, outside=50%
-  let cookBillShare=0;
-  const cookDenom=insideCount+outsideCount*0.5;
-  cookBillsAll.forEach(c=>{
-    if(cookDenom>0){
-      const unit=c.amount/cookDenom;
-      cookBillShare += u.type==='inside' ? unit : unit*0.5;
+  // বাবুর্চির খাবার খরচ (CB) — Inside=পূর্ণ, Outside=৫০%
+  // CB = r₁ × C — সূত্র থেকে এসেছে, cookFoodCost হিসেবে পাস হয়
+  let cookFoodShare = 0;
+  if(cookFoodCost > 0){
+    const denom = insideCount + outsideCount*0.5;
+    if(denom > 0){
+      const unit = cookFoodCost / denom;
+      cookFoodShare = u.type==='inside' ? unit : unit*0.5;
     }
-  });
+  }
 
-  // বাবুর্চির খাবার খরচ — সব সদস্য সমান ভাগে (যে ০ মিল খেলেও)
-  const cookFoodShare = cookFoodCost / (nonCookMembers.length||1);
-
-  return {othersShare, cookBillShare, cookFoodShare};
+  return {othersShare, cookBillShare: 0, cookFoodShare};
 }
 
 // ═══════════════════════════════════════════════
@@ -2748,14 +2715,7 @@ function initOthers(){
   renderOthers();
   renderCookBills();
 }
-function switchOthTab(tab){
-  document.getElementById('oth-panel-others').style.display=tab==='others'?'block':'none';
-  document.getElementById('oth-panel-cook').style.display=tab==='cook'?'block':'none';
-  document.getElementById('oth-tab-others').style.background=tab==='others'?'var(--primary)':'var(--bg)';
-  document.getElementById('oth-tab-others').style.color=tab==='others'?'#fff':'var(--text-light)';
-  document.getElementById('oth-tab-cook').style.background=tab==='cook'?'var(--accent)':'var(--bg)';
-  document.getElementById('oth-tab-cook').style.color=tab==='cook'?'#1a2e22':'var(--text-light)';
-}
+function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
 function addOther(){
   const descEl=document.getElementById('oth-desc');
   const desc=sanitizeInput(descEl.value);
@@ -2826,69 +2786,12 @@ function editOther(id){
     saveDB(); renderOthers(); closeModal(); toast('✅ আপডেট হয়েছে!');
   }, true);
 }
-function addCookBill(){
-  const desc=sanitizeInput(V('cook-bill-desc'));
-  const amount=parseFloat(document.getElementById('cook-bill-amt').value);
-  const date=V('cook-bill-date');
-  if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
-  if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
-  if(!date){ toast('❌ তারিখ দিন!'); return; }
-  if(!DB.cookBills) DB.cookBills=[];
-  DB.cookBills.push({id:Date.now(),desc,amount,date,by:CU.name});
-  saveDB(); renderCookBills();
-  document.getElementById('cook-bill-amt').value='';
-  document.getElementById('cook-bill-desc').value='';
-  toast('✅ বাবুর্চি বিল যোগ হয়েছে!');
-}
-function renderCookBills(){
-  if(!DB.cookBills) DB.cookBills=[];
-  const sel=document.getElementById('cook-month-sel');
-  const m=(sel&&sel.value)||mk();
-  const items=DB.cookBills.filter(c=>c.date.slice(0,7)===m).sort((a,b)=>b.date.localeCompare(a.date));
-  const list=document.getElementById('cook-bill-list');
-  if(!items.length){ list.innerHTML='<p class="muted tc">কোনো এন্ট্রি নেই</p>'; document.getElementById('cook-bill-total').textContent='৳ ০'; return; }
-  let total=0;
-  list.innerHTML = safeHTML(items.map(c=>{
-    total+=c.amount;
-    const btns=isManagerOrCtrl()?`
-      <button data-action="edit-cook" data-id="${c.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
-      <button data-action="del-cook" data-id="${c.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>`:'';
-    return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(c.desc)}</div><div class="bz-meta">${esc(c.date)} · ${esc(c.by)} · <span style="color:var(--accent);font-size:11px">Inside=পূর্ণ, Outside=৫০%</span></div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt" style="color:var(--accent)">৳ ${c.amount.toLocaleString()}</div>${btns}</div></div>`;
-  }).join(''));
-  document.getElementById('cook-bill-total').textContent='৳ '+total.toLocaleString();
-  // Event delegation
-  list.onclick = function(e){
-    const btn = e.target.closest('button[data-action]');
-    if(!btn) return;
-    const id = Number(btn.getAttribute('data-id'));
-    if(btn.getAttribute('data-action')==='del-cook') delCookBill(id);
-    else if(btn.getAttribute('data-action')==='edit-cook') editCookBill(id);
-  };
-}
-function delCookBill(id){
-  showModal('বাবুর্চি বিল মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.cookBills=DB.cookBills.filter(c=>c.id!==id); saveDB(); renderCookBills(); toast('✅ মুছে ফেলা হয়েছে!'); });
-}
-function editCookBill(id){
-  const c=DB.cookBills.find(x=>x.id===id); if(!c) return;
-  const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
-    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">বিবরণ</label>
-    <input id="edit-cook-desc" class="form-input" value="${esc(c.desc)}" style="margin-top:4px"></div>
-    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
-    <input id="edit-cook-amt" type="number" class="form-input" value="${c.amount}" style="margin-top:4px"></div>
-    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">তারিখ</label>
-    <input id="edit-cook-date" type="date" class="form-input" value="${esc(c.date)}" style="margin-top:4px"></div>
-  </div>`;
-  showModal('বাবুর্চি বিল সম্পাদনা', html, ()=>{
-    const desc=sanitizeInput(document.getElementById('edit-cook-desc').value);
-    const amount=parseFloat(document.getElementById('edit-cook-amt').value);
-    const date=document.getElementById('edit-cook-date').value;
-    if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
-    if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
-    if(!date){ toast('❌ তারিখ দিন!'); return; }
-    c.desc=desc; c.amount=amount; c.date=date;
-    saveDB(); renderCookBills(); closeModal(); toast('✅ আপডেট হয়েছে!');
-  }, true);
-}
+// বাবুর্চি বিল entry সরানো হয়েছে — ওরা বাজারের সাথেই খায়, আলাদা বিল নেই
+function addCookBill(){ toast('বাবুর্চির আলাদা বিল নেই।'); }
+function renderCookBills(){ /* deprecated */ }
+function delCookBill(id){ /* deprecated */ }
+function editCookBill(id){ /* deprecated */ }
+
 
 // ═══════════════════════════════════════════════
 // DEPOSIT / WITHDRAW
@@ -3134,10 +3037,10 @@ function loadReport(){
   <div class="rep-row"><span class="rep-key">অফিস মিল বিল (O) <span style="font-size:10px;opacity:.7">(বাদ)</span></span><span class="rep-val" style="color:var(--info)">−৳ ${(X!==undefined?(bazar-X):0).toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">বাকি বাজার (X = B−O)</span><span class="rep-val" style="color:var(--primary)">৳ ${(X||bazar).toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">মোট অন্যান্য <span style="font-size:10px;opacity:.7">(মিলরেটে নয়)</span></span><span class="rep-val">৳ ${others.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">মোট বাবুর্চি বিল <span style="font-size:10px;opacity:.7">(মিলরেটে নয়)</span></span><span class="rep-val">৳ ${cookBillsTotal.toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">সর্বমোট খরচ</span><span class="rep-val">৳ ${total.toLocaleString()}</span></div>
   <div class="rep-row"><span class="rep-key">মোট মিল (M) <span style="font-size:10px;opacity:.7">অফিস বাদে, বাবুর্চি সহ</span></span><span class="rep-val">${(M||0).toFixed(2)}</span></div>
   <div class="rep-row"><span class="rep-key">বাবুর্চির মিল (C)</span><span class="rep-val" style="color:var(--text-light)">${cookMeals.toFixed(2)}</span></div>
+  <div class="rep-row"><span class="rep-key">বাবুর্চির খাবার খরচ (CB = r₁×C) <span style="font-size:10px;opacity:.7">In=পূর্ণ, Out=৫০%</span></span><span class="rep-val" style="color:var(--warning)">৳ ${(cookFoodCost||0).toFixed(2)}</span></div>
   <div class="rep-row"><span class="rep-key">রেগুলার মিল (R = M−C)</span><span class="rep-val">${(R||netMeals).toFixed(2)}</span></div>
   <div class="rep-row"><span class="rep-key" style="color:var(--primary);font-weight:700">প্রতি মিল রেট (FR = X÷M)</span><span class="rep-val" style="font-size:18px">৳ ${pm.toFixed(2)}</span></div>
   <div class="rep-row"><span class="rep-key" style="color:var(--info);font-weight:700">🏢 অফিস মিল রেট</span><span class="rep-val" style="font-size:16px;color:var(--info)">৳ ${getOfficeMealRate(mmKey).toFixed(2)}</span></div>
@@ -3156,7 +3059,7 @@ function loadReport(){
       <span class="rep-key">${u.name}<br><small style="font-size:11px">${u.job||'-'} · রুম ${u.room||'-'} · ${u.type==='inside'?'ইন':'আউট'}</small></span>
       <span style="text-align:right">
         <div style="font-size:13px;color:var(--primary)">${m.toFixed(2)} মিল</div>
-        <div style="font-size:12px;color:var(--text-light)">মিল: ৳${mealB.toFixed(2)} + অন্য: ৳${othersShare.toFixed(2)} + বাবুর্চি: ৳${cookBillShare.toFixed(2)}</div>
+        <div style="font-size:12px;color:var(--text-light)">মিল: ৳${mealB.toFixed(2)} + অন্য: ৳${othersShare.toFixed(2)} + বাবুর্চি: ৳${cookFoodShare.toFixed(2)}</div>
         <div style="font-size:13px;font-weight:700;color:var(--danger)">মোট বিল: ৳${payable.toFixed(2)}</div>
         <div style="font-size:12px;font-weight:700;color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'জমা':'বকেয়া'}: ৳${Math.abs(net).toFixed(2)}</div>
       </span>
