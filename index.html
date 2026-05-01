@@ -3017,72 +3017,58 @@ function loadReport(){
   const mmKey=document.getElementById('rpt-month').value; if(!mmKey) return;
   const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost}=calcMealRate(mmKey);
 
-  // Parse mess month label for header
   const [my,mm]=mmKey.split('-').map(Number);
-  const nm=mm===12?1:mm+1, ny=mm===12?my+1:my;
+  const nm=mm===12?1:mm+1;
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const monthRangeLabel=`${mnames[mm-1]} ১১ – ${mnames[nm-1]} ১০, ${my}`;
 
-  let html=`
-  <div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-    <div style="font-size:12px;opacity:.75;margin-bottom:4px">হিসাবকাল</div>
-    <div style="font-size:15px;font-weight:700">${monthRangeLabel}</div>
-  </div>
-  <div class="rep-row"><span class="rep-key">মোট বাজার (B)</span><span class="rep-val">৳ ${bazar.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">অফিস মিল বিল (O) <span style="font-size:10px;opacity:.7">(বাদ)</span></span><span class="rep-val" style="color:var(--info)">−৳ ${(X!==undefined?(bazar-X):0).toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">বাকি বাজার (X = B−O)</span><span class="rep-val" style="color:var(--primary)">৳ ${(X||bazar).toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">মোট অন্যান্য <span style="font-size:10px;opacity:.7">(মিলরেটে নয়)</span></span><span class="rep-val">৳ ${others.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">সর্বমোট খরচ</span><span class="rep-val">৳ ${total.toLocaleString()}</span></div>
-  <div class="rep-row"><span class="rep-key">মোট মিল (M) <span style="font-size:10px;opacity:.7">অফিস বাদে, বাবুর্চি সহ</span></span><span class="rep-val">${(M||0).toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key">বাবুর্চির মিল (C)</span><span class="rep-val" style="color:var(--text-light)">${cookMeals.toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key">বাবুর্চির খাবার খরচ (CB = r₁×C) <span style="font-size:10px;opacity:.7">In=পূর্ণ, Out=৫০%</span></span><span class="rep-val" style="color:var(--warning)">৳ ${(cookFoodCost||0).toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key">রেগুলার মিল (R = M−C)</span><span class="rep-val">${(R||netMeals).toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key" style="color:var(--primary);font-weight:700">প্রতি মিল রেট (FR = X÷M)</span><span class="rep-val" style="font-size:18px">৳ ${pm.toFixed(2)}</span></div>
-  <div class="rep-row"><span class="rep-key" style="color:var(--info);font-weight:700">🏢 অফিস মিল রেট</span><span class="rep-val" style="font-size:16px;color:var(--info)">৳ ${getOfficeMealRate(mmKey).toFixed(2)}</span></div>
-  <div class="divider"></div>`;
-
   const officeRate=getOfficeMealRate(mmKey);
-  // Regular members (excluding cook and office meal users)
-  DB.users.filter(u=>u.type!=='cook'&&!isOfficeMealUser(u)).forEach(u=>{
-    const m=messMonthMeals(u.u,mmKey);
-    const mealB=m*pm;
-    const {othersShare,cookBillShare,cookFoodShare}=calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
-    const payable=mealB+othersShare+cookBillShare+cookFoodShare;
-    const bal=u.balance||0;
-    const net=bal-payable;
-    html+=`<div class="rep-row">
-      <span class="rep-key">${u.name}<br><small style="font-size:11px">${u.job||'-'} · রুম ${u.room||'-'} · ${u.type==='inside'?'ইন':'আউট'}</small></span>
-      <span style="text-align:right">
-        <div style="font-size:13px;color:var(--primary)">${m.toFixed(2)} মিল</div>
-        <div style="font-size:12px;color:var(--text-light)">মিল: ৳${mealB.toFixed(2)} + অন্য: ৳${othersShare.toFixed(2)} + বাবুর্চি: ৳${cookFoodShare.toFixed(2)}</div>
-        <div style="font-size:13px;font-weight:700;color:var(--danger)">মোট বিল: ৳${payable.toFixed(2)}</div>
-        <div style="font-size:12px;font-weight:700;color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'জমা':'বকেয়া'}: ৳${Math.abs(net).toFixed(2)}</div>
-      </span>
-    </div>`;
-  });
+  const officeMealBill=getOfficeMealUsers().reduce((s,u)=>s+messMonthMeals(u.u,mmKey)*officeRate,0);
 
-  // Office meal users (MEPL / MPCL) — shown separately
-  const ofUsers=getOfficeMealUsers();
-  if(ofUsers.length>0){
-    html+=`<div class="divider"></div>
-    <div style="background:var(--info-light);border:1px solid var(--info);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--info)">
-      🏢 <b>অফিস মিল (MEPL/MPCL)</b> — রেট: ৳${officeRate.toFixed(2)}/মিল — বাবুর্চি/অন্যান্য প্রযোজ্য নয়
-    </div>`;
-    ofUsers.forEach(u=>{
-      const m=messMonthMeals(u.u,mmKey);
-      const payable=m*officeRate;
-      const bal=u.balance||0;
-      const net=bal-payable;
-      html+=`<div class="rep-row">
-        <span class="rep-key">${u.name}<br><small style="font-size:11px">🏢 অফিস মিল</small></span>
-        <span style="text-align:right">
-          <div style="font-size:13px;color:var(--info)">${m.toFixed(2)} মিল × ৳${officeRate.toFixed(2)}</div>
-          <div style="font-size:13px;font-weight:700;color:var(--danger)">দেয়: ৳${payable.toFixed(0)}</div>
-          <div style="font-size:12px;font-weight:700;color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'জমা':'বকেয়া'}: ৳${Math.abs(net).toFixed(0)}</div>
-        </span>
-      </div>`;
-    });
-  }
+  const html=`
+  <div style="background:linear-gradient(135deg,#6c3de0,#8b5cf6);color:#fff;border-radius:14px;padding:18px 18px 14px;">
+    <div style="font-size:12px;opacity:.8;margin-bottom:6px">${monthRangeLabel}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <div style="font-size:36px;font-weight:800;line-height:1">৳ ${pm.toFixed(2)}</div>
+        <div style="font-size:12px;opacity:.8;margin-top:3px">প্রতি মিল রেট</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:20px;font-weight:700">৳ ${total.toLocaleString()}</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px">মোট খরচ</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="background:rgba(255,255,255,0.12);padding:10px;text-align:center">
+        <div style="font-size:15px;font-weight:700">৳${bazar.toLocaleString()}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">বাজার</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.12);padding:10px;text-align:center">
+        <div style="font-size:15px;font-weight:700">৳${others.toLocaleString()}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">অন্যান্য</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.12);padding:10px;text-align:center">
+        <div style="font-size:15px;font-weight:700">৳${(cookFoodCost||0).toFixed(0)}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">বাবুর্চি বিল</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden">
+      <div style="background:rgba(255,255,255,0.10);padding:10px;text-align:center">
+        <div style="font-size:16px;font-weight:700">${(R||netMeals).toFixed(2)}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">নেট মিল (সবার)</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.10);padding:10px;text-align:center">
+        <div style="font-size:16px;font-weight:700;color:#fcd34d">${cookMeals.toFixed(2)}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">বাবুর্চির মিল</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.10);padding:10px;text-align:center">
+        <div style="font-size:12px;font-weight:700;color:#7dd3fc">MEPL+MPCL</div>
+        <div style="font-size:13px;font-weight:700;color:#7dd3fc">${officeMeals.toFixed(1)}মিল</div>
+        <div style="font-size:12px;font-weight:700;color:#7dd3fc">৳${officeMealBill.toFixed(0)}</div>
+      </div>
+    </div>
+  </div>`;
+
   document.getElementById('rpt-rows').innerHTML = safeHTML(html);
 }
 // finalizeMealRate removed — meal rate is now fully automatic (total_expense / total_meals)
