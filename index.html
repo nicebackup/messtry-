@@ -834,8 +834,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="form-group"><label class="form-label">পুরো নাম *</label><input type="text" id="reg-name" class="form-input" placeholder="আপনার পুরো নাম"></div>
       <div class="form-group"><label class="form-label">Mobile Number * (01XXXXXXXXX)</label><input type="tel" id="reg-mobile" class="form-input" placeholder="01XXXXXXXXX" maxlength="11"></div>
       <div class="form-group"><label class="form-label">Email Address * (Password Reset এর জন্য)</label><input type="email" id="reg-email" class="form-input" placeholder="example@email.com"></div>
-      <div class="form-group"><label class="form-label">Mess / Job ID *</label><input type="text" id="reg-jobid" class="form-input" placeholder="যেমন: MQ-001"></div>
-      <div class="form-group"><label class="form-label">Username *</label><input type="text" id="reg-uname" class="form-input" placeholder="ইউনিক ইউজারনেম"></div>
+      <div class="form-group"><label class="form-label">Mess ID / Job ID *</label><input type="text" id="reg-jobid" class="form-input" placeholder="যেমন: 1120"></div>
       <div class="form-group"><label class="form-label">Password * (কমপক্ষে ৬ ক্যারেক্টার)</label>
         <div style="position:relative">
           <input type="password" id="reg-pass" class="form-input" placeholder="পাসওয়ার্ড" style="padding-right:46px">
@@ -1311,10 +1310,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <label class="form-label">নাম</label>
         <input type="text" id="pf-edit-name" class="form-input" placeholder="আপনার নাম">
       </div>
-      <div class="form-group">
-        <label class="form-label">ID <span style="font-size:11px;color:var(--text-light)">(পরিবর্তনযোগ্য)</span></label>
-        <input type="text" id="pf-edit-id" class="form-input" placeholder="ইউজার ID" style="font-family:monospace;letter-spacing:0.5px">
-      </div>
+      <input type="hidden" id="pf-edit-id">
       <div class="form-group">
         <label class="form-label">মোবাইল নম্বর</label>
         <input type="tel" id="pf-edit-mob" class="form-input" placeholder="01XXXXXXXXX">
@@ -2210,20 +2206,26 @@ function doRegister(){
         mob     = sanitizeInput(V('reg-mobile')),
         email   = sanitizeInput(V('reg-email')).toLowerCase(),
         job     = sanitizeInput(V('reg-jobid')),
-        uname   = sanitizeInput(V('reg-uname')),
         pass    = V('reg-pass'),
         room    = sanitizeInput(V('reg-room')),
         type    = document.getElementById('reg-type').value;
   const al=document.getElementById('reg-alert'), ok=document.getElementById('reg-ok');
   al.className='alert'; ok.className='alert';
-  if(!name||!mob||!email||!job||!uname||!pass){
+  if(!name||!mob||!email||!job||!pass){
     al.textContent='❌ * চিহ্নিত তথ্য পূরণ করুন!'; al.className='alert alert-danger show'; return;
   }
   if(!validName(name)){ al.textContent='❌ নাম কমপক্ষে ২ অক্ষর হতে হবে!'; al.className='alert alert-danger show'; return; }
   if(!validMobile(mob)){ al.textContent='❌ সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)!'; al.className='alert alert-danger show'; return; }
   if(!validEmail(email)){ al.textContent='❌ সঠিক Email Address দিন!'; al.className='alert alert-danger show'; return; }
-  if(!validUsername(uname)){ al.textContent='❌ Username শুধু A-Z, 0-9, _, - এবং ৩-৩০ ক্যারেক্টার!'; al.className='alert alert-danger show'; return; }
   if(!validPass(pass)){ al.textContent='❌ পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার!'; al.className='alert alert-danger show'; return; }
+
+  // Auto-generate unique internal key from mobile number
+  const uname = 'u_' + mob;
+
+  // Check duplicate
+  if(DB.users && DB.users.find(x=>x.u===uname||x.mob===mob)){
+    al.textContent='❌ এই মোবাইল নম্বর দিয়ে ইতিমধ্যে অ্যাকাউন্ট আছে!'; al.className='alert alert-danger show'; return;
+  }
 
   const btn = document.querySelector('#sc-register .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='রেজিস্ট্রেশন হচ্ছে...'; }
@@ -2231,13 +2233,11 @@ function doRegister(){
   auth.createUserWithEmailAndPassword(email, pass)
     .then(cred=>{
       const uid = cred.user.uid;
-      // Save extra info in RTDB under users/{uid} — NO password stored
       const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
       return firebase.database().ref('users/' + uid).set(userData)
         .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
         .then(()=> cred.user.sendEmailVerification())
         .then(()=>{
-          // Also add to DB.users array in messData for backward compat with meal/bazar logic
           if(!DB.users) DB.users=[];
           DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
           saveDB();
@@ -2996,7 +2996,6 @@ function depMemSearch(){
   const users=DB.users.filter(u=>u.type!=='cook');
   const matches = q.length===0 ? users : users.filter(u=>
     (u.name||'').toLowerCase().includes(q)||
-    (u.u||'').toLowerCase().includes(q)||
     (u.mob||'').includes(q)||
     (u.job||'').toLowerCase().includes(q)||
     (u.room||'').includes(q)
@@ -3413,10 +3412,15 @@ function saveProfile(){
 // ADMIN
 // ═══════════════════════════════════════════════
 function initAdmin(){
+  const sortedForSel=[...DB.users].sort((a,b)=>{
+    const ai=parseInt(a.job)||Infinity, bi=parseInt(b.job)||Infinity;
+    if(ai!==Infinity||bi!==Infinity) return ai-bi;
+    return (a.job||'').localeCompare(b.job||'');
+  });
   ['mgr-sel','adm-mem','edit-mem-sel','del-mem-sel'].forEach(id=>{
     const el=document.getElementById(id); if(!el) return;
     el.innerHTML='<option value="">-- নির্বাচন করুন --</option>';
-    DB.users.forEach(u=>{ el.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (${esc(u.job||'-')})</option>`; });
+    sortedForSel.forEach(u=>{ el.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
   });
   document.getElementById('mgr-month').value=mk();
   document.getElementById('cfg-bv').value=DB.cfg.def.b;
@@ -3625,7 +3629,7 @@ function renderControllerList(){
   const remSel=document.getElementById('ctrl-rem-sel');
   addSel.innerHTML='<option value="">-- সদস্য নির্বাচন --</option>';
   remSel.innerHTML='<option value="">-- Controller নির্বাচন --</option>';
-  DB.users.filter(u=>!DB.controllers.includes(u.u)).forEach(u=>{ addSel.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.u)})</option>`; });
+  DB.users.filter(u=>!DB.controllers.includes(u.u)).sort((a,b)=>(parseInt(a.job)||0)-(parseInt(b.job)||0)).forEach(u=>{ addSel.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
   DB.controllers.forEach(c=>{ const usr=DB.users.find(x=>x.u===c); if(usr) remSel.innerHTML+=`<option value="${esc(c)}">${esc(usr.name)} (ID: ${esc(c)})</option>`; });
 }
 function addController(){
@@ -3898,7 +3902,13 @@ function makePDF(type){
         <th style="padding:8px 8px;text-align:right;">নেট<br>ব্যালেন্স</th>
       </tr></thead><tbody>`;
     const pdfOfRate=getOfficeMealRate(mmKey);
-    nonCookUsers.forEach((u,ri)=>{
+    // job ID অনুযায়ী sort (numeric হলে number হিসেবে, নাহলে alphabetically)
+    const sortedUsers=[...nonCookUsers].sort((a,b)=>{
+      const ai=parseInt(a.job)||0, bi=parseInt(b.job)||0;
+      if(ai&&bi) return ai-bi;
+      return (a.job||'').localeCompare(b.job||'');
+    });
+    sortedUsers.forEach((u,ri)=>{
       const myMeals=messMonthMeals(u.u,mmKey);
       const isOffU=isOfficeMealUser(u);
       const appRate=isOffU?(pdfOfRate||pm):pm;
@@ -3918,7 +3928,7 @@ function makePDF(type){
       const typeLabel=isOffU?'অফিস':u.type==='inside'?'ইন':'আউট';
       const fmt=v=>'৳'+Math.abs(v).toFixed(2);
       html+=`<tr style="background:${bg};">
-        <td style="padding:6px 8px;font-weight:600;font-size:11px;">${u.name}<br><span style="font-size:9px;color:#5a7a65;font-weight:400;">ID: ${u.u}${u.job?' · '+u.job:''}</span></td>
+        <td style="padding:6px 8px;font-weight:600;font-size:11px;">${u.name}<br><span style="font-size:9px;color:#5a7a65;font-weight:400;">ID- ${u.job||'—'}${u.job&&u.mob?' · ':u.mob?' · ':''}${u.mob||''}</span></td>
         <td style="padding:6px 5px;text-align:center;font-size:10px;">${typeLabel}</td>
         <td style="padding:6px 5px;text-align:right;color:${prevBal>=0?'#2e7d32':'#e53935'};">${prevBal>=0?'':'-'}${fmt(prevBal)}</td>
         <td style="padding:6px 5px;text-align:right;color:#1565c0;">${fmt(thisMonthDeposit)}</td>
@@ -4125,7 +4135,8 @@ function showAllMembersBill(){
     </div>
   </div>`;
 
-  const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
+  const nonCookUsers=DB.users.filter(u=>u.type!=='cook')
+    .sort((a,b)=>{ const ai=parseInt(a.job)||Infinity,bi=parseInt(b.job)||Infinity; return ai-bi||((a.job||'').localeCompare(b.job||'')); });
   const ofRate=getOfficeMealRate(mmKey);
   if(!nonCookUsers.length){ html+='<p class="muted tc">কোনো সদস্য নেই</p>'; }
   else{
@@ -4156,7 +4167,7 @@ function showAllMembersBill(){
       html+=`<tr style="background:${bg};border-top:1px solid var(--border)">
         <td style="padding:7px 8px;position:sticky;left:0;background:${bg};z-index:1;min-width:90px">
           <div style="font-weight:600;font-size:11px;white-space:nowrap">${u.name}</div>
-          <div style="font-size:9px;color:var(--text-light);white-space:nowrap">${isOff?'অফিস':u.type==='inside'?'ইন':'আউট'}${u.room?' · R'+u.room:''}</div>
+          <div style="font-size:9px;color:var(--text-light);white-space:nowrap">ID- ${u.job||'—'} · ${isOff?'অফিস':u.type==='inside'?'ইন':'আউট'}</div>
         </td>
         <td style="text-align:right;padding:7px 6px;color:var(--primary);font-weight:600;white-space:nowrap">${parseFloat(myMeals.toFixed(2))}${rateLabel}</td>
         <td style="text-align:right;padding:7px 6px;white-space:nowrap">৳${fmtTk(mealBill)}</td>
