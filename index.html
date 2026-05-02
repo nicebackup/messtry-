@@ -1310,6 +1310,10 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <label class="form-label">নাম</label>
         <input type="text" id="pf-edit-name" class="form-input" placeholder="আপনার নাম">
       </div>
+      <div class="form-group">
+        <label class="form-label">Mess ID / Job ID</label>
+        <input type="text" id="pf-edit-job" class="form-input" placeholder="যেমন: 1120">
+      </div>
       <input type="hidden" id="pf-edit-id">
       <div class="form-group">
         <label class="form-label">মোবাইল নম্বর</label>
@@ -3334,7 +3338,7 @@ function loadProfile(){
 
   // View mode fields
   document.getElementById('pf-view-name').textContent=cu.name||'-';
-  document.getElementById('pf-view-id').textContent=cu.u||'-';
+  document.getElementById('pf-view-id').textContent=cu.job||'-';
   document.getElementById('pf-view-mob').textContent=cu.mob||'-';
   document.getElementById('pf-view-room').textContent=cu.room||'-';
   // Email with verification badge — always use Firebase Auth live status
@@ -3348,6 +3352,7 @@ function loadProfile(){
 
   // Edit mode pre-fill
   document.getElementById('pf-edit-name').value=cu.name||'';
+  document.getElementById('pf-edit-job').value=cu.job||'';
   document.getElementById('pf-edit-id').value=cu.u||'';
   document.getElementById('pf-edit-mob').value=cu.mob||'';
   document.getElementById('pf-edit-room').value=cu.room||'';
@@ -3397,6 +3402,8 @@ function saveProfile(){
   }
 
   cu.name=newName; CU.name=newName;
+  const newJob=sanitizeInput(document.getElementById('pf-edit-job').value);
+  if(newJob) { cu.job=newJob; CU.job=newJob; }
   if(newMob) cu.mob=newMob;
   if(newRoom) cu.room=newRoom;
   cu.email=newEmail||cu.email||'';
@@ -3889,7 +3896,7 @@ function makePDF(type){
     // Member table
     html+=`<table style="width:100%;border-collapse:collapse;font-size:11px;">
       <thead><tr style="background:#1a6b3c;color:#fff;">
-        <th style="padding:8px 8px;text-align:left;min-width:90px;">সদস্যের নাম ও ID</th>
+        <th style="padding:8px 8px;text-align:left;min-width:90px;">সদস্যের নাম</th>
         <th style="padding:8px 5px;text-align:center;">ধরন</th>
         <th style="padding:8px 5px;text-align:right;">পূর্বের<br>ব্যালেন্স</th>
         <th style="padding:8px 5px;text-align:right;">জমা</th>
@@ -3928,7 +3935,7 @@ function makePDF(type){
       const typeLabel=isOffU?'অফিস':u.type==='inside'?'ইন':'আউট';
       const fmt=v=>'৳'+Math.abs(v).toFixed(2);
       html+=`<tr style="background:${bg};">
-        <td style="padding:6px 8px;font-weight:600;font-size:11px;">${u.name}<br><span style="font-size:9px;color:#5a7a65;font-weight:400;">ID- ${u.job||'—'}${u.job&&u.mob?' · ':u.mob?' · ':''}${u.mob||''}</span></td>
+        <td style="padding:6px 8px;font-weight:600;font-size:11px;">${u.name}<br><span style="font-size:9px;color:#5a7a65;font-weight:400;">ID- ${u.job||'—'}</span></td>
         <td style="padding:6px 5px;text-align:center;font-size:10px;">${typeLabel}</td>
         <td style="padding:6px 5px;text-align:right;color:${prevBal>=0?'#2e7d32':'#e53935'};">${prevBal>=0?'':'-'}${fmt(prevBal)}</td>
         <td style="padding:6px 5px;text-align:right;color:#1565c0;">${fmt(thisMonthDeposit)}</td>
