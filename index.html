@@ -3833,12 +3833,30 @@ function makePDF(type){
         <td style="padding:7px 6px;text-align:right;color:#1a6b3c;font-weight:700;">${myMeals.toFixed(2)}</td>
         <td style="padding:7px 6px;text-align:right;">৳${mealBill.toFixed(2)}</td>
         <td style="padding:7px 6px;text-align:right;color:#1565c0;">${isOffU?'—':'৳'+othersShare.toFixed(2)}</td>
-        <td style="padding:7px 6px;text-align:right;color:#e65100;">${isOffU?'—':'৳'+cookBillShare.toFixed(2)}</td>
+        <td style="padding:7px 6px;text-align:right;color:#e65100;">${isOffU?'—':'৳'+cookFoodShare.toFixed(2)}</td>
         <td style="padding:7px 6px;text-align:right;font-weight:700;color:#e53935;">৳${payable.toFixed(2)}</td>
         <td style="padding:7px 6px;text-align:right;color:#2e7d32;">৳${Math.abs(bal).toFixed(2)}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:${netColor};">${net>=0?'+':''} ৳${Math.abs(net).toFixed(2)}</td>
       </tr>`;
     });
+    // বাবুর্চির সারি
+    const pdfCookUsers=DB.users.filter(u=>u.type==='cook');
+    if(pdfCookUsers.length){
+      html+=`<tr style="background:#f0fdf4;">
+        <td colspan="10" style="padding:6px 10px;font-size:11px;font-weight:700;color:#1a6b3c;border-top:2px solid #1a6b3c;">👨‍🍳 বাবুর্চি (মিল রেটে অন্তর্ভুক্ত, বিল আলাদা)</td>
+      </tr>`;
+      pdfCookUsers.forEach((u,ri)=>{
+        const myMeals=messMonthMeals(u.u,mmKey);
+        const bg=ri%2===0?'#f4f7f5':'#fff';
+        html+=`<tr style="background:${bg};opacity:.85;">
+          <td style="padding:7px 10px;font-weight:600;">${u.name}<br><span style="font-size:10px;color:#5a7a65;font-weight:400;">বাবুর্চি · ${u.room?'R'+u.room:'-'}</span></td>
+          <td style="padding:7px 6px;text-align:center;font-size:11px;">বাবুর্চি</td>
+          <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.room||'-'}</td>
+          <td style="padding:7px 6px;text-align:right;color:#f59e0b;font-weight:700;">${myMeals.toFixed(2)}</td>
+          <td colspan="6" style="padding:7px 6px;text-align:center;font-size:11px;color:#5a7a65;">মিল রেটে অন্তর্ভুক্ত — পৃথক বিল প্রযোজ্য</td>
+        </tr>`;
+      });
+    }
     html+='</tbody></table>';
 
   } else {
