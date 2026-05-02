@@ -218,6 +218,37 @@ html.dark-mode #fb-loading .mq-load-ring-track{border-color:#2d2d44 !important;}
 html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#a78bfa !important;}
 html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#7c3aed,#a78bfa) !important;}
 html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
+/* ── ALL MEMBERS BILL SUMMARY CARD ── */
+.amb-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  background:rgba(0,0,0,.18);border-radius:10px;
+  font-size:11px;text-align:center;margin-top:8px;overflow:hidden;
+}
+.amb-grid2{background:rgba(0,0,0,.12);margin-top:6px;}
+.dark-mode .amb-grid{background:rgba(255,255,255,.06);}
+.dark-mode .amb-grid2{background:rgba(255,255,255,.04);}
+.amb-cell{padding:9px 6px;}
+.amb-sep{border-left:1px solid rgba(255,255,255,.15);}
+.amb-lbl{opacity:.7;font-size:10px;margin-bottom:3px;line-height:1.3;}
+.amb-val{font-weight:700;font-size:13px;line-height:1.2;}
+/* day mode: white values */
+.amb-val{color:rgba(255,255,255,.95);}
+/* colored accents */
+.amb-green{color:#86efac !important;}
+.dark-mode .amb-green{color:#4ade80 !important;}
+.amb-orange{color:#fcd34d !important;}
+.dark-mode .amb-orange{color:#fb923c !important;}
+.amb-blue{color:#93c5fd !important;}
+.dark-mode .amb-blue{color:#38bdf8 !important;}
+/* মেস ফান্ড row */
+.amb-fund{
+  margin-top:8px;
+  background:rgba(0,0,0,.22);
+  border-radius:10px;padding:10px 14px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.dark-mode .amb-fund{background:rgba(255,255,255,.05);}
+
 /* ── SUMMARY HERO CARD (মিল রেট + মাসিক রিপোর্ট) ── */
 .summary-hero-card{
   background:linear-gradient(135deg,#0f4526 0%,#1a6b3c 60%,#28a15e 100%);
@@ -3909,55 +3940,79 @@ function showAllMembersBill(){
   const modal=document.getElementById('all-members-bill-modal');
   const content=document.getElementById('all-members-bill-content');
 
+  // ── office meal calc ──
+  const ofUsers=getOfficeMealUsers();
+  const ofMls=ofUsers.reduce((s,u)=>s+messMonthMeals(u.u,mmKey),0);
+  const ofRateMain=getOfficeMealRate(mmKey);
+  const ofBill=ofMls*ofRateMain;
+
+  // ── মেস ফান্ড ──
+  let messBalance=0;
+  DB.users.filter(u=>u.type!=='cook').forEach(u=>{
+    const isOff=isOfficeMealUser(u);
+    const appliedRate=isOff?(ofRateMain||pm):pm;
+    const myMeals=messMonthMeals(u.u,mmKey);
+    const mealBill=myMeals*appliedRate;
+    const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+    const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
+    const net=(u.balance||0)-payable;
+    if(net>0) messBalance+=net;
+  });
+
   let html=`
-  <div style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
-    <div style="font-size:11px;opacity:.75;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">${messMonthLabel()}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center">
+  <div class="summary-hero-card" style="border-radius:14px;padding:16px;margin-bottom:14px;">
+    <div style="font-size:11px;opacity:.75;letter-spacing:.5px;margin-bottom:8px">${messMonthLabel()}</div>
+
+    <!-- প্রতি মিল রেট + মোট খরচ -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
       <div>
-        <div style="font-size:28px;font-weight:700;line-height:1">৳ ${pm.toFixed(2)}</div>
-        <div style="font-size:11px;opacity:.75;margin-top:2px">প্রতি মিল রেট</div>
+        <div style="font-size:32px;font-weight:800;line-height:1;letter-spacing:-0.5px">৳ ${pm.toFixed(2)}</div>
+        <div style="font-size:11px;opacity:.75;margin-top:4px">প্রতি মিল রেট</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:16px;font-weight:700">৳ ${total.toLocaleString()}</div>
-        <div style="font-size:11px;opacity:.75">মোট খরচ</div>
+        <div style="font-size:18px;font-weight:700">৳ ${total.toLocaleString()}</div>
+        <div style="font-size:11px;opacity:.75;margin-top:2px">মোট খরচ</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.15);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:10px">
-      <div><div style="opacity:.7">বাজার</div><div style="font-weight:700;margin-top:1px">৳${bazar.toLocaleString()}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">অন্যান্য</div><div style="font-weight:700;margin-top:1px">৳${others.toLocaleString()}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চি বিল</div><div style="font-weight:700;margin-top:1px">৳${(cookFoodCost||0).toFixed(0)}</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:rgba(0,0,0,.1);border-radius:8px;padding:8px;font-size:11px;text-align:center;margin-top:4px">
-      <div><div style="opacity:.7">নেট মিল (সবার)</div><div style="font-weight:700;margin-top:1px">${parseFloat(netMeals.toFixed(2))}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)"><div style="opacity:.7">বাবুর্চির মিল</div><div style="font-weight:700;margin-top:1px;color:#fcd34d">${parseFloat(cookMeals.toFixed(2))}</div></div>
-      <div style="border-left:1px solid rgba(255,255,255,.2)">
-        <div style="opacity:.7">অফিস মিল<br><span style="font-size:9px">MEPL+MPCL</span></div>
-        <div style="font-weight:700;margin-top:1px;color:#93c5fd">${(()=>{const ofUsers=getOfficeMealUsers();const ofMls=ofUsers.reduce((s,u)=>s+messMonthMeals(u.u,mmKey),0);const ofRate=getOfficeMealRate(mmKey);const ofBill=ofMls*ofRate;return parseFloat(ofMls.toFixed(2))+'মিল<br>৳'+ofBill.toFixed(0);})()}</div>
+
+    <!-- বাজার / অন্যান্য / বাবুর্চি বিল -->
+    <div class="amb-grid">
+      <div class="amb-cell">
+        <div class="amb-lbl">বাজার</div>
+        <div class="amb-val amb-green">৳${bazar.toLocaleString()}</div>
+      </div>
+      <div class="amb-cell amb-sep">
+        <div class="amb-lbl">অন্যান্য</div>
+        <div class="amb-val amb-green">৳${others.toLocaleString()}</div>
+      </div>
+      <div class="amb-cell amb-sep">
+        <div class="amb-lbl">বাবুর্চি বিল</div>
+        <div class="amb-val amb-orange">৳${(cookFoodCost||0).toFixed(0)}</div>
       </div>
     </div>
-    ${(()=>{
-      // মেস ফান্ড = শুধু যাদের net positive, তাদের জমার সমষ্টি
-      // (manager এর কাছে যা আছে — বাজারে ব্যবহার করা যাবে)
-      const ofRateInner=getOfficeMealRate(mmKey);
-      let messBalance=0;
-      DB.users.filter(u=>u.type!=='cook').forEach(u=>{
-        const isOff=isOfficeMealUser(u);
-        const appliedRate=isOff?(ofRateInner||pm):pm;
-        const myMeals=messMonthMeals(u.u,mmKey);
-        const mealBill=myMeals*appliedRate;
-        const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
-        const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
-        const net=(u.balance||0)-payable;
-        if(net>0) messBalance+=net; // শুধু জমা আছে যাদের
-      });
-      const balColor='#4ade80';
-      const balSign='+';
-      const balLabel='🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)';
-      return `<div style="margin-top:8px;background:rgba(0,0,0,.25);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:11px;opacity:.85">${balLabel}</div>
-        <div style="font-size:19px;font-weight:700;color:${balColor}">${balSign}৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      </div>`;
-    })()}
+
+    <!-- নেট মিল / বাবুর্চির মিল / অফিস মিল -->
+    <div class="amb-grid amb-grid2">
+      <div class="amb-cell">
+        <div class="amb-lbl">নেট মিল (সবার)</div>
+        <div class="amb-val">${parseFloat(netMeals.toFixed(2))}</div>
+      </div>
+      <div class="amb-cell amb-sep">
+        <div class="amb-lbl">বাবুর্চির মিল</div>
+        <div class="amb-val amb-orange">${parseFloat(cookMeals.toFixed(2))}</div>
+      </div>
+      <div class="amb-cell amb-sep">
+        <div class="amb-lbl">অফিস মিল<br><span style="font-size:9px;opacity:.7">MEPL+MPCL</span></div>
+        <div class="amb-val amb-blue">${parseFloat(ofMls.toFixed(1))}মিল</div>
+        <div class="amb-val amb-blue" style="font-size:12px">৳${ofBill.toFixed(0)}</div>
+      </div>
+    </div>
+
+    <!-- মেস ফান্ড -->
+    <div class="amb-fund">
+      <div style="font-size:12px;opacity:.85">🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)</div>
+      <div style="font-size:20px;font-weight:800;color:#4ade80;letter-spacing:-0.3px">+৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    </div>
   </div>`;
 
   const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
