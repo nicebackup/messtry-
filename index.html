@@ -1367,20 +1367,20 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="app-header">
     <button class="header-back" onclick="goHome()">← Home</button>
     <div class="header-title">Admin Panel</div>
-    <div class="header-sub">পরিচালনা কেন্দ্র (Controller Only)</div>
+    <div class="header-sub" id="admin-panel-sub">পরিচালনা কেন্দ্র</div>
   </div>
   <div class="content">
     <div class="card">
       <div class="sec-title">⚙️ Admin কার্যক্রম</div>
-      <div class="adm-item" onclick="tog('card-mgr')"><div class="adm-icon">👑</div><div><div class="adm-lbl">ম্যানেজার নিয়োগ</div><div class="adm-sub">প্রতি মাসের ম্যানেজার সেট করুন (সর্বোচ্চ ১০ জন)</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-mgr')"><div class="adm-icon">👑</div><div><div class="adm-lbl">ম্যানেজার নিয়োগ</div><div class="adm-sub">প্রতি মাসের ম্যানেজার সেট করুন (সর্বোচ্চ ১০ জন)</div></div></div>
       <div class="adm-item" onclick="tog('card-cfg')"><div class="adm-icon">🍽️</div><div><div class="adm-lbl">মিল মান কনফিগারেশন</div><div class="adm-sub">সকাল/দুপুর/রাতের মিল মান পরিবর্তন</div></div></div>
       <div class="adm-item" onclick="tog('card-adm-meal')"><div class="adm-icon">🔓</div><div><div class="adm-lbl">যেকোনো সদস্যের মিল এডিট</div><div class="adm-sub">যেকোনো তারিখ — Lock নেই</div></div></div>
-      <div class="adm-item" onclick="tog('card-edit-mem')"><div class="adm-icon">✏️</div><div><div class="adm-lbl">সদস্যের তথ্য সম্পাদনা</div><div class="adm-sub">নাম, রুম, ফোন, ধরন পরিবর্তন</div></div></div>
-      <div class="adm-item" onclick="tog('card-del-mem')"><div class="adm-icon">🗑️</div><div><div class="adm-lbl">সদস্য মুছে ফেলুন</div><div class="adm-sub">মেস ছেড়ে যাওয়া সদস্য ডিলিট</div></div></div>
-      <div class="adm-item" onclick="tog('card-ctrl')"><div class="adm-icon">⭐</div><div><div class="adm-lbl">Controller নিয়োগ</div><div class="adm-sub">নতুন Controller যোগ/বাদ দিন</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-edit-mem')"><div class="adm-icon">✏️</div><div><div class="adm-lbl">সদস্যের তথ্য সম্পাদনা</div><div class="adm-sub">নাম, রুম, ফোন, ধরন পরিবর্তন</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-del-mem')"><div class="adm-icon">🗑️</div><div><div class="adm-lbl">সদস্য মুছে ফেলুন</div><div class="adm-sub">মেস ছেড়ে যাওয়া সদস্য ডিলিট</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-ctrl')"><div class="adm-icon">⭐</div><div><div class="adm-lbl">Controller নিয়োগ</div><div class="adm-sub">নতুন Controller যোগ/বাদ দিন</div></div></div>
       <div class="adm-item" onclick="tog('card-sitenote')"><div class="adm-icon">📍</div><div><div class="adm-lbl">ঠিকানা / সাইট নোট</div><div class="adm-sub">Home এ দেখানো ঠিকানা বা শর্ট নোট</div></div></div>
       <div class="adm-item" onclick="sec('notice')"><div class="adm-icon">📢</div><div><div class="adm-lbl">নোটিশ বোর্ড</div><div class="adm-sub">নোটিশ লিখুন ও পপআপ নিয়ন্ত্রণ করুন</div></div></div>
-      <div class="adm-item" onclick="tog('card-del-cycle')"><div class="adm-icon">🗓️</div><div><div class="adm-lbl">মেস মাস চক্র ডিলিট</div><div class="adm-sub">নির্দিষ্ট চক্রের সব মিল/বাজার ডেটা মুছুন</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-del-cycle')"><div class="adm-icon">🗓️</div><div><div class="adm-lbl">মেস মাস চক্র ডিলিট</div><div class="adm-sub">নির্দিষ্ট চক্রের সব মিল/বাজার ডেটা মুছুন</div></div></div>
     </div>
 
     <!-- Manager Card -->
@@ -2069,7 +2069,7 @@ function sec(s){
   if(s==='report'){ buildMessMonthOptions(); showSc('report'); return; }
   if(s==='members'){ loadMembers(); showSc('members'); return; }
   if(s==='profile'){ loadProfile(); showSc('profile'); return; }
-  if(s==='admin'){ initAdmin(); showSc('admin'); return; }
+  if(s==='admin'){ if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; } initAdmin(); showSc('admin'); return; }
   if(s==='officemeal'){ initOfficeMealScreen(); showSc('officemeal'); return; }
   if(s==='messmanager'){ newMessManagerScreen(); return; }
   if(s==='notice'){ initNotice(); showSc('notice'); return; }
@@ -2407,7 +2407,7 @@ function refreshHome(){
   const omEl=document.getElementById('menu-officemeal');
   if(omEl) omEl.style.display=mgr?'block':'none';
   document.getElementById('menu-deposit').style.display='block';
-  document.getElementById('admin-btn').style.display=isController()?'block':'none';
+  document.getElementById('admin-btn').style.display=isManagerOrCtrl()?'block':'none';
 
   // Auto-reset to today every time goHome is called fresh
   if(!homeViewDate) homeViewDate=null;
@@ -3445,6 +3445,12 @@ function saveProfile(){
 // ADMIN
 // ═══════════════════════════════════════════════
 function initAdmin(){
+  // Controller-only items: show/hide based on role
+  const ctrl=isController();
+  document.querySelectorAll('.ctrl-only').forEach(el=>{ el.style.display=ctrl?'flex':'none'; });
+  const sub=document.getElementById('admin-panel-sub');
+  if(sub) sub.textContent=ctrl?'পরিচালনা কেন্দ্র (Controller)':'পরিচালনা কেন্দ্র (Manager)';
+
   const sortedForSel=[...DB.users].sort((a,b)=>{
     const ai=parseInt(a.job)||Infinity, bi=parseInt(b.job)||Infinity;
     if(ai!==Infinity||bi!==Infinity) return ai-bi;
