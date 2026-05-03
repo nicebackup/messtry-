@@ -1705,6 +1705,36 @@ const auth = firebase.auth();
 // ═══════════════════════════════════════════════
 let _dbSaveTimeout = null;
 let _saveRetryCount = 0;
+// ── Internet Check ──
+function isOnline(){ return navigator.onLine; }
+
+function noNetPopup(){
+  // Remove existing
+  const ex=document.getElementById('no-net-popup');
+  if(ex) ex.remove();
+
+  const div=document.createElement('div');
+  div.id='no-net-popup';
+  div.style.cssText=`
+    position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
+    background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  `;
+  div.innerHTML=`
+    <div style="background:var(--card);border-radius:18px;padding:28px 24px;max-width:320px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+      <div style="font-size:48px;margin-bottom:12px">📡</div>
+      <div style="font-size:17px;font-weight:700;color:var(--danger);margin-bottom:8px">ইন্টারনেট সংযোগ নেই!</div>
+      <div style="font-size:13px;color:var(--text-light);margin-bottom:20px;line-height:1.5">ডেটা এন্ট্রি করতে ইন্টারনেট সংযোগ চালু করুন।<br>সকল তথ্য Real-Time Firebase এ সংরক্ষিত হয়।</div>
+      <button onclick="document.getElementById('no-net-popup').remove()" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">ঠিক আছে</button>
+    </div>
+  `;
+  document.body.appendChild(div);
+}
+
+// Network status monitor
+window.addEventListener('online',  ()=>{ const p=document.getElementById('no-net-popup'); if(p) p.remove(); toast('✅ ইন্টারনেট সংযোগ পুনরায় চালু হয়েছে!'); });
+window.addEventListener('offline', ()=>{ noNetPopup(); });
+
 function saveDB(){
   if(_dbSaveTimeout) clearTimeout(_dbSaveTimeout);
   _dbSaveTimeout = setTimeout(()=>{
@@ -2648,6 +2678,7 @@ function getSel(t){
   return 'off';
 }
 function saveMeal(){
+  if(!isOnline()){ noNetPopup(); return; }
   const bT=getSel('b'),lT=getSel('l'),dT=getSel('d');
   const bQ=parseInt(document.getElementById('qty-b').value)||1;
   const lQ=parseInt(document.getElementById('qty-l').value)||1;
@@ -2826,6 +2857,7 @@ function initBazar(){
   renderBazar();
 }
 function addBazar(){
+  if(!isOnline()){ noNetPopup(); return; }
   const descEl=document.getElementById('bz-desc');
   const desc=sanitizeInput(descEl.value);
   const amount=parseFloat(document.getElementById('bz-amt').value);
@@ -2899,6 +2931,7 @@ function initOthers(){
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
 function addOther(){
+  if(!isOnline()){ noNetPopup(); return; }
   const descEl=document.getElementById('oth-desc');
   const desc=sanitizeInput(descEl.value);
   const amount=parseFloat(document.getElementById('oth-amt').value);
@@ -3107,6 +3140,7 @@ function showMemberBalance(){
   info.textContent=`${u.name} এর বর্তমান ব্যালেন্স: ৳ ${Math.abs(bal).toLocaleString()} (${bal>=0?'জমা আছে':'বকেয়া আছে'})`;
 }
 function saveDeposit(){
+  if(!isOnline()){ noNetPopup(); return; }
   const uname=document.getElementById('dep-mem').value;
   const type=document.getElementById('dep-type').value;
   const amount=parseFloat(document.getElementById('dep-amt').value);
@@ -3416,6 +3450,7 @@ function pfEditMode(on){
 }
 
 function saveProfile(){
+  if(!isOnline()){ noNetPopup(); return; }
   const cu=DB.users.find(x=>x.u===CU.u); if(!cu) return;
   const newName=sanitizeInput(document.getElementById('pf-edit-name').value);
   const newId=sanitizeInput(document.getElementById('pf-edit-id').value).toLowerCase();
@@ -3530,6 +3565,7 @@ function initAdmin(){
 }
 
 function deleteMessCycle(){
+  if(!isOnline()){ noNetPopup(); return; }
   const key=document.getElementById('del-cycle-sel').value;
   if(!key){ toast('❌ চক্র নির্বাচন করুন!'); return; }
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
@@ -3582,6 +3618,7 @@ function renderManagerInfo(){
   }
 }
 function setManager(){
+  if(!isOnline()){ noNetPopup(); return; }
   const month=document.getElementById('mgr-month').value, uname=document.getElementById('mgr-sel').value;
   if(!month||!uname){ toast('❌ মাস ও সদস্য নির্বাচন করুন!'); return; }
   if(!DB.managers[month]) DB.managers[month]=[];
@@ -3598,6 +3635,7 @@ function setManager(){
   toast('✅ ম্যানেজার নির্বাচন সফল!');
 }
 function removeManager(){
+  if(!isOnline()){ noNetPopup(); return; }
   const month=document.getElementById('mgr-month').value, uname=document.getElementById('mgr-remove').value;
   if(!month||!uname){ toast('❌ ম্যানেজার নির্বাচন করুন!'); return; }
   if(DB.managers[month]) DB.managers[month]=DB.managers[month].filter(u=>u!==uname);
@@ -3607,6 +3645,7 @@ function removeManager(){
   saveDB(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
 function saveCfg(){
+  if(!isOnline()){ noNetPopup(); return; }
   const dateStr=document.getElementById('cfg-date').value;
   const bv=parseFloat(document.getElementById('cfg-bv').value)||0.75;
   const lv=parseFloat(document.getElementById('cfg-lv').value)||1.5;
@@ -3629,6 +3668,7 @@ function loadAdmMeal(){
 }
 function setAdmPQO(t,val){ if(!admBuf[t]) admBuf[t]={t:'off',q:1}; admBuf[t].t=val; hlPQO(t,val,true); }
 function saveAdmMeal(){
+  if(!isOnline()){ noNetPopup(); return; }
   if(!admBuf.uname||!admBuf.dateStr){ toast('❌ সদস্য ও তারিখ নির্বাচন করুন!'); return; }
   ['b','l','d'].forEach(t=>{ if(!admBuf[t]) admBuf[t]={t:'off',q:1}; admBuf[t].q=parseInt(document.getElementById('adm-qty-'+t).value)||1; });
   DB.meals[admBuf.uname+'_'+admBuf.dateStr]={b:{...admBuf.b},l:{...admBuf.l},d:{...admBuf.d}};
@@ -3649,6 +3689,7 @@ function loadEditMem(){
   document.getElementById('edit-mem-joined').value=u.joined||'';
 }
 function saveEditMem(){
+  if(!isOnline()){ noNetPopup(); return; }
   const uname=document.getElementById('edit-mem-sel').value; if(!uname) return;
   const u=DB.users.find(x=>x.u===uname); if(!u) return;
   const newName=sanitizeInput(document.getElementById('edit-mem-name').value);
@@ -3669,6 +3710,7 @@ function saveEditMem(){
 }
 // Delete member
 function deleteMember(){
+  if(!isOnline()){ noNetPopup(); return; }
   const uname=document.getElementById('del-mem-sel').value; if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
   const u=DB.users.find(x=>x.u===uname);
   showModal('সদস্য মুছুন',`${u?.name||uname} কে স্থায়ীভাবে মুছে ফেলবেন? সব ডেটা হারিয়ে যাবে!`,()=>{
@@ -3706,6 +3748,7 @@ function renderControllerList(){
   DB.controllers.forEach(c=>{ const usr=DB.users.find(x=>x.u===c); if(usr) remSel.innerHTML+=`<option value="${esc(c)}">${esc(usr.name)} (ID: ${esc(c)})</option>`; });
 }
 function addController(){
+  if(!isOnline()){ noNetPopup(); return; }
   const uname=document.getElementById('ctrl-add-sel').value; if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
   if(DB.controllers.length>=5){ toast('❌ সর্বোচ্চ ৫ জন Controller রাখা যাবে!'); return; }
   if(!DB.controllers.includes(uname)) DB.controllers.push(uname);
@@ -3715,6 +3758,7 @@ function addController(){
   saveDB(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
 }
 function removeController(){
+  if(!isOnline()){ noNetPopup(); return; }
   const uname=document.getElementById('ctrl-rem-sel').value; if(!uname){ toast('❌ Controller নির্বাচন করুন!'); return; }
   if(uname===CU.u){ toast('❌ নিজেকে Controller থেকে বাদ দেওয়া যাবে না!'); return; }
   DB.controllers=DB.controllers.filter(c=>c!==uname);
@@ -4325,6 +4369,7 @@ function editController(uname){
 // SITE NOTE
 // ═══════════════════════════════════════════════
 function saveSiteNote(){
+  if(!isOnline()){ noNetPopup(); return; }
   const val=sanitizeInput(document.getElementById('site-note-input').value).slice(0,80);
   DB.siteNote=val;
   saveDB();
@@ -4373,6 +4418,7 @@ function toggleNoticePopup(){
   toast(DB.notice.popupEnabled?'🔔 পপআপ চালু হয়েছে!':'🔕 পপআপ বন্ধ করা হয়েছে!');
 }
 function saveNotice(){
+  if(!isOnline()){ noNetPopup(); return; }
   const ta=document.getElementById('notice-text-input');
   const text=ta?(ta.value||'').trim().slice(0,2000):'';
   DB.notice.text=text;
@@ -4380,6 +4426,7 @@ function saveNotice(){
   toast('✅ নোটিশ সেভ হয়েছে!');
 }
 function clearNotice(){
+  if(!isOnline()){ noNetPopup(); return; }
   showModal('নোটিশ মুছুন','নোটিশ মুছে ফেলবেন?',()=>{
     DB.notice.text=''; saveDB(); initNotice(); toast('✅ নোটিশ মুছে ফেলা হয়েছে!');
   });
@@ -4482,6 +4529,7 @@ function loadOfficeMealInfo(){
 }
 
 function saveOfficeMealRate(){
+  if(!isOnline()){ noNetPopup(); return; }
   if(!isManagerOrCtrl()){ toast('❌ শুধুমাত্র ম্যানেজার বা এডমিন করতে পারবেন!'); return; }
   const mmKey=document.getElementById('ofm-month').value;
   if(!mmKey){ toast('❌ মেস মাস নির্বাচন করুন!'); return; }
@@ -4699,6 +4747,7 @@ function loadOfficeMealScreen(){
 }
 
 function saveOfficeMealRateScreen(){
+  if(!isOnline()){ noNetPopup(); return; }
   const mmKey = document.getElementById('ofms-month')?.value;
   if(!mmKey){ toast('❌ মাস নির্বাচন করুন!'); return; }
   const rate = parseFloat(document.getElementById('ofms-rate').value);
@@ -4710,6 +4759,7 @@ function saveOfficeMealRateScreen(){
 }
 
 function saveOfficeMeal(key){
+  if(!isOnline()){ noNetPopup(); return; }
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
   const u = getOrCreateOfficeUser(key);
   const date = ofmsDate||tod();
