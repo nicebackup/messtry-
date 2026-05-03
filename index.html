@@ -300,7 +300,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   .content{max-width:960px;width:100%;margin:0 auto;padding:28px 40px;}
   .pb-nav{padding-bottom:24px !important;}
   .bottom-nav{position:fixed;bottom:0;left:0;transform:none;max-width:100%;display:flex;justify-content:center;padding:0 20px;}
-  .menu-grid{grid-template-columns:repeat(3,1fr);}
+  .menu-grid-top{grid-template-columns:repeat(2,1fr);}
+  .menu-grid-bot{grid-template-columns:repeat(3,1fr);}
   .stats-row{grid-template-columns:repeat(4,1fr);}
   .modal{max-width:600px;border-radius:20px !important;margin:auto;}
   .modal-bg{align-items:center !important;}
@@ -312,7 +313,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 }
 @media(min-width:1200px){
   .content{max-width:1100px;padding:32px 60px;}
-  .menu-grid{grid-template-columns:repeat(4,1fr);}
+  .menu-grid-top{grid-template-columns:repeat(2,1fr);}
+  .menu-grid-bot{grid-template-columns:repeat(4,1fr);}
   .stats-row{grid-template-columns:repeat(4,1fr);}
 }
 /* Tablet portrait 600–768px */
@@ -321,7 +323,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   .screen.active{display:flex;flex-direction:column;}
   .content{max-width:700px;margin:0 auto;padding:22px 28px;}
   .pb-nav{padding-bottom:75px;}
-  .menu-grid{grid-template-columns:repeat(3,1fr);}
+  .menu-grid-top{grid-template-columns:repeat(2,1fr);}
+  .menu-grid-bot{grid-template-columns:repeat(3,1fr);}
   .stats-row{grid-template-columns:repeat(3,1fr);}
   .bottom-nav{position:fixed;bottom:0;left:0;transform:none;max-width:100%;display:flex;justify-content:center;}
   .modal{max-width:560px;border-radius:20px !important;margin:auto;}
@@ -407,7 +410,13 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 .stat-num{font-size:24px;font-weight:700;color:var(--primary);}
 .stat-lbl{font-size:12px;color:var(--text-light);margin-top:2px;}
 /* MENU GRID */
-.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.menu-grid{display:grid;gap:12px;}
+.menu-grid-top{grid-template-columns:1fr 1fr;}
+.menu-grid-bot{grid-template-columns:1fr 1fr 1fr;margin-top:12px;}
+.menu-grid-bot .menu-item{padding:14px 8px;}
+.menu-grid-bot .menu-icon{font-size:22px;margin-bottom:5px;}
+.menu-grid-bot .menu-lbl{font-size:11px;}
+.menu-grid-bot .menu-sub{font-size:9px;}
 .menu-item{background:var(--card);border-radius:var(--radius);padding:20px 14px;box-shadow:var(--shadow);border:1px solid var(--border);text-align:center;cursor:pointer;transition:all .2s;border-top:3px solid var(--primary);}
 .menu-item:active{transform:scale(.97);}
 .menu-item.ac{border-top-color:var(--accent);}
@@ -933,9 +942,11 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       </div>
     </div>
     <!-- Quick Actions -->
-    <div class="menu-grid">
+    <div class="menu-grid menu-grid-top">
       <div class="menu-item" onclick="sec('meal')"><div class="menu-icon">🍽️</div><div class="menu-lbl">মিল আপডেট</div><div class="menu-sub">Meal Update</div></div>
       <div class="menu-item ac" id="menu-bazar" onclick="sec('bazar')" style="display:none"><div class="menu-icon">🛒</div><div class="menu-lbl">বাজার খরচ</div><div class="menu-sub">Bazar Entry</div></div>
+    </div>
+    <div class="menu-grid menu-grid-bot">
       <div class="menu-item in" id="menu-others" onclick="sec('others')" style="display:none"><div class="menu-icon">⚡</div><div class="menu-lbl">অন্যান্য খরচ</div><div class="menu-sub">Others Expense</div></div>
       <div class="menu-item ac" id="menu-deposit" onclick="sec('deposit')" style="display:none"><div class="menu-icon">💵</div><div class="menu-lbl">জমা/উত্তোলন</div><div class="menu-sub">Deposit/Withdraw</div></div>
       <div class="menu-item in" id="menu-officemeal" onclick="sec('officemeal')" style="display:none"><div class="menu-icon">🏢</div><div class="menu-lbl">অফিস মিল</div><div class="menu-sub">MEPL / MPCL</div></div>
