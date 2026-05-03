@@ -6,6 +6,13 @@
 <title>Midland Quarter - মেস ম্যানেজমেন্ট</title>
 <meta name="theme-color" content="#0f4526">
 <link rel="icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a6b3c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MQ Mess">
+  <link rel="apple-touch-icon" href="icon-192.png">
 <!-- Dark mode flash fix: apply class BEFORE paint -->
 <script>
 try{
@@ -902,6 +909,15 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     </div>
   </div>
   <div class="content pb-nav">
+    <!-- PWA Install Button -->
+    <div id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:none;background:linear-gradient(135deg,#1a6b3c,#228b4a);color:#fff;border-radius:12px;padding:10px 16px;margin-bottom:12px;align-items:center;gap:10px;cursor:pointer;box-shadow:0 2px 12px rgba(26,107,60,0.3);">
+      <span style="font-size:22px">📲</span>
+      <div>
+        <div style="font-weight:700;font-size:13px">App হিসেবে Install করুন</div>
+        <div style="font-size:11px;opacity:.85">Home Screen এ যোগ করুন — Offline কাজ করবে</div>
+      </div>
+      <span style="margin-left:auto;font-size:18px">›</span>
+    </div>
     <div class="welcome-bar">
       <div><div class="date-bar" id="home-date"></div></div>
       <span class="welcome-role" id="home-role">Member</span>
@@ -4738,6 +4754,42 @@ function renderOfficeMealNotesScreen(){
   el.innerHTML=safeHTML(h);
 }
 
+</script>
+<script>
+// ── PWA Service Worker Registration ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+
+// ── PWA Install Prompt ──
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Install button দেখাও
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'none';
+  toast('✅ App সফলভাবে Install হয়েছে!');
+});
+
+function triggerPWAInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r => {
+      deferredPrompt = null;
+    });
+  }
+}
 </script>
 </body>
 </html>

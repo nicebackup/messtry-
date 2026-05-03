@@ -1,0 +1,42 @@
+{
+  "name": "Midland Quarter Mess Management",
+  "short_name": "MQ Mess",
+  "description": "Midland Quarter মেস ম্যানেজমেন্ট সিস্টেম",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f4526",
+  "theme_color": "#1a6b3c",
+  "lang": "bn",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["finance", "utilities"],
+  "shortcuts": [
+    {
+      "name": "মিল আপডেট",
+      "short_name": "মিল",
+      "url": "./index.html#meal",
+      "description": "আজকের মিল আপডেট করুন"
+    },
+    {
+      "name": "মাসিক রিপোর্ট",
+      "short_name": "রিপোর্ট",
+      "url": "./index.html#report",
+      "description": "মাসিক রিপোর্ট দেখুন"
+    }
+  ]
+}
