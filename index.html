@@ -1039,9 +1039,14 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="app-header">
     <button class="header-back" onclick="goHome()">← Home</button>
     <div class="header-title">বাজার খরচ</div>
-    <div class="header-sub">Bazar Entry</div>
+    <div class="header-sub" id="bazar-header-sub">Bazar Entry</div>
   </div>
   <div class="content pb-nav">
+    <div id="bazar-readonly-notice" style="display:none">
+      <div style="background:var(--info-light,#eff6ff);border:1px solid var(--info,#3b82f6);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--info,#1d4ed8)">
+        👁️ আপনি শুধু বাজার খরচের ইতিহাস দেখতে পারবেন। এন্ট্রি করার অধিকার নেই।
+      </div>
+    </div>
     <div id="bazar-form-wrap">
       <div class="card">
         <div class="sec-title">➕ বাজার যোগ করুন</div>
@@ -1068,10 +1073,14 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="app-header">
     <button class="header-back" onclick="goHome()">← Home</button>
     <div class="header-title">অন্যান্য খরচ</div>
-    <div class="header-sub">Others Expense</div>
+    <div class="header-sub" id="others-header-sub">Others Expense</div>
   </div>
   <div class="content pb-nav">
-
+    <div id="others-readonly-notice" style="display:none">
+      <div style="background:var(--info-light,#eff6ff);border:1px solid var(--info,#3b82f6);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--info,#1d4ed8)">
+        👁️ আপনি শুধু অন্যান্য খরচের ইতিহাস দেখতে পারবেন। এন্ট্রি করার অধিকার নেই।
+      </div>
+    </div>
     <!-- OTHERS PANEL — একমাত্র tab -->
     <div id="oth-panel-others">
       <div id="others-form-wrap">
@@ -2391,8 +2400,10 @@ function refreshHome(){
 
   // Show/hide manager-only buttons
   const mgr=isManagerOrCtrl();
-  document.getElementById('menu-bazar').style.display=mgr?'block':'none';
-  document.getElementById('menu-others').style.display=mgr?'block':'none';
+  document.getElementById('menu-bazar').style.display='block';
+  document.getElementById('menu-bazar').querySelector('.menu-sub').textContent=mgr?'Bazar Entry':'ইতিহাস দেখুন';
+  document.getElementById('menu-others').style.display='block';
+  document.getElementById('menu-others').querySelector('.menu-sub').textContent=mgr?'Others Expense':'ইতিহাস দেখুন';
   const omEl=document.getElementById('menu-officemeal');
   if(omEl) omEl.style.display=mgr?'block':'none';
   document.getElementById('menu-deposit').style.display='block';
@@ -2792,7 +2803,10 @@ function initBazar(){
   const sel=document.getElementById('bz-month-sel');
   sel.value=mk(); if(!sel.value) sel.value=mk();
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
-  document.getElementById('bazar-form-wrap').style.display=isManagerOrCtrl()?'block':'none';
+  const mgr=isManagerOrCtrl();
+  document.getElementById('bazar-form-wrap').style.display=mgr?'block':'none';
+  document.getElementById('bazar-readonly-notice').style.display=mgr?'none':'block';
+  document.getElementById('bazar-header-sub').textContent=mgr?'Bazar Entry':'ইতিহাস দেখুন';
   renderBazar();
 }
 function addBazar(){
@@ -2858,8 +2872,11 @@ function editBazar(id){
 }
 
 function initOthers(){
+  const mgr2=isManagerOrCtrl();
   if(!document.getElementById('oth-date').value) document.getElementById('oth-date').value=tod();
-  document.getElementById('others-form-wrap').style.display=isManagerOrCtrl()?'block':'none';
+  document.getElementById('others-form-wrap').style.display=mgr2?'block':'none';
+  document.getElementById('others-readonly-notice').style.display=mgr2?'none':'block';
+  document.getElementById('others-header-sub').textContent=mgr2?'Others Expense':'ইতিহাস দেখুন';
   const sel=document.getElementById('oth-month-sel');
   if(sel) sel.value=mk();
   renderOthers();
