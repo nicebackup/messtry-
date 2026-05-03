@@ -1386,7 +1386,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <!-- Manager Card -->
     <div class="card" id="card-mgr" style="display:none">
       <div class="sec-title">👑 ম্যানেজার নিয়োগ</div>
-      <div class="form-group"><label class="form-label">মাস</label><input type="month" id="mgr-month" class="form-input"></div>
+      <div class="form-group"><label class="form-label">মেস মাস</label><select id="mgr-month" class="form-input"></select></div>
       <div id="mgr-current" style="margin-bottom:12px;font-size:13px;color:var(--text-light)"></div>
       <div class="form-group"><label class="form-label">সদস্য নির্বাচন করুন (ম্যানেজার)</label><select id="mgr-sel" class="form-input"><option value="">-- সদস্য নির্বাচন --</option></select></div>
       <button class="btn btn-primary btn-sm" onclick="setManager()" style="width:100%;margin-bottom:8px">✅ ম্যানেজার যোগ করুন</button>
@@ -3455,7 +3455,25 @@ function initAdmin(){
     el.innerHTML='<option value="">-- নির্বাচন করুন --</option>';
     sortedForSel.forEach(u=>{ el.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
   });
-  document.getElementById('mgr-month').value=mk();
+  // Populate mgr-month with mess month options
+  const mgrMonSel=document.getElementById('mgr-month');
+  if(mgrMonSel){
+    mgrMonSel.innerHTML='';
+    const now2=getBSTDate();
+    const mnames2=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+    const currentKey=messMonthKey();
+    for(let i=-1;i<12;i++){
+      const d=new Date(now2.getFullYear(),now2.getMonth()-i+1,15);
+      const key=messMonthKey(d);
+      const {y,m}=getMessMonth(d);
+      const nm=(m+1)%12, ny=m===11?y+1:y;
+      const opt=document.createElement('option');
+      opt.value=key;
+      opt.textContent=`${mnames2[m]} ১১ – ${mnames2[nm]} ১০, ${y}`;
+      if(key===currentKey) opt.selected=true;
+      mgrMonSel.appendChild(opt);
+    }
+  }
   document.getElementById('cfg-bv').value=DB.cfg.def.b;
   document.getElementById('cfg-lv').value=DB.cfg.def.l;
   document.getElementById('cfg-dv').value=DB.cfg.def.d;
