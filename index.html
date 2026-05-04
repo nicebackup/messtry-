@@ -905,7 +905,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-sub" id="home-mgr">লোড হচ্ছে...</div>
     <div class="header-actions">
       <button class="header-icon-btn" onclick="newMessManagerScreen()" title="মেস ম্যানেজার">👑</button>
-      <button class="header-icon-btn" onclick="toggleDark()" title="Dark Mode">🌙</button>
     </div>
   </div>
   <div class="content pb-nav">
@@ -1332,6 +1331,13 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="prof-row"><span style="color:var(--text-light)">🏠 রুম নম্বর</span><b id="pf-view-room">-</b></div>
       <div class="prof-row"><span style="color:var(--text-light)">📧 ইমেইল</span><span id="pf-view-email" style="font-size:13px">-</span></div>
       <div class="prof-row" style="border:none"><span style="color:var(--text-light)">🏡 ঠিকানা</span><span id="pf-view-addr" style="font-size:13px;text-align:right;max-width:60%">-</span></div>
+      <div class="prof-row" style="border:none;margin-top:4px;">
+        <span style="color:var(--text-light)">🎨 থিম</span>
+        <div style="display:flex;gap:0;border-radius:20px;overflow:hidden;border:1.5px solid var(--border);">
+          <button id="theme-day-btn" onclick="setTheme('day')" style="padding:5px 18px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s;background:var(--primary);color:#fff;">☀️ Day</button>
+          <button id="theme-night-btn" onclick="setTheme('night')" style="padding:5px 18px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s;background:transparent;color:var(--text-light);">🌙 Night</button>
+        </div>
+      </div>
     </div>
 
     <!-- ── Profile Edit (edit mode, hidden by default) ── -->
@@ -2145,6 +2151,26 @@ function applyDark(force){
   if(document.body) document.body.classList.toggle('dark-mode', isDark);
   syncThemeMeta(isDark);
   return isDark;
+}
+function setTheme(mode){
+  const isDark = mode==='night';
+  DB.darkMode = isDark;
+  applyDark();
+  localStorage.setItem('mq_dark', isDark?'1':'0');
+  updateThemeBtns();
+}
+function updateThemeBtns(){
+  const isDark = document.documentElement.classList.contains('dark-mode');
+  const dayBtn = document.getElementById('theme-day-btn');
+  const nightBtn = document.getElementById('theme-night-btn');
+  if(!dayBtn||!nightBtn) return;
+  if(isDark){
+    dayBtn.style.background='transparent'; dayBtn.style.color='var(--text-light)';
+    nightBtn.style.background='var(--primary)'; nightBtn.style.color='#fff';
+  } else {
+    dayBtn.style.background='var(--primary)'; dayBtn.style.color='#fff';
+    nightBtn.style.background='transparent'; nightBtn.style.color='var(--text-light)';
+  }
 }
 function toggleDark(){
   const isDark = !document.documentElement.classList.contains('dark-mode');
@@ -3406,6 +3432,7 @@ function toggleBlockMember(){
 function loadProfile(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
+  updateThemeBtns();
 
   // Avatar + name + role
   document.getElementById('pf-av').textContent=cu.name[0].toUpperCase();
