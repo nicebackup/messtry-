@@ -1582,7 +1582,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 
 
 <!-- ═══════════ FIREBASE LOADING OVERLAY ═══════════ -->
-<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#f4f7f5;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .25s ease;">
+<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#f4f7f5;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:background .3s;">
   <div style="position:relative;width:72px;height:72px;">
     <div class="mq-load-ring-track" style="position:absolute;inset:0;border-radius:50%;border:6px solid #e8f5e9;"></div>
     <div class="mq-load-ring-spin" style="position:absolute;inset:0;border-radius:50%;border:6px solid transparent;border-top-color:#1a6b3c;animation:mq-spin 0.9s linear infinite;"></div>
@@ -1601,9 +1601,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 <style>
 @keyframes mq-spin { to { transform: rotate(360deg); } }
 @keyframes mq-dot { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
-body { background: #f4f7f5; }
-html.dark-mode body { background: #0f1117; }
-html.dark-mode #fb-loading { background: #0f1117 !important; }
 </style>
 
 <!-- ═══════════ CONFIRM MODAL ═══════════ -->
@@ -1708,20 +1705,6 @@ const auth = firebase.auth();
 // ═══════════════════════════════════════════════
 let _dbSaveTimeout = null;
 let _saveRetryCount = 0;
-function hideFbLoading(){
-  const el=document.getElementById('fb-loading');
-  if(!el||el.style.display==='none') return;
-  el.style.opacity='0';
-  setTimeout(()=>{ el.style.display='none'; el.style.opacity='1'; }, 220);
-}
-function showFbLoading(){
-  const el=document.getElementById('fb-loading');
-  if(!el) return;
-  el.style.opacity='0';
-  el.style.display='flex';
-  requestAnimationFrame(()=>{ el.style.opacity='1'; });
-}
-
 // ── Internet Check ──
 function isOnline(){ return navigator.onLine; }
 
@@ -1818,21 +1801,23 @@ function migrateDB(){
 
 // Real-time listener — updates DB & UI whenever Firebase data changes
 function loadDB(){
-  showFbLoading();
+  // Show loading overlay
+  document.getElementById('fb-loading').style.display='flex';
   dbRef.on('value', snap=>{
-    hideFbLoading();
     const data = snap.val();
     if(data){
       DB = data;
       delete DB.darkMode;
       migrateDB();
     } else {
+      // First-ever run: push default structure to Firebase
       migrateDB();
       const initialDB = JSON.parse(JSON.stringify(DB));
       delete initialDB.darkMode;
       dbRef.set(initialDB);
     }
     applyDark();
+    // Refresh current active screen if already logged in
     if(CU){
       const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
       if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
@@ -1846,8 +1831,9 @@ function loadDB(){
       else if(activeId==='profile') loadProfile();
       else if(activeId==='notice') initNotice();
     }
+    // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
-    hideFbLoading();
+    document.getElementById('fb-loading').style.display='none';
     toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
     console.error('Firebase read error:', err);
   });
@@ -1859,14 +1845,14 @@ function loadDB(){
 auth.onAuthStateChanged(fbUser=>{
   if(!fbUser){
     // Not logged in
-    hideFbLoading();
+    document.getElementById('fb-loading').style.display='none';
     CU = null;
     showSc('login');
     return;
   }
   if(!fbUser.emailVerified){
     // Logged in but email not verified
-    hideFbLoading();
+    document.getElementById('fb-loading').style.display='none';
     auth.signOut();
     CU = null;
     showSc('login');
@@ -1879,14 +1865,14 @@ auth.onAuthStateChanged(fbUser=>{
   firebase.database().ref('users/' + uid).once('value').then(snap=>{
     const userData = snap.val();
     if(!userData){
-      hideFbLoading();
+      document.getElementById('fb-loading').style.display='none';
       auth.signOut(); CU=null; showSc('login');
       const al = document.getElementById('login-alert');
       if(al){ al.textContent='❌ প্রোফাইল পাওয়া যায়নি। Admin-এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
       return;
     }
     if(userData.blocked){
-      hideFbLoading();
+      document.getElementById('fb-loading').style.display='none';
       auth.signOut(); CU=null; showSc('login');
       const al = document.getElementById('login-alert');
       if(al){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
@@ -1914,12 +1900,12 @@ auth.onAuthStateChanged(fbUser=>{
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
       }
 
-      hideFbLoading();
+      document.getElementById('fb-loading').style.display='none';
       refreshHome(); showSc('home');
       setTimeout(()=>showNoticePopup(), 800);
     });
   }).catch(err=>{
-    hideFbLoading();
+    document.getElementById('fb-loading').style.display='none';
     console.error('RTDB profile load error:', err);
     auth.signOut(); CU=null; showSc('login');
   });
