@@ -1746,10 +1746,7 @@ function saveDB(){
     const dbToSave = JSON.parse(JSON.stringify(DB));
     delete dbToSave.darkMode;
     dbRef.set(dbToSave)
-      .then(()=>{
-        _saveRetryCount=0;
-        try { localStorage.setItem('mq_db_cache', JSON.stringify(dbToSave)); } catch(e){}
-      })
+      .then(()=>{ _saveRetryCount=0; })
       .catch(e=>{
         console.error('Firebase write error:',e);
         _saveRetryCount++;
@@ -1809,25 +1806,7 @@ function migrateDB(){
 
 // Real-time listener — updates DB & UI whenever Firebase data changes
 function loadDB(){
-  // Try to load cached DB instantly (no loading screen)
-  try {
-    const cached = localStorage.getItem('mq_db_cache');
-    if(cached){
-      const parsed = JSON.parse(cached);
-      DB = parsed;
-      delete DB.darkMode;
-      applyDark();
-      // Show UI immediately from cache
-      if(CU){
-        refreshHome(); showSc('home');
-      }
-    } else {
-      // First time — show minimal loading
-      showFbLoading();
-    }
-  } catch(e){}
-
-  // Firebase sync in background
+  showFbLoading();
   dbRef.on('value', snap=>{
     hideFbLoading();
     const data = snap.val();
@@ -1835,8 +1814,6 @@ function loadDB(){
       DB = data;
       delete DB.darkMode;
       migrateDB();
-      // Cache for next instant load
-      try { localStorage.setItem('mq_db_cache', JSON.stringify(DB)); } catch(e){}
     } else {
       migrateDB();
       const initialDB = JSON.parse(JSON.stringify(DB));
@@ -1844,7 +1821,6 @@ function loadDB(){
       dbRef.set(initialDB);
     }
     applyDark();
-    // Refresh current active screen
     if(CU){
       const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
       if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
