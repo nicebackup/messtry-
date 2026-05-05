@@ -2334,28 +2334,23 @@ function doRegister(){
   auth.createUserWithEmailAndPassword(email, pass)
     .then(cred=>{
       const uid = cred.user.uid;
-      const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
-      return firebase.database().ref('users/' + uid).set(userData)
-        .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
-        .then(()=> cred.user.sendEmailVerification())
+      // ✅ আগেই verification mail পাঠাও
+      return cred.user.sendEmailVerification()
         .then(()=>{
-          // Add new member to messData/users array in Firebase directly
-          // We read the current array first to avoid overwriting other members
-          dbRef.child('users').once('value').then(uSnap=>{
-            const currentUsers = uSnap.val() || [];
-            const newEntry = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
-            const alreadyExists = currentUsers.find(x=>x.uid===uid||x.u===uname);
-            if(!alreadyExists){
-              currentUsers.push(newEntry);
-              dbRef.child('users').set(currentUsers).catch(()=>{});
-            }
-          }).catch(()=>{});
-          ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
-          ok.className='alert alert-success show';
-          al.className='alert';
-          if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-          auth.signOut();
-          setTimeout(()=>showSc('login'), 2500);
+          const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
+          return firebase.database().ref('users/' + uid).set(userData)
+            .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
+            .then(()=>{
+              if(!DB.users) DB.users=[];
+              DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
+              saveDB();
+              ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+              ok.className='alert alert-success show';
+              al.className='alert';
+              if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+              auth.signOut();
+              setTimeout(()=>showSc('login'), 2500);
+            });
         });
     })
     .catch(err=>{
