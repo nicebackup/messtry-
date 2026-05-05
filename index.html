@@ -2339,9 +2339,17 @@ function doRegister(){
         .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
         .then(()=> cred.user.sendEmailVerification())
         .then(()=>{
-          if(!DB.users) DB.users=[];
-          DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
-          saveDB();
+          // Add new member to messData/users array in Firebase directly
+          // We read the current array first to avoid overwriting other members
+          dbRef.child('users').once('value').then(uSnap=>{
+            const currentUsers = uSnap.val() || [];
+            const newEntry = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
+            const alreadyExists = currentUsers.find(x=>x.uid===uid||x.u===uname);
+            if(!alreadyExists){
+              currentUsers.push(newEntry);
+              dbRef.child('users').set(currentUsers).catch(()=>{});
+            }
+          }).catch(()=>{});
           ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
           ok.className='alert alert-success show';
           al.className='alert';
