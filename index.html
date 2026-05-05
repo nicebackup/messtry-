@@ -817,7 +817,11 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div id="login-alert" class="alert alert-danger"></div>
       <div class="form-group">
         <label class="form-label">Email Address</label>
-        <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন">
+        <div style="position:relative">
+          <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন" style="padding-right:46px" oninput="loginEmailInput()">
+          <button type="button" id="login-email-save-btn" onclick="saveLoginEmail()" title="Email সেভ করুন" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--primary);font-size:18px;">✅</button>
+        </div>
+        <div id="saved-emails-list" style="display:none;margin-top:6px;"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
@@ -1846,8 +1850,10 @@ function loadDB(){
     }
     // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
-    document.getElementById('fb-loading').style.display='none';
-    toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
+    hideFbLoading();
+    if(auth.currentUser){
+      toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
+    }
     console.error('Firebase read error:', err);
   });
 }
@@ -1858,9 +1864,10 @@ function loadDB(){
 auth.onAuthStateChanged(fbUser=>{
   if(!fbUser){
     // Not logged in
-    document.getElementById('fb-loading').style.display='none';
+    hideFbLoading();
     CU = null;
     showSc('login');
+    initLoginPage();
     return;
   }
   if(!fbUser.emailVerified){
@@ -2233,6 +2240,57 @@ function closeModal(){ document.getElementById('modal-bg').classList.remove('sho
 // ═══════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════
+// ── Login Email Save/Load ──
+function loginEmailInput(){
+  const val=document.getElementById('login-user').value.trim();
+  const btn=document.getElementById('login-email-save-btn');
+  if(btn) btn.style.display=val.includes('@')?'block':'none';
+}
+function saveLoginEmail(){
+  const email=document.getElementById('login-user').value.trim();
+  if(!email.includes('@')) return;
+  try{
+    let saved=JSON.parse(localStorage.getItem('mq_saved_emails')||'[]');
+    if(!saved.includes(email)){ saved.unshift(email); saved=saved.slice(0,5); }
+    localStorage.setItem('mq_saved_emails',JSON.stringify(saved));
+    toast('✅ Email সেভ হয়েছে!');
+    renderSavedEmails();
+  }catch(e){}
+}
+function renderSavedEmails(){
+  const list=document.getElementById('saved-emails-list');
+  if(!list) return;
+  try{
+    const saved=JSON.parse(localStorage.getItem('mq_saved_emails')||'[]');
+    if(!saved.length){ list.style.display='none'; return; }
+    list.style.display='block';
+    list.innerHTML=saved.map(e=>`
+      <div onclick="document.getElementById('login-user').value='${e}';loginEmailInput();"
+        style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;">
+        <span>📧 ${e}</span>
+        <span onclick="event.stopPropagation();removeSavedEmail('${e}')" style="color:var(--danger);font-size:11px;padding:2px 6px;">✕</span>
+      </div>`).join('');
+  }catch(e){}
+}
+function removeSavedEmail(email){
+  try{
+    let saved=JSON.parse(localStorage.getItem('mq_saved_emails')||'[]');
+    saved=saved.filter(e=>e!==email);
+    localStorage.setItem('mq_saved_emails',JSON.stringify(saved));
+    renderSavedEmails();
+  }catch(e){}
+}
+function initLoginPage(){
+  renderSavedEmails();
+  // Last used email auto-fill
+  try{
+    const last=localStorage.getItem('mq_last_email');
+    const inp=document.getElementById('login-user');
+    if(last&&inp&&!inp.value) inp.value=last;
+    loginEmailInput();
+  }catch(e){}
+}
+
 function doLogin(){
   const email = V('login-user').trim().toLowerCase();
   const pass = V('login-pass');
@@ -2251,6 +2309,8 @@ function doLogin(){
   auth.setPersistence(persistence).then(()=>{
     return auth.signInWithEmailAndPassword(email, pass);
   }).then(cred=>{
+    // Save last used email
+    try{ localStorage.setItem('mq_last_email', email); }catch(e){}
     const fbUser = cred.user;
     if(!fbUser.emailVerified){
       // Block unverified users — show resend button
