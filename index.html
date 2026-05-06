@@ -303,7 +303,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   body{display:block;}
   .screen{max-width:100%;min-height:100vh;}
   .screen.active{display:flex;flex-direction:column;}
-  .app-header{padding:8px 36px 10px;}
+  .app-header{padding:0 70px;min-height:54px;}
   .content{max-width:960px;width:100%;margin:0 auto;padding:28px 40px;}
   .pb-nav{padding-bottom:24px !important;}
   .bottom-nav{position:fixed;bottom:0;left:0;transform:none;max-width:100%;display:flex;justify-content:center;padding:0 20px;}
@@ -314,7 +314,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   .modal-bg{align-items:center !important;}
   .toast{bottom:30px;}
   .edit-row{grid-template-columns:1fr 1fr 1fr;}
-  .header-title{font-size:26px;}
+  .header-title{font-size:16px;}
   .card{padding:24px 28px;}
   .form-input{font-size:15px;}
 }
@@ -336,8 +336,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   .bottom-nav{position:fixed;bottom:0;left:0;transform:none;max-width:100%;display:flex;justify-content:center;}
   .modal{max-width:560px;border-radius:20px !important;margin:auto;}
   .modal-bg{align-items:center !important;}
-  .header-title{font-size:24px;}
-  .app-header{padding:8px 24px 10px;}
+  .header-title{font-size:15px;}
+  .app-header{padding:0 60px;min-height:54px;}
 }
 /* Mobile ≤599px */
 @media(max-width:599px){
@@ -348,14 +348,14 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 }
 .app-header,.card,.menu-item,.bottom-nav,.modal,.form-input,.btn,.header-icon-btn,.header-back,.today-card,.stat-card,.toast,.dark-toggle{transition:background-color .25s ease,color .25s ease,border-color .25s ease,box-shadow .25s ease,background .25s ease;}
 /* HEADER */
-.app-header{background:linear-gradient(135deg,var(--primary-dark) 0%,var(--primary) 60%,var(--primary-light) 100%);color:#fff;padding:8px 16px 10px;position:relative;overflow:hidden;}
-.app-header .content-inner{max-width:1100px;margin:0 auto;position:relative;}
+.app-header{background:linear-gradient(135deg,var(--primary-dark) 0%,var(--primary) 60%,var(--primary-light) 100%);color:#fff;padding:0 55px;position:relative;overflow:hidden;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.app-header .content-inner{max-width:1100px;margin:0 auto;position:relative;width:100%;}
 .app-header::before{content:'';position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,255,255,0.07);border-radius:50%;}
-.header-logo{font-size:10px;font-family:'Poppins',sans-serif;letter-spacing:2px;text-transform:uppercase;opacity:.7;margin-bottom:2px;}
-.header-title{font-size:17px;font-weight:700;font-family:'Poppins',sans-serif;line-height:1.2;}
-.header-sub{font-size:11px;opacity:.72;margin-top:1px;}
-.header-back{background:rgba(255,255,255,0.18);border:none;color:#fff;padding:3px 11px;border-radius:20px;cursor:pointer;font-size:11px;margin-bottom:5px;font-family:inherit;}
-.header-actions{position:absolute;top:10px;right:14px;display:flex;gap:7px;}
+.header-logo{display:none;}
+.header-title{font-size:15px;font-weight:700;font-family:'Poppins',sans-serif;line-height:1.2;text-align:center;width:100%;}
+.header-sub{font-size:10px;opacity:.75;margin-top:2px;text-align:center;width:100%;}
+.header-back{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:5px 11px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:500;font-family:inherit;white-space:nowrap;z-index:1;}
+.header-actions{position:absolute;top:50%;right:10px;transform:translateY(-50%);display:flex;gap:7px;align-items:center;z-index:1;}
 .header-icon-btn{background:rgba(255,255,255,0.18);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;}
 /* CONTENT */
 .content{padding:20px;flex:1;}
@@ -817,11 +817,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div id="login-alert" class="alert alert-danger"></div>
       <div class="form-group">
         <label class="form-label">Email Address</label>
-        <div style="position:relative">
-          <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন" style="padding-right:46px" oninput="onLoginEmailInput()">
-          <button type="button" id="login-email-save-btn" onclick="saveLoginEmail()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:20px;line-height:1;" title="Email সেভ করুন">✅</button>
-        </div>
-        <div id="saved-emails-list"></div>
+        <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন">
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
@@ -908,8 +904,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-title">Midland Quarter</div>
     <div class="header-sub" id="home-mgr">লোড হচ্ছে...</div>
     <div class="header-actions">
-      <button class="header-icon-btn" onclick="newMessManagerScreen()" title="মেস ম্যানেজার">👑</button>
-      <button class="header-icon-btn" onclick="toggleDark()" title="Dark Mode">🌙</button>
+      <div class="header-actions" id="home-header-actions"></div>
     </div>
   </div>
   <div class="content pb-nav">
@@ -932,7 +927,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <div style="flex:1">
           <div class="today-hd" id="td-date">তারিখ: --</div>
           <div class="today-day" id="td-day">--</div>
-          <div id="td-viewing-badge" style="display:none;font-size:10px;background:var(--accent-light);color:#7a4800;border-radius:12px;padding:2px 10px;margin-top:4px;display:inline-block;"></div>
+          <div id="td-viewing-badge" style="display:none;font-size:10px;background:var(--accent-light);color:#7a4800;border-radius:12px;padding:2px 10px;margin-top:4px;"></div>
         </div>
         <button onclick="downloadDayPDF()" title="দৈনিক PDF রিপোর্ট" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">⬇ PDF</button>
       </div>
@@ -1280,7 +1275,14 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-sub">All Members</div>
   </div>
   <div class="content pb-nav">
-    <div class="form-group"><input type="text" id="mem-search" class="form-input" placeholder="🔍 নাম, রুম, Job ID..." oninput="loadMembers()"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+      <input type="text" id="mem-search" class="form-input" placeholder="🔍 নাম, Job ID..." oninput="loadMembers()" style="flex:1;margin:0;">
+      <button id="mgr-toggle-btn" onclick="toggleManagerView()" style="white-space:nowrap;padding:10px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">👑 ম্যানেজার</button>
+    </div>
+    <!-- Manager list (hidden by default) -->
+    <div id="mgr-list-panel" style="display:none;margin-bottom:12px;">
+      <div class="card" id="mgr-list-content"><p class="muted tc">লোড হচ্ছে...</p></div>
+    </div>
     <div class="card"><div id="mem-list"></div></div>
   </div>
 </div>
@@ -1336,6 +1338,13 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="prof-row"><span style="color:var(--text-light)">🏠 রুম নম্বর</span><b id="pf-view-room">-</b></div>
       <div class="prof-row"><span style="color:var(--text-light)">📧 ইমেইল</span><span id="pf-view-email" style="font-size:13px">-</span></div>
       <div class="prof-row" style="border:none"><span style="color:var(--text-light)">🏡 ঠিকানা</span><span id="pf-view-addr" style="font-size:13px;text-align:right;max-width:60%">-</span></div>
+      <div class="prof-row" style="border:none;margin-top:4px;">
+        <span style="color:var(--text-light)">🎨 থিম</span>
+        <div style="display:flex;gap:0;border-radius:20px;overflow:hidden;border:1.5px solid var(--border);">
+          <button id="theme-day-btn" onclick="setTheme('day')" style="padding:5px 18px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s;background:var(--primary);color:#fff;">☀️ Day</button>
+          <button id="theme-night-btn" onclick="setTheme('night')" style="padding:5px 18px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s;background:transparent;color:var(--text-light);">🌙 Night</button>
+        </div>
+      </div>
     </div>
 
     <!-- ── Profile Edit (edit mode, hidden by default) ── -->
@@ -1692,12 +1701,12 @@ function sanitizeInput(s){
 const firebaseConfig = {
   apiKey: 'AIzaSyDqHnuTefG_v2KJ5rFVmsPO1P0KQvH40OU',
   authDomain: 'midlandquarter-c516b.firebaseapp.com',
+  databaseURL: 'https://midlandquarter-c516b-default-rtdb.firebaseio.com/',
   projectId: 'midlandquarter-c516b',
   storageBucket: 'midlandquarter-c516b.firebasestorage.app',
   messagingSenderId: '899146057513',
   appId: '1:899146057513:web:636a096affb5dd40a3d938',
-  measurementId: 'G-CNXVF9KG9Y',
-  databaseURL: 'https://midlandquarter-c516b-default-rtdb.firebaseio.com/'
+  measurementId: 'G-CNXVF9KG9Y'
 };
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
@@ -1805,28 +1814,23 @@ function migrateDB(){
 
 // Real-time listener — updates DB & UI whenever Firebase data changes
 function loadDB(){
+  // Show loading overlay
   document.getElementById('fb-loading').style.display='flex';
-
-  // ৮ সেকেন্ডে না হলে login এ ফেরত
-  const t = setTimeout(()=>{
-    document.getElementById('fb-loading').style.display='none';
-    if(!CU){ showSc('login'); }
-  }, 8000);
-
   dbRef.on('value', snap=>{
-    clearTimeout(t);
     const data = snap.val();
     if(data){
       DB = data;
       delete DB.darkMode;
       migrateDB();
     } else {
+      // First-ever run: push default structure to Firebase
       migrateDB();
       const initialDB = JSON.parse(JSON.stringify(DB));
       delete initialDB.darkMode;
       dbRef.set(initialDB);
     }
     applyDark();
+    // Refresh current active screen if already logged in
     if(CU){
       const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
       if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
@@ -1840,11 +1844,10 @@ function loadDB(){
       else if(activeId==='profile') loadProfile();
       else if(activeId==='notice') initNotice();
     }
+    // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
-    clearTimeout(t);
     document.getElementById('fb-loading').style.display='none';
-    if(CU) toast('❌ Firebase সংযোগ ব্যর্থ!');
-    else showSc('login');
+    toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
     console.error('Firebase read error:', err);
   });
 }
@@ -1858,7 +1861,6 @@ auth.onAuthStateChanged(fbUser=>{
     document.getElementById('fb-loading').style.display='none';
     CU = null;
     showSc('login');
-    initLoginPage();
     return;
   }
   if(!fbUser.emailVerified){
@@ -2157,6 +2159,26 @@ function applyDark(force){
   syncThemeMeta(isDark);
   return isDark;
 }
+function setTheme(mode){
+  const isDark = mode==='night';
+  DB.darkMode = isDark;
+  applyDark(isDark);
+  persistDark(isDark);
+  updateThemeBtns();
+}
+function updateThemeBtns(){
+  const isDark = document.documentElement.classList.contains('dark-mode');
+  const dayBtn = document.getElementById('theme-day-btn');
+  const nightBtn = document.getElementById('theme-night-btn');
+  if(!dayBtn||!nightBtn) return;
+  if(isDark){
+    dayBtn.style.background='transparent'; dayBtn.style.color='var(--text-light)';
+    nightBtn.style.background='var(--primary)'; nightBtn.style.color='#fff';
+  } else {
+    dayBtn.style.background='var(--primary)'; dayBtn.style.color='#fff';
+    nightBtn.style.background='transparent'; nightBtn.style.color='var(--text-light)';
+  }
+}
 function toggleDark(){
   const isDark = !document.documentElement.classList.contains('dark-mode');
   persistDark(isDark);
@@ -2211,58 +2233,6 @@ function closeModal(){ document.getElementById('modal-bg').classList.remove('sho
 // ═══════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════
-function onLoginEmailInput(){
-  const val=(document.getElementById('login-user').value||'').trim();
-  const btn=document.getElementById('login-email-save-btn');
-  if(btn) btn.style.display=val.includes('@')?'block':'none';
-}
-function saveLoginEmail(){
-  const email=(document.getElementById('login-user').value||'').trim().toLowerCase();
-  if(!email.includes('@')) return;
-  try{
-    let list=JSON.parse(localStorage.getItem('mq_emails')||'[]');
-    list=list.filter(e=>e!==email);
-    list.unshift(email);
-    list=list.slice(0,5);
-    localStorage.setItem('mq_emails',JSON.stringify(list));
-    renderSavedEmails();
-    toast('✅ Email সেভ হয়েছে!');
-  }catch(e){}
-}
-function removeSavedEmail(email){
-  try{
-    let list=JSON.parse(localStorage.getItem('mq_emails')||'[]');
-    list=list.filter(e=>e!==email);
-    localStorage.setItem('mq_emails',JSON.stringify(list));
-    renderSavedEmails();
-  }catch(e){}
-}
-function renderSavedEmails(){
-  const box=document.getElementById('saved-emails-list');
-  if(!box) return;
-  try{
-    const list=JSON.parse(localStorage.getItem('mq_emails')||'[]');
-    if(!list.length){ box.innerHTML=''; return; }
-    box.innerHTML=list.map(e=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;margin-top:5px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;" onclick="pickEmail('${e}')">
-        <span>📧 ${e}</span>
-        <span onclick="event.stopPropagation();removeSavedEmail('${e}')" style="color:var(--danger);font-weight:700;padding:2px 6px;font-size:13px;">✕</span>
-      </div>`).join('');
-  }catch(e){}
-}
-function pickEmail(email){
-  const inp=document.getElementById('login-user');
-  if(inp){ inp.value=email; onLoginEmailInput(); inp.focus(); }
-}
-function initLoginPage(){
-  renderSavedEmails();
-  try{
-    const last=localStorage.getItem('mq_last_email');
-    const inp=document.getElementById('login-user');
-    if(last&&inp&&!inp.value){ inp.value=last; onLoginEmailInput(); }
-  }catch(e){}
-}
-
 function doLogin(){
   const email = V('login-user').trim().toLowerCase();
   const pass = V('login-pass');
@@ -2281,8 +2251,6 @@ function doLogin(){
   auth.setPersistence(persistence).then(()=>{
     return auth.signInWithEmailAndPassword(email, pass);
   }).then(cred=>{
-    // সফল login — email সেভ করো
-    try{ localStorage.setItem('mq_last_email', email); }catch(e){}
     const fbUser = cred.user;
     if(!fbUser.emailVerified){
       // Block unverified users — show resend button
@@ -3361,6 +3329,43 @@ function loadReport(){
 // ═══════════════════════════════════════════════
 // MEMBERS
 // ═══════════════════════════════════════════════
+function toggleManagerView(){
+  const panel=document.getElementById('mgr-list-panel');
+  const btn=document.getElementById('mgr-toggle-btn');
+  const isOpen=panel.style.display!=='none';
+  if(isOpen){
+    panel.style.display='none';
+    btn.style.background='var(--card)';
+    btn.style.color='var(--text)';
+    btn.style.borderColor='var(--border)';
+  } else {
+    panel.style.display='block';
+    btn.style.background='var(--primary)';
+    btn.style.color='#fff';
+    btn.style.borderColor='var(--primary)';
+    // Render manager list
+    const mmKey=messMonthKey();
+    const mgrs=(DB.managers&&DB.managers[mmKey])||[];
+    const content=document.getElementById('mgr-list-content');
+    if(!mgrs.length){
+      content.innerHTML='<p class="muted tc" style="padding:12px">এই মাসে কোনো ম্যানেজার নেই</p>';
+      return;
+    }
+    const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+    const [my,mm]=mmKey.split('-').map(Number);
+    const nm=mm===12?1:mm+1;
+    content.innerHTML=`<div style="font-size:11px;color:var(--text-light);margin-bottom:8px;font-weight:600;">👑 ${mnames[mm-1]} ১১ – ${mnames[nm-1]} ১০, ${my}</div>`
+      + mgrs.map(u=>{
+          const usr=DB.users.find(x=>x.u===u);
+          if(!usr) return '';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">${usr.name[0].toUpperCase()}</div>
+            <div><div style="font-weight:600;font-size:13px">${usr.name}</div><div style="font-size:11px;color:var(--text-light)">ID- ${usr.job||'—'} · রুম ${usr.room||'—'}</div></div>
+          </div>`;
+        }).join('');
+  }
+}
+
 function loadMembers(){
   const q=(document.getElementById('mem-search')?.value||'').toLowerCase();
   const mmKey=messMonthKey();
@@ -3471,6 +3476,7 @@ function toggleBlockMember(){
 function loadProfile(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
+  updateThemeBtns();
 
   // Avatar + name + role
   document.getElementById('pf-av').textContent=cu.name[0].toUpperCase();
