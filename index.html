@@ -1903,7 +1903,11 @@ auth.onAuthStateChanged(fbUser=>{
       if(DB.users){
         const idx = DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
         if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; }
-        else { DB.users.push({...CU}); }
+        else {
+          // নতুন সদস্য messData তে নেই — যোগ করে Firebase এ সেভ করি
+          DB.users.push({...CU});
+          saveDB();
+        }
       }
       // Also fix role in RTDB if it had extra quotes
       if(roleData?.role !== role){
@@ -2367,32 +2371,45 @@ function doRegister(){
     .then(cred=>{
       const uid = cred.user.uid;
       const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
+      // Step 1: Firebase RTDB তে user data সেভ
       return firebase.database().ref('users/' + uid).set(userData)
         .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
-        .then(()=> cred.user.sendEmailVerification())
         .then(()=>{
+          // Step 2: messData তে নতুন সদস্য যোগ করে সেভ
           const newMember = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
-          // messData/users array তে সরাসরি সেভ করি — signOut এর আগে
           if(!DB.users) DB.users=[];
           DB.users.push(newMember);
-          // signOut এর আগেই Firebase এ পুরো messData সেভ করি
           const dbToSave = JSON.parse(JSON.stringify(DB));
           delete dbToSave.darkMode;
-          dbRef.set(dbToSave).then(()=>{
-            ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+          return dbRef.set(dbToSave);
+        })
+        .then(()=>{
+          // Step 3: সব সেভ শেষ — এখন verification email পাঠাই (signOut এর আগে)
+          const currentUser = auth.currentUser;
+          if(currentUser){
+            return currentUser.sendEmailVerification().then(()=>{
+              ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email ইনবক্স চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+              ok.className='alert alert-success show';
+              al.className='alert';
+              if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+              // Email পাঠানোর পর ১ সেকেন্ড অপেক্ষা করে signOut
+              setTimeout(()=>{ auth.signOut(); }, 1000);
+              setTimeout(()=>showSc('login'), 2500);
+            }).catch(()=>{
+              // Email পাঠাতে ব্যর্থ হলেও registration সফল
+              ok.textContent='✅ রেজিস্ট্রেশন সফল! Login করুন এবং Verification Email resend করুন।';
+              ok.className='alert alert-success show';
+              al.className='alert';
+              if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+              setTimeout(()=>{ auth.signOut(); }, 500);
+              setTimeout(()=>showSc('login'), 2500);
+            });
+          } else {
+            ok.textContent='✅ রেজিস্ট্রেশন সফল! Login করুন।';
             ok.className='alert alert-success show';
-            al.className='alert';
             if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-            auth.signOut();
             setTimeout(()=>showSc('login'), 2500);
-          }).catch(()=>{
-            // fallback: তবুও signOut করি
-            ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
-            ok.className='alert alert-success show';
-            if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-            auth.signOut();
-            setTimeout(()=>showSc('login'), 2500);
-          });
+          }
         });
     })
     .catch(err=>{
