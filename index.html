@@ -2334,20 +2334,23 @@ function doRegister(){
   auth.createUserWithEmailAndPassword(email, pass)
     .then(cred=>{
       const uid = cred.user.uid;
-      const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
-      return firebase.database().ref('users/' + uid).set(userData)
-        .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
-        .then(()=> cred.user.sendEmailVerification())
+      // ✅ আগেই verification mail পাঠাও
+      return cred.user.sendEmailVerification()
         .then(()=>{
-          if(!DB.users) DB.users=[];
-          DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
-          saveDB();
-          ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
-          ok.className='alert alert-success show';
-          al.className='alert';
-          if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-          auth.signOut();
-          setTimeout(()=>showSc('login'), 2500);
+          const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
+          return firebase.database().ref('users/' + uid).set(userData)
+            .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
+            .then(()=>{
+              if(!DB.users) DB.users=[];
+              DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
+              saveDB();
+              ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+              ok.className='alert alert-success show';
+              al.className='alert';
+              if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+              auth.signOut();
+              setTimeout(()=>showSc('login'), 2500);
+            });
         });
     })
     .catch(err=>{
@@ -3061,9 +3064,12 @@ function renderDepMyBalance(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
   const prevBal=cu.prevBalance||0;
-  const depBal=cu.balance||0;
+  // Deposit balance = শুধু এই চক্রের transactions (deposit - withdraw)
+  const depBal=DB.transactions
+    .filter(t=>t.uname===cu.u)
+    .reduce((s,t)=>s+(t.type==='deposit'?t.amount:-t.amount),0);
   const totalBal=prevBal+depBal;
-  const fmt=v=>{const r=Math.round(v*100)/100;return(r<0?'\u2212\u09F3':'\u09F3')+Math.abs(r).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  const fmt=v=>{const r=Math.round(v*100)/100;return(r<0?'−৳':'৳')+Math.abs(r).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
   const col=v=>v>=0?'var(--primary)':'var(--danger)';
   const infoCol=v=>v>=0?'var(--info)':'var(--danger)';
   const pEl=document.getElementById('dep-prev-bal');
@@ -4254,7 +4260,7 @@ function showAllMembersBill(){
   const ofRateMain=getOfficeMealRate(mmKey);
   const ofBill=ofMls*ofRateMain;
 
-  // ── মেস ফান্ড ──
+  // ── মেস ফান্ড = সবার মোট balance - সবার মোট বিল ──
   let messBalance=0;
   DB.users.filter(u=>u.type!=='cook').forEach(u=>{
     const isOff=isOfficeMealUser(u);
@@ -4263,8 +4269,9 @@ function showAllMembersBill(){
     const mealBill=myMeals*appliedRate;
     const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
     const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
+    // u.balance = prevBalance + এই চক্রের সব transactions
     const net=(u.balance||0)-payable;
-    if(net>0) messBalance+=net;
+    messBalance+=net; // সব net যোগ করি (positive + negative)
   });
 
   let html=`
