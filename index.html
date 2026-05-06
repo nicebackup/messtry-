@@ -817,7 +817,15 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div id="login-alert" class="alert alert-danger"></div>
       <div class="form-group">
         <label class="form-label">Email Address</label>
-        <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন">
+        <div style="position:relative">
+          <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন" style="padding-right:90px" oninput="onLoginEmailInput()">
+          <label id="save-id-label" onclick="toggleSaveId()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;background:var(--bg);border:1.5px solid var(--border);border-radius:7px;padding:3px 8px;transition:border-color .2s,background .2s;" title="Email সেভ করুন">
+            <span id="save-id-box" style="width:15px;height:15px;border:1.5px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;background:#fff;transition:all .18s;flex-shrink:0;">
+              <svg id="save-id-tick" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><polyline points="2,6 5,9 10,3"/></svg>
+            </span>
+            <span style="font-size:10px;font-weight:600;color:var(--text-light);white-space:nowrap;letter-spacing:.3px;">Save ID</span>
+          </label>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
@@ -2264,6 +2272,75 @@ function showModal(title,body,onOk,isHtml){
   };
 }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('show'); }
+
+// ═══════════════════════════════════════════════
+// SAVE ID — Email auto-save in login box
+// ═══════════════════════════════════════════════
+const LS_SAVED_EMAIL = 'mq_saved_email';
+
+function initSaveId(){
+  const saved = localStorage.getItem(LS_SAVED_EMAIL);
+  if(saved){
+    const inp = document.getElementById('login-user');
+    if(inp) inp.value = saved;
+    setSaveIdChecked(true);
+  }
+}
+
+function setSaveIdChecked(checked){
+  const box  = document.getElementById('save-id-box');
+  const tick = document.getElementById('save-id-tick');
+  const lbl  = document.getElementById('save-id-label');
+  if(!box) return;
+  if(checked){
+    box.style.background      = 'var(--primary)';
+    box.style.borderColor     = 'var(--primary)';
+    lbl.style.borderColor     = 'var(--primary)';
+    lbl.style.background      = 'rgba(var(--primary-rgb,33,150,243),.08)';
+    if(tick) tick.style.display = 'block';
+  } else {
+    box.style.background      = '#fff';
+    box.style.borderColor     = 'var(--border)';
+    lbl.style.borderColor     = 'var(--border)';
+    lbl.style.background      = 'var(--bg)';
+    if(tick) tick.style.display = 'none';
+  }
+}
+
+function toggleSaveId(){
+  const saved = localStorage.getItem(LS_SAVED_EMAIL);
+  const inp   = document.getElementById('login-user');
+  if(saved){
+    // Currently checked → uncheck: clear storage and clear input
+    localStorage.removeItem(LS_SAVED_EMAIL);
+    if(inp) inp.value = '';
+    setSaveIdChecked(false);
+  } else {
+    // Currently unchecked → check: save current email
+    const email = inp ? inp.value.trim() : '';
+    if(email){
+      localStorage.setItem(LS_SAVED_EMAIL, email);
+      setSaveIdChecked(true);
+    } else {
+      // No email typed yet — just visually enable, will save on next login
+      setSaveIdChecked(true);
+    }
+  }
+}
+
+function onLoginEmailInput(){
+  // If Save ID is active, keep the stored value in sync as user types
+  if(localStorage.getItem(LS_SAVED_EMAIL) !== null){
+    const inp = document.getElementById('login-user');
+    const val = inp ? inp.value.trim() : '';
+    if(val){
+      localStorage.setItem(LS_SAVED_EMAIL, val);
+    } else {
+      localStorage.removeItem(LS_SAVED_EMAIL);
+      setSaveIdChecked(false);
+    }
+  }
+}
 
 // ═══════════════════════════════════════════════
 // AUTH
@@ -4994,6 +5071,9 @@ function renderOfficeMealNotesScreen(){
 
 </script>
 <script>
+// ── Init Save ID on page load ──
+document.addEventListener('DOMContentLoaded', initSaveId);
+
 // ── PWA Service Worker Registration ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
