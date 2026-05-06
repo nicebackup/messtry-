@@ -1818,23 +1818,33 @@ function migrateDB(){
 
 // Real-time listener — updates DB & UI whenever Firebase data changes
 function loadDB(){
-  // Show loading overlay
-  document.getElementById('fb-loading').style.display='flex';
+  showFbLoading();
+
+  // Timeout — 8 সেকেন্ডের মধ্যে না হলে login এ ফেরত
+  const loadTimeout = setTimeout(()=>{
+    hideFbLoading();
+    dbRef.off('value');
+    if(!CU){
+      showSc('login');
+      initLoginPage();
+    }
+  }, 8000);
+
   dbRef.on('value', snap=>{
+    clearTimeout(loadTimeout);
     const data = snap.val();
     if(data){
       DB = data;
       delete DB.darkMode;
       migrateDB();
     } else {
-      // First-ever run: push default structure to Firebase
       migrateDB();
       const initialDB = JSON.parse(JSON.stringify(DB));
       delete initialDB.darkMode;
       dbRef.set(initialDB);
     }
     applyDark();
-    // Refresh current active screen if already logged in
+    hideFbLoading();
     if(CU){
       const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
       if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
@@ -1848,8 +1858,8 @@ function loadDB(){
       else if(activeId==='profile') loadProfile();
       else if(activeId==='notice') initNotice();
     }
-    // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
+    clearTimeout(loadTimeout);
     hideFbLoading();
     if(auth.currentUser){
       toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
@@ -1920,9 +1930,11 @@ auth.onAuthStateChanged(fbUser=>{
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
       }
 
-      document.getElementById('fb-loading').style.display='none';
+      hideFbLoading();
       refreshHome(); showSc('home');
       setTimeout(()=>showNoticePopup(), 800);
+      // Start real-time DB sync
+      loadDB();
     });
   }).catch(err=>{
     document.getElementById('fb-loading').style.display='none';
@@ -4602,9 +4614,8 @@ document.addEventListener('click', function(e){
     dd.style.display='none';
   }
 });
+// loadDB শুধু onAuthStateChanged এ call হবে
 // Firebase loadDB handles initialization and real-time sync
-document.getElementById('fb-loading').style.display='flex';
-loadDB();        // Firebase RTDB real-time listener
 
 // ═══════════════════════════════════════════════
 // OFFICE MEAL — MEPL / MPCL
