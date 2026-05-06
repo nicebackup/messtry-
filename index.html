@@ -1871,9 +1871,20 @@ function loadDB(){
 // ═══════════════════════════════════════════════
 // onAuthStateChanged — Session Management
 // ═══════════════════════════════════════════════
+let _authHandled = false;
+
+// Safety timeout — 10s পরেও না হলে login দেখাও
+setTimeout(()=>{
+  if(!_authHandled){
+    hideFbLoading();
+    showSc('login');
+    initLoginPage();
+  }
+}, 10000);
+
 auth.onAuthStateChanged(fbUser=>{
+  _authHandled = true;
   if(!fbUser){
-    // Not logged in
     hideFbLoading();
     CU = null;
     showSc('login');
@@ -1881,50 +1892,57 @@ auth.onAuthStateChanged(fbUser=>{
     return;
   }
   if(!fbUser.emailVerified){
-    // Logged in but email not verified
-    document.getElementById('fb-loading').style.display='none';
+    hideFbLoading();
     auth.signOut();
     CU = null;
     showSc('login');
+    initLoginPage();
     const al = document.getElementById('login-alert');
     if(al){ al.innerHTML='⚠️ ইমেইল যাচাই করা হয়নি। <b>'+esc(fbUser.email)+'</b> ইনবক্স চেক করুন।'; al.className='alert alert-danger show'; }
     return;
   }
   // Verified user — load their RTDB profile
   const uid = fbUser.uid;
+
+  // Timeout for profile load
+  const profileTimeout = setTimeout(()=>{
+    hideFbLoading();
+    auth.signOut(); CU=null;
+    showSc('login'); initLoginPage();
+    const al=document.getElementById('login-alert');
+    if(al){ al.textContent='❌ সংযোগ ব্যর্থ! আবার চেষ্টা করুন।'; al.className='alert alert-danger show'; }
+  }, 8000);
+
   firebase.database().ref('users/' + uid).once('value').then(snap=>{
+    clearTimeout(profileTimeout);
     const userData = snap.val();
     if(!userData){
-      document.getElementById('fb-loading').style.display='none';
-      auth.signOut(); CU=null; showSc('login');
+      hideFbLoading();
+      auth.signOut(); CU=null; showSc('login'); initLoginPage();
       const al = document.getElementById('login-alert');
       if(al){ al.textContent='❌ প্রোফাইল পাওয়া যায়নি। Admin-এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
       return;
     }
     if(userData.blocked){
-      document.getElementById('fb-loading').style.display='none';
-      auth.signOut(); CU=null; showSc('login');
+      hideFbLoading();
+      auth.signOut(); CU=null; showSc('login'); initLoginPage();
       const al = document.getElementById('login-alert');
-      if(al){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
+      if(al){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে।'; al.className='alert alert-danger show'; }
       return;
     }
-    // Check role from RTDB roles/{uid}
     firebase.database().ref('roles/' + uid).once('value').then(rsnap=>{
       const roleData = rsnap.val();
-      // Sanitize: remove any extra quotes Firebase Console might have added
       let role = roleData?.role || userData.role || 'member';
       role = String(role).replace(/^"+|"+$/g,'').trim().toLowerCase();
       if(!['controller','manager','member'].includes(role)) role='member';
 
       CU = { uid, u: userData.u||uid, name: userData.name||fbUser.email, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role, type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
 
-      // Sync CU into DB.users array so role checks & meal data work correctly
       if(DB.users){
         const idx = DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
         if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; }
         else { DB.users.push({...CU}); }
       }
-      // Also fix role in RTDB if it had extra quotes
       if(roleData?.role !== role){
         firebase.database().ref('roles/'+uid).set({role}).catch(()=>{});
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
@@ -1937,9 +1955,10 @@ auth.onAuthStateChanged(fbUser=>{
       loadDB();
     });
   }).catch(err=>{
-    document.getElementById('fb-loading').style.display='none';
+    clearTimeout(profileTimeout);
+    hideFbLoading();
     console.error('RTDB profile load error:', err);
-    auth.signOut(); CU=null; showSc('login');
+    auth.signOut(); CU=null; showSc('login'); initLoginPage();
   });
 });
 
