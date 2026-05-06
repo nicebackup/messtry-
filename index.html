@@ -2371,15 +2371,28 @@ function doRegister(){
         .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
         .then(()=> cred.user.sendEmailVerification())
         .then(()=>{
+          const newMember = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
+          // messData/users array তে সরাসরি সেভ করি — signOut এর আগে
           if(!DB.users) DB.users=[];
-          DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
-          saveDB();
-          ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
-          ok.className='alert alert-success show';
-          al.className='alert';
-          if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-          auth.signOut();
-          setTimeout(()=>showSc('login'), 2500);
+          DB.users.push(newMember);
+          // signOut এর আগেই Firebase এ পুরো messData সেভ করি
+          const dbToSave = JSON.parse(JSON.stringify(DB));
+          delete dbToSave.darkMode;
+          dbRef.set(dbToSave).then(()=>{
+            ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+            ok.className='alert alert-success show';
+            al.className='alert';
+            if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+            auth.signOut();
+            setTimeout(()=>showSc('login'), 2500);
+          }).catch(()=>{
+            // fallback: তবুও signOut করি
+            ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+            ok.className='alert alert-success show';
+            if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+            auth.signOut();
+            setTimeout(()=>showSc('login'), 2500);
+          });
         });
     })
     .catch(err=>{
