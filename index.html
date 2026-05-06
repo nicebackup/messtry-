@@ -1891,7 +1891,8 @@ auth.onAuthStateChanged(fbUser=>{
     initLoginPage();
     return;
   }
-  if(!fbUser.emailVerified){
+  // Session আছে — loading দেখাও
+  showFbLoading();
     hideFbLoading();
     auth.signOut();
     CU = null;
@@ -5008,6 +5009,15 @@ function triggerPWAInstall() {
     });
   }
 }
+
+// ── Page Init — সাথে সাথে login দেখাও ──
+(function initPage(){
+  // Dark mode apply করো
+  applyDark();
+  // Login screen দেখাও — onAuthStateChanged যদি session পায় তখন home এ যাবে
+  showSc('login');
+  initLoginPage();
+})();
 </script>
 </body>
 </html>
