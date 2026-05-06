@@ -1855,6 +1855,11 @@ function loadDB(){
 // ═══════════════════════════════════════════════
 // onAuthStateChanged — Session Management
 // ═══════════════════════════════════════════════
+
+// Guard flag: prevents onAuthStateChanged from force-signing-out
+// the newly created user before sendEmailVerification() completes.
+let _registrationInProgress = false;
+
 auth.onAuthStateChanged(fbUser=>{
   if(!fbUser){
     // Not logged in
@@ -1864,6 +1869,10 @@ auth.onAuthStateChanged(fbUser=>{
     return;
   }
   if(!fbUser.emailVerified){
+    // If registration is actively in progress, do NOT sign out —
+    // the doRegister() function controls sign-out itself after
+    // sendEmailVerification() has completed successfully.
+    if(_registrationInProgress) return;
     // Logged in but email not verified
     document.getElementById('fb-loading').style.display='none';
     auth.signOut();
@@ -2331,33 +2340,58 @@ function doRegister(){
   const btn = document.querySelector('#sc-register .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='রেজিস্ট্রেশন হচ্ছে...'; }
 
-  auth.createUserWithEmailAndPassword(email, pass)
-    .then(cred=>{
-      const uid = cred.user.uid;
+  // Set guard flag BEFORE creating the user so that onAuthStateChanged
+  // does not race us to signOut() before sendEmailVerification() fires.
+  _registrationInProgress = true;
+
+  (async ()=>{
+    try {
+      // Step 1 — Create the Firebase Auth account
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      const user = cred.user;
+      const uid  = user.uid;
+
+      // Step 2 — Send verification email IMMEDIATELY while the session
+      // is fresh and the auth token is 100 % valid.
+      // (RTDB writes come AFTER so nothing can race us here.)
+      if(!user){ throw new Error('auth/no-current-user'); }
+      await user.sendEmailVerification();
+
+      // Step 3 — Now persist the profile data to Realtime Database
       const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod(), balance: 0 };
-      return firebase.database().ref('users/' + uid).set(userData)
-        .then(()=> firebase.database().ref('roles/' + uid).set({ role: 'member' }))
-        .then(()=> cred.user.sendEmailVerification())
-        .then(()=>{
-          if(!DB.users) DB.users=[];
-          DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
-          saveDB();
-          ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
-          ok.className='alert alert-success show';
-          al.className='alert';
-          if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-          auth.signOut();
-          setTimeout(()=>showSc('login'), 2500);
-        });
-    })
-    .catch(err=>{
+      await firebase.database().ref('users/' + uid).set(userData);
+      await firebase.database().ref('roles/' + uid).set({ role: 'member' });
+
+      // Step 4 — Mirror into local DB cache
+      if(!DB.users) DB.users=[];
+      DB.users.push({ uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false });
+      saveDB();
+
+      // Step 5 — Show success, then sign out cleanly
+      ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+      ok.className='alert alert-success show';
+      al.className='alert';
+      if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+
+      // Clear flag before signOut so onAuthStateChanged handles it normally
+      _registrationInProgress = false;
+      await auth.signOut();
+      setTimeout(()=>showSc('login'), 2500);
+
+    } catch(err){
+      _registrationInProgress = false; // always reset on error
+      // If account was created but email send failed, still sign out cleanly
+      try{ await auth.signOut(); }catch(_){}
+
       let msg = '❌ রেজিস্ট্রেশন ব্যর্থ!';
-      if(err.code==='auth/email-already-in-use') msg='❌ এই Email দিয়ে ইতিমধ্যে অ্যাকাউন্ট আছে!';
-      else if(err.code==='auth/weak-password') msg='❌ পাসওয়ার্ড দুর্বল! কমপক্ষে ৬ ক্যারেক্টার দিন।';
-      else if(err.code==='auth/network-request-failed') msg='❌ ইন্টারনেট সংযোগ চেক করুন!';
+      if(err.code==='auth/email-already-in-use')      msg='❌ এই Email দিয়ে ইতিমধ্যে অ্যাকাউন্ট আছে!';
+      else if(err.code==='auth/weak-password')         msg='❌ পাসওয়ার্ড দুর্বল! কমপক্ষে ৬ ক্যারেক্টার দিন।';
+      else if(err.code==='auth/network-request-failed')msg='❌ ইন্টারনেট সংযোগ চেক করুন!';
+      else if(err.code==='auth/too-many-requests')     msg='❌ অনেক চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
       al.textContent=msg; al.className='alert alert-danger show';
       if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
-    });
+    }
+  })();
 }
 function doForgot(){
   const email=V('fgt-email').trim().toLowerCase();
