@@ -833,6 +833,27 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <span class="link-txt" onclick="showSc('forgot')">🔑 Forgot Password?</span>
       <span class="link-txt" onclick="showSc('register')">নতুন অ্যাকাউন্ট তৈরি করুন →</span>
     </div>
+
+    <!-- ── Email Verification Notice Card (shown after registration) ── -->
+    <div id="verify-card" style="display:none;margin-top:14px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:22px 18px;text-align:center;border:2px solid #4CAF50;">
+      <div style="font-size:44px;margin-bottom:10px">📬</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">ইমেইল Verify করুন</div>
+      <div style="font-size:13px;color:var(--text-light);line-height:1.7;margin-bottom:12px">
+        <b id="verify-email-display" style="color:var(--primary)"></b> ঠিকানায়<br>একটি Verification লিংক পাঠানো হয়েছে।<br>
+        ইনবক্স (বা Spam ফোল্ডার) চেক করুন এবং<br>লিংকে ক্লিক করে অ্যাকাউন্ট সক্রিয় করুন।
+      </div>
+      <div style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text-light);margin-bottom:14px;line-height:1.6;">
+        ✅ Verify করা হলে উপরের <b>Login</b> ফর্ম দিয়ে প্রবেশ করুন।
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:2px">
+        <div style="font-size:12px;color:var(--text-light);margin-bottom:10px">ইমেইল পাননি?</div>
+        <button id="resend-btn" onclick="doResendFromCard()" class="btn" style="background:var(--bg);color:var(--primary);border:1.5px solid var(--primary);padding:10px 20px;font-size:13px;font-weight:600;border-radius:10px;width:100%;cursor:pointer;">
+          🔄 পুনরায় Verification ইমেইল পাঠান
+        </button>
+        <div id="resend-msg" style="margin-top:8px;font-size:12px;min-height:18px;color:#4CAF50;"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2017,6 +2038,11 @@ function showSc(id){
   const el=document.getElementById('sc-'+id);
   if(el) el.classList.add('active');
   window.scrollTo(0,0);
+  // Hide the post-registration verify card whenever leaving login screen
+  if(id !== 'login'){
+    const vc = document.getElementById('verify-card');
+    if(vc) vc.style.display='none';
+  }
   // Push history state for back button
   if(id!=='login'&&id!=='register'&&id!=='forgot'){
     history.pushState({screen:id},'',window.location.pathname+'?s='+id);
@@ -2305,6 +2331,63 @@ function doLogin(){
   });
 }
 
+// Stored temporarily so doResendFromCard() can re-sign-in
+let _verifyEmail = '', _verifyPass = '';
+
+function showVerifyCard(email, pass){
+  _verifyEmail = email;
+  _verifyPass  = pass;
+  // Switch to login screen first
+  showSc('login');
+  // Clear normal login-alert (we have a better card now)
+  const la = document.getElementById('login-alert');
+  if(la){ la.className='alert'; la.textContent=''; }
+  // Pre-fill login email for convenience
+  const lu = document.getElementById('login-user');
+  if(lu) lu.value = email;
+  // Show the card and populate email display
+  const card = document.getElementById('verify-card');
+  const disp = document.getElementById('verify-email-display');
+  const msg  = document.getElementById('resend-msg');
+  if(disp) disp.textContent = email;
+  if(msg)  msg.textContent  = '';
+  const resendBtn = document.getElementById('resend-btn');
+  if(resendBtn){ resendBtn.disabled=false; resendBtn.textContent='🔄 পুনরায় Verification ইমেইল পাঠান'; }
+  if(card) card.style.display='block';
+}
+
+function doResendFromCard(){
+  if(!_verifyEmail || !_verifyPass){
+    toast('❌ তথ্য পাওয়া যায়নি, আবার রেজিস্ট্রেশন পেজে চেষ্টা করুন।');
+    return;
+  }
+  const btn = document.getElementById('resend-btn');
+  const msg = document.getElementById('resend-msg');
+  if(btn){ btn.disabled=true; btn.textContent='পাঠানো হচ্ছে...'; }
+  if(msg){ msg.textContent=''; msg.style.color='#4CAF50'; }
+
+  _registrationInProgress = true; // guard against onAuthStateChanged sign-out
+  auth.signInWithEmailAndPassword(_verifyEmail, _verifyPass)
+    .then(cred => cred.user.sendEmailVerification())
+    .then(()=>{
+      _registrationInProgress = false;
+      return auth.signOut();
+    })
+    .then(()=>{
+      if(btn){ btn.disabled=false; btn.textContent='🔄 পুনরায় Verification ইমেইল পাঠান'; }
+      if(msg){ msg.textContent='✅ ইমেইল পাঠানো হয়েছে! ইনবক্স ও Spam ফোল্ডার চেক করুন।'; }
+    })
+    .catch(err=>{
+      _registrationInProgress = false;
+      auth.signOut().catch(()=>{});
+      if(btn){ btn.disabled=false; btn.textContent='🔄 পুনরায় Verification ইমেইল পাঠান'; }
+      let emsg = '❌ পাঠানো যায়নি।';
+      if(err.code==='auth/too-many-requests') emsg='❌ অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+      if(err.code==='auth/wrong-password')    emsg='❌ পাসওয়ার্ড মিলছে না।';
+      if(msg){ msg.textContent=emsg; msg.style.color='#e53935'; }
+    });
+}
+
 function resendVerificationEmail(email, pass){
   // Sign in temporarily to get the user object for resend
   auth.signInWithEmailAndPassword(email, pass).then(cred=>{
@@ -2376,7 +2459,7 @@ function doRegister(){
       // Clear flag before signOut so onAuthStateChanged handles it normally
       _registrationInProgress = false;
       await auth.signOut();
-      setTimeout(()=>showSc('login'), 2500);
+      setTimeout(()=>showVerifyCard(email, pass), 2500);
 
     } catch(err){
       _registrationInProgress = false; // always reset on error
