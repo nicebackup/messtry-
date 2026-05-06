@@ -817,7 +817,11 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div id="login-alert" class="alert alert-danger"></div>
       <div class="form-group">
         <label class="form-label">Email Address</label>
-        <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন">
+        <div style="position:relative">
+          <input type="email" id="login-user" class="form-input" placeholder="আপনার Email Address লিখুন" style="padding-right:46px" oninput="onLoginEmailInput()">
+          <button type="button" id="login-email-save-btn" onclick="saveLoginEmail()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:20px;line-height:1;" title="Email সেভ করুন">✅</button>
+        </div>
+        <div id="saved-emails-list"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
@@ -1686,14 +1690,14 @@ function sanitizeInput(s){
 // FIREBASE CONFIG & INIT
 // ═══════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: 'AIzaSyAKvpwf78d9UmRT03qs6Y3cMTOJfC6bLaQ',
-  authDomain: 'messtry-baa1e.firebaseapp.com',
-  databaseURL: 'https://messtry-baa1e-default-rtdb.firebaseio.com',
-  projectId: 'messtry-baa1e',
-  storageBucket: 'messtry-baa1e.firebasestorage.app',
-  messagingSenderId: '73015451817',
-  appId: '1:73015451817:web:3a696947a8f8571a0cc9b8',
-  measurementId: 'G-F2GNQZSM92'
+  apiKey: 'AIzaSyDqHnuTefG_v2KJ5rFVmsPO1P0KQvH40OU',
+  authDomain: 'midlandquarter-c516b.firebaseapp.com',
+  projectId: 'midlandquarter-c516b',
+  storageBucket: 'midlandquarter-c516b.firebasestorage.app',
+  messagingSenderId: '899146057513',
+  appId: '1:899146057513:web:636a096affb5dd40a3d938',
+  measurementId: 'G-CNXVF9KG9Y',
+  databaseURL: 'https://midlandquarter-c516b-default-rtdb.firebaseio.com/'
 };
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
@@ -1854,6 +1858,7 @@ auth.onAuthStateChanged(fbUser=>{
     document.getElementById('fb-loading').style.display='none';
     CU = null;
     showSc('login');
+    initLoginPage();
     return;
   }
   if(!fbUser.emailVerified){
@@ -2206,6 +2211,58 @@ function closeModal(){ document.getElementById('modal-bg').classList.remove('sho
 // ═══════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════
+function onLoginEmailInput(){
+  const val=(document.getElementById('login-user').value||'').trim();
+  const btn=document.getElementById('login-email-save-btn');
+  if(btn) btn.style.display=val.includes('@')?'block':'none';
+}
+function saveLoginEmail(){
+  const email=(document.getElementById('login-user').value||'').trim().toLowerCase();
+  if(!email.includes('@')) return;
+  try{
+    let list=JSON.parse(localStorage.getItem('mq_emails')||'[]');
+    list=list.filter(e=>e!==email);
+    list.unshift(email);
+    list=list.slice(0,5);
+    localStorage.setItem('mq_emails',JSON.stringify(list));
+    renderSavedEmails();
+    toast('✅ Email সেভ হয়েছে!');
+  }catch(e){}
+}
+function removeSavedEmail(email){
+  try{
+    let list=JSON.parse(localStorage.getItem('mq_emails')||'[]');
+    list=list.filter(e=>e!==email);
+    localStorage.setItem('mq_emails',JSON.stringify(list));
+    renderSavedEmails();
+  }catch(e){}
+}
+function renderSavedEmails(){
+  const box=document.getElementById('saved-emails-list');
+  if(!box) return;
+  try{
+    const list=JSON.parse(localStorage.getItem('mq_emails')||'[]');
+    if(!list.length){ box.innerHTML=''; return; }
+    box.innerHTML=list.map(e=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;margin-top:5px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;" onclick="pickEmail('${e}')">
+        <span>📧 ${e}</span>
+        <span onclick="event.stopPropagation();removeSavedEmail('${e}')" style="color:var(--danger);font-weight:700;padding:2px 6px;font-size:13px;">✕</span>
+      </div>`).join('');
+  }catch(e){}
+}
+function pickEmail(email){
+  const inp=document.getElementById('login-user');
+  if(inp){ inp.value=email; onLoginEmailInput(); inp.focus(); }
+}
+function initLoginPage(){
+  renderSavedEmails();
+  try{
+    const last=localStorage.getItem('mq_last_email');
+    const inp=document.getElementById('login-user');
+    if(last&&inp&&!inp.value){ inp.value=last; onLoginEmailInput(); }
+  }catch(e){}
+}
+
 function doLogin(){
   const email = V('login-user').trim().toLowerCase();
   const pass = V('login-pass');
@@ -2224,6 +2281,8 @@ function doLogin(){
   auth.setPersistence(persistence).then(()=>{
     return auth.signInWithEmailAndPassword(email, pass);
   }).then(cred=>{
+    // সফল login — email সেভ করো
+    try{ localStorage.setItem('mq_last_email', email); }catch(e){}
     const fbUser = cred.user;
     if(!fbUser.emailVerified){
       // Block unverified users — show resend button
