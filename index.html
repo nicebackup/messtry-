@@ -1909,9 +1909,16 @@ function loadDB(){
     }
     // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
-    document.getElementById('fb-loading').style.display='none';
-    toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
     console.error('Firebase read error:', err);
+    // ✅ সাথে সাথে toast না দিয়ে 4 সেকেন্ড অপেক্ষা করি।
+    // যদি এর মধ্যে Firebase connect হয়ে যায় (_dbLoaded=true), toast দেখাব না।
+    // এতে page load-এর সময় false alarm বন্ধ হবে।
+    setTimeout(()=>{
+      if(!_dbLoaded){
+        document.getElementById('fb-loading').style.display='none';
+        toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
+      }
+    }, 4000);
   });
 }
 
