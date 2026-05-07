@@ -1779,9 +1779,9 @@ let _dbSaveTimeout = null;
 let _saveRetryCount = 0;
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
-// DB সত্যিকারের ready কিনা — load হয়েছে এবং users array populated
+// DB সত্যিকারের ready কিনা — load হয়েছে এবং current user DB.users-এ আছে
 function _isDBReady(){
-  return _dbLoaded && Array.isArray(DB.users) && DB.users.length > 0;
+  return _dbLoaded && DB.users && DB.users.some(u => u.u === CU?.u);
 }
 
 // DB ready হওয়া পর্যন্ত অপেক্ষা করে callback চালায়
@@ -1892,6 +1892,8 @@ function migrateDB(){
 function loadDB(){
   // Show loading overlay
   document.getElementById('fb-loading').style.display='flex';
+  // Force fetch from server — bypasses stale IndexedDB cache
+  firebase.database().goOnline();
   dbRef.on('value', snap=>{
     const data = snap.val();
     if(data){
@@ -1908,19 +1910,13 @@ function loadDB(){
     // ✅ Firebase load সম্পন্ন — এখন থেকে saveDB() allow
     _dbLoaded = true;
     applyDark();
-    // Refresh current active screen if already logged in
+    // Refresh home data on every snapshot when logged in
     if(CU){
-      const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
-      if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
-      else if(activeId==='meal') loadMealDate();
-      else if(activeId==='bazar') renderBazar();
-      else if(activeId==='others'){ renderOthers(); renderCookBills(); }
-      else if(activeId==='deposit'){ renderDepMyBalance(); renderDepMyHistory(); if(isManagerOrCtrl()){ renderDepHistory(); showMemberBalance(); } }
-      else if(activeId==='bill') loadBill();
-      else if(activeId==='report') loadReport();
-      else if(activeId==='members') loadMembers();
-      else if(activeId==='profile') loadProfile();
-      else if(activeId==='notice') initNotice();
+      refreshHome();
+      // If not already on home screen, go to home
+      if(document.querySelector('.screen.active')?.id !== 'sc-home'){
+        showSc('home');
+      }
     }
     // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
@@ -2012,10 +2008,19 @@ auth.onAuthStateChanged(fbUser=>{
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
       }
 
-      _waitUntilReady(()=>{
-        document.getElementById('fb-loading').style.display='none';
-        refreshHome(); showSc('home');
-        setTimeout(()=>showNoticePopup(), 800);
+      // Force a fresh server read so _isDBReady() sees current user data
+      dbRef.once('value').then(()=>{
+        _waitUntilReady(()=>{
+          document.getElementById('fb-loading').style.display='none';
+          refreshHome(); showSc('home');
+          setTimeout(()=>showNoticePopup(), 800);
+        });
+      }).catch(()=>{
+        _waitUntilReady(()=>{
+          document.getElementById('fb-loading').style.display='none';
+          refreshHome(); showSc('home');
+          setTimeout(()=>showNoticePopup(), 800);
+        });
       });
     });
   }).catch(err=>{
