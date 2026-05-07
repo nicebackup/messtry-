@@ -2451,12 +2451,29 @@ function doLogin(){
         if(!['controller','manager','member'].includes(role)) role='member';
         CU = { uid, u: userData.u||uid, name: userData.name, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role, type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), balance: userData.balance||0, emailVerified: true };
         // Sync into DB.users so meal/bazar/role checks work
-        if(DB.users){ const idx=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u); if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; } else { DB.users.push({...CU}); } }
+        if(DB.users){
+          const idx=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
+          if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; }
+          else {
+            DB.users.push({...CU});
+            // নতুন সদস্য — Firebase-এ শুধু এই user-টা push (পুরো array replace না)
+            const ni = DB.users.length-1;
+            dbRef.child('users/'+ni).set({...CU}).catch(()=>{});
+          }
+        }
         // Auto-fix bad role value in RTDB if needed
         if(roleData?.role !== role){ firebase.database().ref('roles/'+uid).set({role}).catch(()=>{}); firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{}); }
         if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
-        refreshHome(); showSc('home');
-        setTimeout(()=>showNoticePopup(), 600);
+        // DB load না হলে অপেক্ষা করে তারপর home দেখাও
+        function _goHomeLogin(){
+          refreshHome(); showSc('home');
+          setTimeout(()=>showNoticePopup(), 600);
+        }
+        if(_dbLoaded){ _goHomeLogin(); }
+        else {
+          const _t = setInterval(()=>{ if(_dbLoaded){ clearInterval(_t); _goHomeLogin(); }}, 50);
+          setTimeout(()=>{ clearInterval(_t); _goHomeLogin(); }, 5000);
+        }
       });
     }).catch(err=>{ al.textContent='❌ ডেটা লোড ব্যর্থ: '+err.message; al.className='alert alert-danger show'; if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } });
   }).catch(err=>{
@@ -2587,9 +2604,10 @@ function doRegister(){
       if(!DB.users) DB.users=[];
       const newUser = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
       DB.users.push(newUser);
-      // ✅ messData/users সরাসরি update — saveDB() guard-এর উপর নির্ভর না করে
-      // এটা না করলে registration-এ user শুধু local DB-তে যায়, Firebase messData-তে না
-      dbRef.child('users').set(DB.users).catch(e=>console.error('User list sync error:',e));
+      // ✅ নতুন user শুধু array-র শেষে push — পুরো array replace না
+      // আগে .set(DB.users) করলে অন্য সদস্যদের data মুছে যেত!
+      const newIdx = DB.users.length - 1;
+      dbRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
 
       // Step 5 — Show success, then sign out cleanly
       ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
