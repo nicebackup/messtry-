@@ -1598,17 +1598,16 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <!-- Sticky Header -->
     <div style="position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px 0">
       <!-- Row 1: back | title centered | pdf -->
-      <div style="display:grid;grid-template-columns:36px 1fr 60px;align-items:center;margin-bottom:2px">
+      <div style="display:grid;grid-template-columns:36px 1fr 60px;align-items:center;margin-bottom:4px">
         <button onclick="goHome()" style="background:none;border:none;cursor:pointer;color:var(--text);font-size:22px;padding:0;line-height:1;text-align:left">‹</button>
         <div style="text-align:center">
-          <div id="we-slot-lbl" style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:.5px"></div>
+          <div id="we-slot-lbl" style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:.5px;line-height:1.2"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text-light);line-height:1.2">
+            <span id="we-date-lbl"></span>
+            <span id="we-day-lbl" style="margin-left:5px"></span>
+          </div>
         </div>
-        <button id="we-pdf-btn" onclick="exportWhoEatsPDF()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 0;font-size:11px;font-weight:700;cursor:pointer;width:100%">PDF</button>
-      </div>
-      <!-- Row 2: date + day centered -->
-      <div style="text-align:center;margin-bottom:8px">
-        <span id="we-date-lbl" style="font-size:12px;font-weight:600;color:var(--text)"></span>
-        <span id="we-day-lbl"  style="font-size:11px;color:var(--text-light);margin-left:6px"></span>
+        <button id="we-pdf-btn" onclick="exportWhoEatsPDF()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 0;font-size:12px;font-weight:700;cursor:pointer;width:100%">PDF</button>
       </div>
       <!-- Toggle: Plant / Quarter -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin:0 -14px;padding:0 14px">
@@ -2891,17 +2890,15 @@ function exportWhoEatsPDF(){
   const doc  = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
   const mL=15, mR=195, mT=15;
   const slotBn  = WE_SLOT_LABELS[_weSlot] || _weSlot;
-  const slotMap = {b:'Sokal', l:'Dupur', d:'Raat'};
+  const slotMap = {b:'Morning', l:'Lunch', d:'Dinner'};
   const slotAsc = slotMap[_weSlot] || _weSlot;
 
   // ── Title block ──
   doc.setFontSize(14); doc.setFont('helvetica','bold');
-  doc.text(slotAsc+' - Plante Khabe', 105, mT+6, {align:'center'});
-  doc.setFontSize(11); doc.setFont('helvetica','normal');
-  doc.text('('+_weDate+')', 105, mT+13, {align:'center'});
+  doc.text(slotAsc+' Meals @ Plant ('+_weDate+')', 105, mT+8, {align:'center'});
 
   // ── Horizontal rule ──
-  let y = mT+18;
+  let y = mT+14;
   doc.setDrawColor(150); doc.setLineWidth(0.4);
   doc.line(mL, y, mR, y); y+=6;
 
@@ -2927,9 +2924,9 @@ function exportWhoEatsPDF(){
   doc.line(mL, y, mR, y); y+=7;
   const total = _wePlanters.reduce((a,e)=>a+e.qty,0);
   doc.setFontSize(13); doc.setFont('helvetica','bold');
-  doc.text('Mot: '+total+' Meal', 105, y, {align:'center'});
+  doc.text('Total: '+total+' Meal', 105, y, {align:'center'});
 
-  doc.save(slotAsc+'_plant_'+_weDate+'.pdf');
+  doc.save(slotAsc+'@Plant_'+_weDate+'.pdf');
   toast('PDF ডাউনলোড হচ্ছে!');
 }
 
