@@ -1596,43 +1596,35 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="content" style="padding:0">
 
     <!-- Sticky Header -->
-    <div style="position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:10px 12px 0">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <button onclick="goHome()" style="background:none;border:none;cursor:pointer;color:var(--text);font-size:20px;padding:2px 6px;line-height:1">‹</button>
-        <div style="flex:1">
-          <div id="we-date-lbl" style="font-size:13px;font-weight:700;color:var(--text)"></div>
-          <div id="we-day-lbl"  style="font-size:11px;color:var(--text-light)"></div>
+    <div style="position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px 0">
+      <!-- Row 1: back | title centered | pdf -->
+      <div style="display:grid;grid-template-columns:36px 1fr 60px;align-items:center;margin-bottom:2px">
+        <button onclick="goHome()" style="background:none;border:none;cursor:pointer;color:var(--text);font-size:22px;padding:0;line-height:1;text-align:left">‹</button>
+        <div style="text-align:center">
+          <div id="we-slot-lbl" style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:.5px"></div>
         </div>
-        <button id="we-csv-btn" onclick="exportWhoEatsCSV()" style="background:var(--success);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.3px">⬇ CSV</button>
+        <button id="we-pdf-btn" onclick="exportWhoEatsPDF()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 0;font-size:11px;font-weight:700;cursor:pointer;width:100%">PDF</button>
       </div>
-      <!-- Tabs -->
-      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin:0 -12px;padding:0 12px">
-        <button id="we-tab-b" onclick="switchWeTab('b')" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-light);transition:all .18s">🌅 সকাল</button>
-        <button id="we-tab-l" onclick="switchWeTab('l')" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-light);transition:all .18s">🌞 দুপুর</button>
-        <button id="we-tab-d" onclick="switchWeTab('d')" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-light);transition:all .18s">🌙 রাত</button>
+      <!-- Row 2: date + day centered -->
+      <div style="text-align:center;margin-bottom:8px">
+        <span id="we-date-lbl" style="font-size:12px;font-weight:600;color:var(--text)"></span>
+        <span id="we-day-lbl"  style="font-size:11px;color:var(--text-light);margin-left:6px"></span>
+      </div>
+      <!-- Toggle: Plant / Quarter -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin:0 -14px;padding:0 14px">
+        <button id="we-tog-p" onclick="setWeView('P')" style="flex:1;background:none;border:none;border-bottom:3px solid var(--primary);padding:8px 4px;font-size:13px;font-weight:700;cursor:pointer;color:var(--primary);transition:all .18s">প্ল্যান্ট</button>
+        <button id="we-tog-q" onclick="setWeView('Q')" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-light);transition:all .18s">কোয়ার্টার</button>
       </div>
     </div>
 
     <!-- Body -->
-    <div style="padding:10px 12px 80px">
-      <!-- Plant section -->
-      <div id="we-plant-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:11px;font-weight:700;color:var(--success);letter-spacing:.5px">🏭 প্ল্যান্টে খাবে</span>
-        <span id="we-plant-total" style="font-size:12px;font-weight:700;color:var(--success)"></span>
+    <div style="padding:12px 14px 80px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span id="we-view-lbl" style="font-size:11px;font-weight:700;letter-spacing:.4px"></span>
+        <span id="we-view-total" style="font-size:13px;font-weight:800;color:var(--primary)"></span>
       </div>
-      <div id="we-plant-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:14px"></div>
-
-      <!-- Quarter section -->
-      <div id="we-qtr-wrap" style="display:none">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-top:1px dashed var(--border);padding-top:10px">
-          <span style="font-size:11px;font-weight:700;color:var(--info);letter-spacing:.5px">🏠 কোয়ার্টারে খাবে</span>
-          <span id="we-qtr-total" style="font-size:12px;font-weight:700;color:var(--info)"></span>
-        </div>
-        <div id="we-qtr-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
-      </div>
-
-      <!-- Empty state -->
-      <div id="we-empty" style="display:none;text-align:center;padding:40px 0;color:var(--text-light);font-size:13px">এই বেলায় কেউ নেই</div>
+      <div id="we-view-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px"></div>
+      <div id="we-empty" style="display:none;text-align:center;padding:50px 0;color:var(--text-light);font-size:13px">এই বেলায় কেউ নেই</div>
     </div>
 
   </div>
@@ -2793,129 +2785,155 @@ function showMyMealHistory(){
 // ═══════════════════════════════════════════════
 // WHO EATS — Full page (ID grid view)
 // ═══════════════════════════════════════════════
-let _weSlot = 'b'; // active tab: b/l/d
+let _weSlot = 'b';   // b=সকাল l=দুপুর d=রাত
 let _weDate = '';
+let _weView = 'P';   // P=Plant  Q=Quarter
+let _wePlanters = [];
+let _weQtr = [];
+
+const WE_SLOT_LABELS = { b:'সকাল', l:'দুপুর', d:'রাত' };
 
 function showWhoEatsDate(slot){
   _weDate = homeViewDate || tod();
   _weSlot = slot;
-  renderWeScreen();
+  _weView = 'P';
+  _collectWeData();
+  _renderWeHeader();
+  _renderWeGrid();
   sec('whoeats');
 }
 function showWhoEatsOnDate(slot, dateStr){
   _weDate = dateStr;
   _weSlot = slot;
-  renderWeScreen();
+  _weView = 'P';
+  _collectWeData();
+  _renderWeHeader();
+  _renderWeGrid();
   sec('whoeats');
 }
-function showWhoEats(slot){
-  showWhoEatsDate(slot);
+function showWhoEats(slot){ showWhoEatsDate(slot); }
+function switchWeTab(slot){ showWhoEatsDate(slot); }
+
+function setWeView(v){
+  _weView = v;
+  // Toggle button styles
+  const bp = document.getElementById('we-tog-p');
+  const bq = document.getElementById('we-tog-q');
+  if(v==='P'){
+    bp.style.color='var(--primary)'; bp.style.borderBottom='3px solid var(--primary)'; bp.style.fontWeight='700';
+    bq.style.color='var(--text-light)'; bq.style.borderBottom='3px solid transparent'; bq.style.fontWeight='600';
+  } else {
+    bq.style.color='var(--info)'; bq.style.borderBottom='3px solid var(--info)'; bq.style.fontWeight='700';
+    bp.style.color='var(--text-light)'; bp.style.borderBottom='3px solid transparent'; bp.style.fontWeight='600';
+  }
+  _renderWeGrid();
 }
 
-function switchWeTab(slot){
-  _weSlot = slot;
-  renderWeScreen();
+function _collectWeData(){
+  _wePlanters = [];
+  _weQtr = [];
+  (DB.users||[]).filter(u=>!u.blocked).forEach(u=>{
+    const m = (DB.meals||{})[u.u+'_'+_weDate];
+    if(!m || !m[_weSlot] || m[_weSlot].t==='off') return;
+    const qty = m[_weSlot].q || 1;
+    if(m[_weSlot].t==='P') _wePlanters.push({u, qty});
+    if(m[_weSlot].t==='Q') _weQtr.push({u, qty});
+  });
 }
 
-function renderWeScreen(){
+function _renderWeHeader(){
   const days=['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
   const d = new Date(_weDate+'T00:00:00');
+  document.getElementById('we-slot-lbl').textContent = WE_SLOT_LABELS[_weSlot] || '';
   document.getElementById('we-date-lbl').textContent = fmtDate(_weDate);
   document.getElementById('we-day-lbl').textContent  = days[d.getDay()];
+}
 
-  // Update tabs
-  ['b','l','d'].forEach(s=>{
-    const btn = document.getElementById('we-tab-'+s);
-    if(!btn) return;
-    const active = s === _weSlot;
-    btn.style.color       = active ? 'var(--primary)' : 'var(--text-light)';
-    btn.style.borderBottom= active ? '3px solid var(--primary)' : '3px solid transparent';
-    btn.style.fontWeight  = active ? '700' : '600';
-  });
+function _renderWeGrid(){
+  const list  = _weView==='P' ? _wePlanters : _weQtr;
+  const color = _weView==='P' ? 'var(--success)' : 'var(--info)';
+  const lbl   = _weView==='P' ? 'প্ল্যান্টে খাবে' : 'কোয়ার্টারে খাবে';
+  const grid  = document.getElementById('we-view-grid');
+  const empty = document.getElementById('we-empty');
+  const vlbl  = document.getElementById('we-view-lbl');
+  const vtot  = document.getElementById('we-view-total');
 
-  // Collect P and Q users
-  const planters=[], qtr=[];
-  DB.users.filter(u=>!u.blocked).forEach(u=>{
-    const m = DB.meals[u.u+'_'+_weDate];
-    if(!m || !m[_weSlot] || m[_weSlot].t==='off') return;
-    if(m[_weSlot].t==='P') planters.push({u, qty: m[_weSlot].q||1});
-    if(m[_weSlot].t==='Q') qtr.push({u, qty: m[_weSlot].q||1});
-  });
+  vlbl.textContent  = lbl;
+  vlbl.style.color  = color;
 
-  const makeCell = (entry, color) => {
+  if(!list.length){
+    grid.innerHTML = '';
+    vtot.textContent = '';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  const total = list.reduce((a,e)=>a+e.qty,0);
+  vtot.textContent = 'মোট: '+total+' মিল';
+
+  grid.innerHTML = list.map(entry=>{
     const id  = entry.u.job || entry.u.u;
-    const lbl = entry.qty > 1 ? `${id}-P${entry.qty}` : String(id);
-    return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:12px;font-weight:700;color:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(lbl)}</div>`;
-  };
-
-  // Plant grid
-  const pgrid = document.getElementById('we-plant-grid');
-  const ptotal = document.getElementById('we-plant-total');
-  const empty  = document.getElementById('we-empty');
-  const qwrap  = document.getElementById('we-qtr-wrap');
-  const qgrid  = document.getElementById('we-qtr-grid');
-  const qtotal = document.getElementById('we-qtr-total');
-
-  if(!planters.length && !qtr.length){
-    pgrid.innerHTML=''; ptotal.textContent='';
-    if(empty) empty.style.display='block';
-    if(qwrap) qwrap.style.display='none';
-  } else {
-    if(empty) empty.style.display='none';
-    const pSum = planters.reduce((a,e)=>a+e.qty,0);
-    pgrid.innerHTML = planters.map(e=>makeCell(e,'var(--success)')).join('');
-    ptotal.textContent = `মোট: ${pSum} মিল`;
-
-    if(qtr.length){
-      const qSum = qtr.reduce((a,e)=>a+e.qty,0);
-      qgrid.innerHTML = qtr.map(e=>{
-        const id  = e.u.job || e.u.u;
-        const lbl = e.qty > 1 ? `${id}-Q${e.qty}` : String(id);
-        return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:12px;font-weight:700;color:var(--info);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(lbl)}</div>`;
-      }).join('');
-      qtotal.textContent = `মোট: ${qSum} মিল`;
-      if(qwrap) qwrap.style.display='block';
-    } else {
-      if(qwrap) qwrap.style.display='none';
-    }
-  }
+    const lbl = entry.qty>1 ? id+'-P'+entry.qty : String(id);
+    return '<div style="background:var(--bg);border:1.5px solid '+color+';border-radius:7px;'+
+           'padding:7px 4px;text-align:center;font-size:13px;font-weight:700;color:'+color+';'+
+           'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(lbl)+'</div>';
+  }).join('');
 }
 
-function exportWhoEatsCSV(){
-  const slotName = {'b':'সকাল','l':'দুপুর','d':'রাত'}[_weSlot];
-  const planters = [];
-  DB.users.filter(u=>!u.blocked).forEach(u=>{
-    const m = DB.meals[u.u+'_'+_weDate];
-    if(m && m[_weSlot] && m[_weSlot].t==='P'){
-      planters.push({id: u.job||u.u, qty: m[_weSlot].q||1});
-    }
+function renderWeScreen(){ /* legacy no-op */ }
+
+// ── PDF Export (Plant only, 3-column grid, A4) ──
+function exportWhoEatsPDF(){
+  if(!_wePlanters.length){ toast('এই বেলায় প্ল্যান্টে কেউ নেই'); return; }
+  const {jsPDF} = window.jspdf;
+  if(!jsPDF){ toast('PDF লাইব্রেরি লোড হয়নি'); return; }
+
+  const doc  = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const mL=15, mR=195, mT=15;
+  const slotBn  = WE_SLOT_LABELS[_weSlot] || _weSlot;
+  const slotMap = {b:'Sokal', l:'Dupur', d:'Raat'};
+  const slotAsc = slotMap[_weSlot] || _weSlot;
+
+  // ── Title block ──
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text(slotAsc+' - Plante Khabe', 105, mT+6, {align:'center'});
+  doc.setFontSize(11); doc.setFont('helvetica','normal');
+  doc.text('('+_weDate+')', 105, mT+13, {align:'center'});
+
+  // ── Horizontal rule ──
+  let y = mT+18;
+  doc.setDrawColor(150); doc.setLineWidth(0.4);
+  doc.line(mL, y, mR, y); y+=6;
+
+  // ── 3-column grid of IDs ──
+  const colW = (mR-mL)/3;
+  doc.setFontSize(12); doc.setFont('helvetica','bold');
+  const ids = _wePlanters.map(e=>{
+    const id = e.u.job || e.u.u;
+    return e.qty>1 ? id+'-P'+e.qty : String(id);
   });
-  if(!planters.length){ toast('❌ এই বেলায় প্ল্যান্টে কেউ নেই'); return; }
 
-  // Build CSV — 3 IDs per row (matching spreadsheet style)
-  const rows = [];
-  rows.push([`${slotName} প্ল্যান্টে খাবে (${_weDate})`,'','']);
-  for(let i=0; i<planters.length; i+=3){
-    const row=[];
-    for(let j=0;j<3;j++){
-      const e=planters[i+j];
-      row.push(e ? (e.qty>1?`${e.id}-P${e.qty}`:String(e.id)) : '');
-    }
-    rows.push(row);
+  for(let i=0; i<ids.length; i++){
+    const col = i%3;
+    const x   = mL + col*colW + colW/2;
+    doc.text(ids[i], x, y, {align:'center'});
+    if(col===2 || i===ids.length-1){ y+=8; }
+    if(y>270){ doc.addPage(); y=mT; }
   }
-  const pSum=planters.reduce((a,e)=>a+e.qty,0);
-  rows.push([`মোট- ${pSum} মিল`,'','']);
 
-  const csv=rows.map(r=>r.map(c=>'"'+c+'"').join(',')).join('\n');
-  const bom='﻿'; // UTF-8 BOM for Excel
-  const blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=`plant_${slotName}_${_weDate}.csv`; a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ CSV ডাউনলোড হচ্ছে!');
+  // ── Footer ──
+  y+=4;
+  doc.setDrawColor(100); doc.setLineWidth(0.5);
+  doc.line(mL, y, mR, y); y+=7;
+  const total = _wePlanters.reduce((a,e)=>a+e.qty,0);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text('Mot: '+total+' Meal', 105, y, {align:'center'});
+
+  doc.save(slotAsc+'_plant_'+_weDate+'.pdf');
+  toast('PDF ডাউনলোড হচ্ছে!');
 }
 
+function exportWhoEatsCSV(){ /* replaced by PDF */ }
 function closeWhoEats(){ goHome(); }
 
 // ═══════════════════════════════════════════════
