@@ -1997,9 +1997,23 @@ auth.onAuthStateChanged(fbUser=>{
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
       }
 
-      document.getElementById('fb-loading').style.display='none';
-      refreshHome(); showSc('home');
-      setTimeout(()=>showNoticePopup(), 800);
+      // ✅ DB load হওয়ার আগে home দেখালে ফাঁকা দেখায়।
+      // তাই _dbLoaded না হলে অপেক্ষা করি — তারপর home দেখাই।
+      function _goHome(){
+        document.getElementById('fb-loading').style.display='none';
+        refreshHome(); showSc('home');
+        setTimeout(()=>showNoticePopup(), 800);
+      }
+      if(_dbLoaded){
+        _goHome();
+      } else {
+        // Firebase data এখনো আসেনি — আসার সাথে সাথে home দেখাব
+        const _waitForDB = setInterval(()=>{
+          if(_dbLoaded){ clearInterval(_waitForDB); _goHome(); }
+        }, 50);
+        // ৫ সেকেন্ডের বেশি অপেক্ষা না করে fallback
+        setTimeout(()=>{ clearInterval(_waitForDB); _goHome(); }, 5000);
+      }
     });
   }).catch(err=>{
     document.getElementById('fb-loading').style.display='none';
