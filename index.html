@@ -1778,6 +1778,21 @@ const auth = firebase.auth();
 let _dbSaveTimeout = null;
 let _saveRetryCount = 0;
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
+
+// DB সত্যিকারের ready কিনা — load হয়েছে এবং users array populated
+function _isDBReady(){
+  return _dbLoaded && Array.isArray(DB.users) && DB.users.length > 0;
+}
+
+// DB ready হওয়া পর্যন্ত অপেক্ষা করে callback চালায়
+function _waitUntilReady(cb, timeoutMs=6000){
+  if(_isDBReady()){ cb(); return; }
+  const t = setInterval(()=>{
+    if(_isDBReady()){ clearInterval(t); cb(); }
+  }, 50);
+  // timeout-এ যাই হোক চলে যাও — আটকে থাকা যাবে না
+  setTimeout(()=>{ clearInterval(t); cb(); }, timeoutMs);
+}
 // ── Internet Check ──
 function isOnline(){ return navigator.onLine; }
 
@@ -1997,23 +2012,11 @@ auth.onAuthStateChanged(fbUser=>{
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
       }
 
-      // ✅ DB load হওয়ার আগে home দেখালে ফাঁকা দেখায়।
-      // তাই _dbLoaded না হলে অপেক্ষা করি — তারপর home দেখাই।
-      function _goHome(){
+      _waitUntilReady(()=>{
         document.getElementById('fb-loading').style.display='none';
         refreshHome(); showSc('home');
         setTimeout(()=>showNoticePopup(), 800);
-      }
-      if(_dbLoaded){
-        _goHome();
-      } else {
-        // Firebase data এখনো আসেনি — আসার সাথে সাথে home দেখাব
-        const _waitForDB = setInterval(()=>{
-          if(_dbLoaded){ clearInterval(_waitForDB); _goHome(); }
-        }, 50);
-        // ৫ সেকেন্ডের বেশি অপেক্ষা না করে fallback
-        setTimeout(()=>{ clearInterval(_waitForDB); _goHome(); }, 5000);
-      }
+      });
     });
   }).catch(err=>{
     document.getElementById('fb-loading').style.display='none';
@@ -2464,16 +2467,10 @@ function doLogin(){
         // Auto-fix bad role value in RTDB if needed
         if(roleData?.role !== role){ firebase.database().ref('roles/'+uid).set({role}).catch(()=>{}); firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{}); }
         if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
-        // DB load না হলে অপেক্ষা করে তারপর home দেখাও
-        function _goHomeLogin(){
+        _waitUntilReady(()=>{
           refreshHome(); showSc('home');
           setTimeout(()=>showNoticePopup(), 600);
-        }
-        if(_dbLoaded){ _goHomeLogin(); }
-        else {
-          const _t = setInterval(()=>{ if(_dbLoaded){ clearInterval(_t); _goHomeLogin(); }}, 50);
-          setTimeout(()=>{ clearInterval(_t); _goHomeLogin(); }, 5000);
-        }
+        });
       });
     }).catch(err=>{ al.textContent='❌ ডেটা লোড ব্যর্থ: '+err.message; al.className='alert alert-danger show'; if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } });
   }).catch(err=>{
