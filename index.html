@@ -593,7 +593,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <!-- Office Meal Rate per mess month -->
       <div class="form-group">
         <label class="form-label">📅 মেস মাস নির্বাচন</label>
-        <input type="month" id="ofm-month" class="form-input" onchange="loadOfficeMealInfo()">
+        <select id="ofm-month" class="form-input" onchange="loadOfficeMealInfo()"></select>
       </div>
       <div class="form-group">
         <label class="form-label">💰 অফিস মিল রেট (প্রতি মিল) ৳</label>
@@ -642,7 +642,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="sec-title">💰 অফিস মিল রেট</div>
       <div class="form-group">
         <label class="form-label">মেস মাস</label>
-        <input type="month" id="ofms-month" class="form-input" onchange="loadOfficeMealScreen()">
+        <select id="ofms-month" class="form-input" onchange="loadOfficeMealScreen()"></select>
       </div>
       <div class="form-group">
         <label class="form-label">প্রতি মিল রেট ৳</label>
@@ -1086,11 +1086,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-sub" id="bazar-header-sub">Bazar Entry</div>
   </div>
   <div class="content pb-nav">
-    <div id="bazar-readonly-notice" style="display:none">
-      <div style="background:var(--info-light,#eff6ff);border:1px solid var(--info,#3b82f6);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--info,#1d4ed8)">
-        👁️ আপনি শুধু বাজার খরচের ইতিহাস দেখতে পারবেন। এন্ট্রি করার অধিকার নেই।
-      </div>
-    </div>
+    <div id="bazar-readonly-notice" style="display:none"></div>
     <div id="bazar-form-wrap">
       <div class="card">
         <div class="sec-title">➕ বাজার যোগ করুন</div>
@@ -1103,7 +1099,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div class="sec-title" style="margin:0">📋 এই মাসের বাজার</div>
-        <input type="month" id="bz-month-sel" class="form-input" style="width:auto;padding:6px 10px;font-size:13px" onchange="renderBazar()">
+        <select id="bz-month-sel" class="form-input" style="width:auto;padding:6px 10px;font-size:13px" onchange="renderBazar()"></select>
       </div>
       <div id="bz-list"><p class="muted tc">কোনো এন্ট্রি নেই</p></div>
       <div class="divider"></div>
@@ -1120,11 +1116,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-sub" id="others-header-sub">Others Expense</div>
   </div>
   <div class="content pb-nav">
-    <div id="others-readonly-notice" style="display:none">
-      <div style="background:var(--info-light,#eff6ff);border:1px solid var(--info,#3b82f6);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--info,#1d4ed8)">
-        👁️ আপনি শুধু অন্যান্য খরচের ইতিহাস দেখতে পারবেন। এন্ট্রি করার অধিকার নেই।
-      </div>
-    </div>
+    <div id="others-readonly-notice" style="display:none"></div>
     <!-- OTHERS PANEL — একমাত্র tab -->
     <div id="oth-panel-others">
       <div id="others-form-wrap">
@@ -1147,7 +1139,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="sec-title" style="margin:0">📋 এই মাসের অন্যান্য খরচ</div>
-          <input type="month" id="oth-month-sel" class="form-input" style="width:auto;padding:6px 10px;font-size:13px" onchange="renderOthers()">
+          <select id="oth-month-sel" class="form-input" style="width:auto;padding:6px 10px;font-size:13px" onchange="renderOthers()"></select>
         </div>
         <div id="oth-list"><p class="muted tc">কোনো এন্ট্রি নেই</p></div>
         <div class="divider"></div>
@@ -1779,9 +1771,9 @@ let _dbSaveTimeout = null;
 let _saveRetryCount = 0;
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
-// DB সত্যিকারের ready কিনা — load হয়েছে এবং current user DB.users-এ আছে
+// DB সত্যিকারের ready কিনা — load হয়েছে এবং users array populated
 function _isDBReady(){
-  return _dbLoaded && DB.users && DB.users.some(u => u.u === CU?.u);
+  return _dbLoaded && Array.isArray(DB.users) && DB.users.length > 0;
 }
 
 // DB ready হওয়া পর্যন্ত অপেক্ষা করে callback চালায়
@@ -1892,8 +1884,6 @@ function migrateDB(){
 function loadDB(){
   // Show loading overlay
   document.getElementById('fb-loading').style.display='flex';
-  // Force fetch from server — bypasses stale IndexedDB cache
-  firebase.database().goOnline();
   dbRef.on('value', snap=>{
     const data = snap.val();
     if(data){
@@ -1910,13 +1900,19 @@ function loadDB(){
     // ✅ Firebase load সম্পন্ন — এখন থেকে saveDB() allow
     _dbLoaded = true;
     applyDark();
-    // Refresh home data on every snapshot when logged in
+    // Refresh current active screen if already logged in
     if(CU){
-      refreshHome();
-      // If not already on home screen, go to home
-      if(document.querySelector('.screen.active')?.id !== 'sc-home'){
-        showSc('home');
-      }
+      const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
+      if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
+      else if(activeId==='meal') loadMealDate();
+      else if(activeId==='bazar') renderBazar();
+      else if(activeId==='others'){ renderOthers(); renderCookBills(); }
+      else if(activeId==='deposit'){ renderDepMyBalance(); renderDepMyHistory(); if(isManagerOrCtrl()){ renderDepHistory(); showMemberBalance(); } }
+      else if(activeId==='bill') loadBill();
+      else if(activeId==='report') loadReport();
+      else if(activeId==='members') loadMembers();
+      else if(activeId==='profile') loadProfile();
+      else if(activeId==='notice') initNotice();
     }
     // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
@@ -2008,19 +2004,10 @@ auth.onAuthStateChanged(fbUser=>{
         firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{});
       }
 
-      // Force a fresh server read so _isDBReady() sees current user data
-      dbRef.once('value').then(()=>{
-        _waitUntilReady(()=>{
-          document.getElementById('fb-loading').style.display='none';
-          refreshHome(); showSc('home');
-          setTimeout(()=>showNoticePopup(), 800);
-        });
-      }).catch(()=>{
-        _waitUntilReady(()=>{
-          document.getElementById('fb-loading').style.display='none';
-          refreshHome(); showSc('home');
-          setTimeout(()=>showNoticePopup(), 800);
-        });
+      _waitUntilReady(()=>{
+        document.getElementById('fb-loading').style.display='none';
+        refreshHome(); showSc('home');
+        setTimeout(()=>showNoticePopup(), 800);
       });
     });
   }).catch(err=>{
@@ -2092,16 +2079,24 @@ function dateInMessMonth(dateStr, mmKey){
 }
 function buildMessMonthOptions(){
   const sel = document.getElementById('rpt-month'); if(!sel) return;
-  sel.innerHTML='<option value="">-- মাস নির্বাচন করুন --</option>';
+  fillMessCycleSelect(sel);
+}
+// যেকোনো <select> এ মেস চক্র options ভরো
+function fillMessCycleSelect(sel, months=12){
+  if(!sel) return;
+  const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const now = getBSTDate();
-  for(let i=0;i<12;i++){
+  const currentKey = messMonthKey();
+  sel.innerHTML='';
+  for(let i=0;i<months;i++){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 15);
     const key = messMonthKey(d);
     const {y,m} = getMessMonth(d);
-    const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
     const nm=(m+1)%12, ny=m===11?y+1:y;
     const opt=document.createElement('option');
-    opt.value=key; opt.textContent=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
+    opt.value=key;
+    opt.textContent=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
+    if(key===currentKey) opt.selected=true;
     sel.appendChild(opt);
   }
 }
@@ -3247,11 +3242,11 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0
 // ═══════════════════════════════════════════════
 function initBazar(){
   const sel=document.getElementById('bz-month-sel');
-  sel.value=mk(); if(!sel.value) sel.value=mk();
+  fillMessCycleSelect(sel);
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
   const mgr=isManagerOrCtrl();
   document.getElementById('bazar-form-wrap').style.display=mgr?'block':'none';
-  document.getElementById('bazar-readonly-notice').style.display=mgr?'none':'block';
+  document.getElementById('bazar-readonly-notice').style.display='none';
   document.getElementById('bazar-header-sub').textContent=mgr?'Bazar Entry':'ইতিহাস দেখুন';
   renderBazar();
 }
@@ -3271,9 +3266,9 @@ function addBazar(){
   toast('✅ বাজার যোগ হয়েছে!');
 }
 function renderBazar(){
-  const m=document.getElementById('bz-month-sel').value||mk();
+  const m=document.getElementById('bz-month-sel').value||messMonthKey();
   const list=document.getElementById('bz-list');
-  const items=DB.bazar.filter(b=>b.date.slice(0,7)===m).sort((a,b)=>b.date.localeCompare(a.date));
+  const items=DB.bazar.filter(b=>dateInMessMonth(b.date,m)).sort((a,b)=>b.date.localeCompare(a.date));
   if(!items.length){ list.innerHTML='<p class="muted tc">কোনো এন্ট্রি নেই</p>'; document.getElementById('bz-total').textContent='৳ ০'; return; }
   let total=0;
   list.innerHTML = safeHTML(items.map(b=>{
@@ -3322,10 +3317,10 @@ function initOthers(){
   const mgr2=isManagerOrCtrl();
   if(!document.getElementById('oth-date').value) document.getElementById('oth-date').value=tod();
   document.getElementById('others-form-wrap').style.display=mgr2?'block':'none';
-  document.getElementById('others-readonly-notice').style.display=mgr2?'none':'block';
+  document.getElementById('others-readonly-notice').style.display='none';
   document.getElementById('others-header-sub').textContent=mgr2?'Others Expense':'ইতিহাস দেখুন';
   const sel=document.getElementById('oth-month-sel');
-  if(sel) sel.value=mk();
+  fillMessCycleSelect(sel);
   renderOthers();
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
@@ -3347,8 +3342,8 @@ function addOther(){
 }
 function renderOthers(){
   const sel=document.getElementById('oth-month-sel');
-  const m=(sel&&sel.value)||mk();
-  const items=DB.others.filter(o=>o.date.slice(0,7)===m).sort((a,b)=>b.date.localeCompare(a.date));
+  const m=(sel&&sel.value)||messMonthKey();
+  const items=DB.others.filter(o=>dateInMessMonth(o.date,m)).sort((a,b)=>b.date.localeCompare(a.date));
   const list=document.getElementById('oth-list');
   if(!items.length){ list.innerHTML='<p class="muted tc">কোনো এন্ট্রি নেই</p>'; document.getElementById('oth-total').textContent='৳ ০'; return; }
   let total=0;
@@ -5018,7 +5013,7 @@ function renderOfficeMealNotes(){
 
 function initOfficeMealCard(){
   const el=document.getElementById('ofm-month');
-  if(el) el.value=messMonthKey();
+  if(el){ fillMessCycleSelect(el); }
   loadOfficeMealInfo();
 }
 
@@ -5059,9 +5054,8 @@ function initOfficeMealScreen(){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); goHome(); return; }
   getOrCreateOfficeUser('mepl');
   getOrCreateOfficeUser('mpcl');
-  const mmKey = messMonthKey();
   const el = document.getElementById('ofms-month');
-  if(el) el.value = mmKey;
+  if(el){ fillMessCycleSelect(el); }
   if(!ofmsDate) ofmsDate = nextDay(tod());
   const dateEl = document.getElementById('ofms-date');
   if(dateEl) dateEl.value = ofmsDate;
