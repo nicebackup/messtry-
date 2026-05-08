@@ -2252,7 +2252,7 @@ function sec(s){
   if(s==='others'){ initOthers(); showSc('others'); return; }
   if(s==='deposit'){ initDeposit(); showSc('deposit'); return; }
   if(s==='bill'){ loadBill(); showSc('bill'); return; }
-  if(s==='report'){ buildMessMonthOptions(); showSc('report'); return; }
+  if(s==='report'){ buildMessMonthOptions(); showSc('report'); loadReport(); return; }
   if(s==='members'){ loadMembers(); showSc('members'); return; }
   if(s==='profile'){ loadProfile(); showSc('profile'); return; }
   if(s==='admin'){ if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; } initAdmin(); showSc('admin'); return; }
@@ -4606,20 +4606,23 @@ function makePDF(type){
   const overlay = document.getElementById('print-overlay');
   const content = document.getElementById('print-overlay-content');
   if(!overlay || !content){ toast('❌ Overlay element পাওয়া যায়নি!'); return; }
+  // Update toolbar title
+  const titleEl = document.getElementById('print-overlay-title');
+  if(titleEl) titleEl.textContent = type==='daily' ? '📅 দৈনিক রিপোর্ট' : '📊 মাসিক রিপোর্ট';
   // Inline style for embedded content
-  const inlineStyle = `
-    <style>
-      *{box-sizing:border-box;}
-      table{border-collapse:collapse;width:100%;}
-      th,td{padding:6px 8px;border:1px solid #d0e4d8;font-size:11px;}
-      th{background:#1a6b3c;color:#fff;font-weight:600;}
-      tr:nth-child(even) td{background:#f4f7f5;}
-    </style>`;
+  const inlineStyle = `<style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body,div{font-family:'Hind Siliguri','Poppins',sans-serif;}
+    table{border-collapse:collapse;width:100%;}
+    th,td{padding:6px 8px;border:1px solid #d0e4d8;font-size:11px;}
+    th{background:#1a6b3c;color:#fff;font-weight:600;}
+    tr:nth-child(even) td{background:#f4f7f5;}
+  </style>`;
   content.innerHTML = inlineStyle + html;
   overlay.style.display = 'block';
   overlay.scrollTop = 0;
   document.body.style.overflow = 'hidden';
-  toast('✅ রিপোর্ট লোড হয়েছে! উপরে Print বাটনে চাপুন।');
+  toast('✅ রিপোর্ট লোড হয়েছে!');
 }
 
 function closePrintOverlay(){
@@ -5304,7 +5307,7 @@ function triggerPWAInstall() {
 <div id="print-overlay" style="display:none;position:fixed;inset:0;z-index:3000;background:#f4f7f5;overflow-y:auto;">
   <div id="print-overlay-toolbar" style="position:sticky;top:0;z-index:10;background:#1a6b3c;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;box-shadow:0 2px 10px rgba(0,0,0,.3);">
     <button onclick="closePrintOverlay()" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">✕ বন্ধ করুন</button>
-    <div style="font-size:14px;font-weight:700;">📊 রিপোর্ট</div>
+    <div id="print-overlay-title" style="font-size:14px;font-weight:700;">📊 রিপোর্ট</div>
     <button onclick="window.print()" style="background:#fff;color:#1a6b3c;border:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print / PDF</button>
   </div>
   <div id="print-overlay-content" style="padding:12px;max-width:900px;margin:0 auto;"></div>
