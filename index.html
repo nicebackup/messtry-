@@ -1817,10 +1817,14 @@ window.addEventListener('offline', ()=>{ noNetPopup(); });
 
 function saveDB(){
   if(!_dbLoaded){ console.warn('saveDB blocked: DB not yet loaded'); return; }
+  // ✅ CRITICAL FIX: Snapshot must be captured HERE (at call time), NOT inside
+  // setTimeout. Firebase's real-time listener fires during the 400ms delay and
+  // does `DB = snap.val()` which overwrites DB — losing our unsaved changes.
+  // Capturing the snapshot immediately ensures we always save what was intended.
+  const dbToSave = JSON.parse(JSON.stringify(DB));
+  delete dbToSave.darkMode;
   if(_dbSaveTimeout) clearTimeout(_dbSaveTimeout);
   _dbSaveTimeout = setTimeout(()=>{
-    const dbToSave = JSON.parse(JSON.stringify(DB));
-    delete dbToSave.darkMode;
     dbRef.set(dbToSave)
       .then(()=>{ _saveRetryCount=0; })
       .catch(e=>{
@@ -1829,9 +1833,7 @@ function saveDB(){
         if(_saveRetryCount<=3){
           // Retry after 2 seconds
           setTimeout(()=>{
-            const retryDB = JSON.parse(JSON.stringify(DB));
-            delete retryDB.darkMode;
-            dbRef.set(retryDB).catch(err=>console.error('Retry failed:',err));
+            dbRef.set(dbToSave).catch(err=>console.error('Retry failed:',err));
           }, 2000);
         } else {
           toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।');
@@ -3558,23 +3560,45 @@ function renderDepHistory(){
   if(!txs.length){ histEl.innerHTML='<p class="muted tc">কোনো লেনদেন নেই</p>'; return; }
   const html=txs.map(tx=>{
     const u=DB.users.find(x=>x.u===tx.uname);
-    const delBtn=isManagerOrCtrl()?`<button data-action="del-tx" data-id="${tx.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0;">🗑️</button>`:'';
-    return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}${delBtn}</div></div>`;
+    const editBtn=isManagerOrCtrl()?`<button data-action="edit-tx" data-id="${tx.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;">✏️</button>`:'';
+    return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}${editBtn}</div></div>`;
   }).join('');
   histEl.innerHTML = safeHTML(html)||'<p class="muted tc">কোনো লেনদেন নেই</p>';
   // Event delegation
   histEl.onclick = function(e){
-    const btn=e.target.closest('button[data-action="del-tx"]');
+    const btn=e.target.closest('button[data-action="edit-tx"]');
     if(!btn) return;
     const id=Number(btn.getAttribute('data-id'));
-    showModal('লেনদেন মুছুন','এই লেনদেন মুছে ফেলবেন? সদস্যের ব্যালেন্স রিভার্স হয়ে যাবে।',()=>{
-      const tx=DB.transactions.find(x=>x.id===id); if(!tx) return;
-      const u=DB.users.find(x=>x.u===tx.uname);
-      if(u) u.balance=(u.balance||0)-(tx.type==='deposit'?tx.amount:-tx.amount);
-      DB.transactions=DB.transactions.filter(x=>x.id!==id);
-      saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory(); toast('✅ লেনদেন মুছে ফেলা হয়েছে!');
-    });
+    editTransaction(id);
   };
+}
+function editTransaction(id){
+  if(!isOnline()){ noNetPopup(); return; }
+  const tx=DB.transactions.find(x=>x.id===id); if(!tx) return;
+  const u=DB.users.find(x=>x.u===tx.uname); if(!u) return;
+  const typeLabel=tx.type==='deposit'?'জমা':'উত্তোলন';
+  const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
+    <div style="background:var(--bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text-light)">
+      <b>${esc(u.name)}</b> — ${typeLabel} (${esc(tx.date)})
+    </div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
+    <input id="edit-tx-amt" type="number" class="form-input" value="${tx.amount}" style="margin-top:4px" min="1"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">নোট (ঐচ্ছিক)</label>
+    <input id="edit-tx-note" type="text" class="form-input" value="${esc(tx.note||'')}" style="margin-top:4px" placeholder="মাসিক জমা, ফেরত..."></div>
+  </div>`;
+  showModal('লেনদেন সম্পাদনা', html, ()=>{
+    const newAmt=parseFloat(document.getElementById('edit-tx-amt').value);
+    const newNote=sanitizeInput(document.getElementById('edit-tx-note').value).slice(0,100);
+    if(!validAmount(newAmt)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+    // পুরনো পরিমাণ রিভার্স করুন
+    u.balance=(u.balance||0)-(tx.type==='deposit'?tx.amount:-tx.amount);
+    // নতুন পরিমাণ প্রয়োগ করুন
+    u.balance=(u.balance||0)+(tx.type==='deposit'?newAmt:-newAmt);
+    tx.amount=newAmt;
+    tx.note=newNote;
+    saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
+    closeModal(); toast('✅ লেনদেন আপডেট হয়েছে!');
+  }, true);
 }
 
 // ═══════════════════════════════════════════════
@@ -4616,17 +4640,13 @@ function showAllMembersBill(){
   const ofBill=ofMls*ofRateMain;
 
   // ── মেস ফান্ড ──
-  let messBalance=0;
+  // সূত্র: (সকল সদস্যের মোট ব্যালেন্স) − (বাজার খরচ + অন্যান্য খরচ)
+  // অর্থাৎ: ম্যানেজারের কাছে যত টাকা জমা আছে, সেখান থেকে মোট খরচ বাদ দিলে বাকিটাই মেস ফান্ড
+  let totalDeposited = 0;
   DB.users.filter(u=>u.type!=='cook').forEach(u=>{
-    const isOff=isOfficeMealUser(u);
-    const appliedRate=isOff?(ofRateMain||pm):pm;
-    const myMeals=messMonthMeals(u.u,mmKey);
-    const mealBill=myMeals*appliedRate;
-    const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
-    const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
-    const net=(u.balance||0)-payable;
-    if(net>0) messBalance+=net;
+    totalDeposited += (u.balance||0);
   });
+  const messBalance = totalDeposited - bazar - others;
 
   let html=`
   <div class="summary-hero-card" style="border-radius:14px;padding:16px;margin-bottom:14px;">
@@ -4680,7 +4700,7 @@ function showAllMembersBill(){
     <!-- মেস ফান্ড -->
     <div class="amb-fund">
       <div style="font-size:12px;opacity:.85">🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)</div>
-      <div style="font-size:20px;font-weight:800;color:#4ade80;letter-spacing:-0.3px">+৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:20px;font-weight:800;color:${messBalance>=0?'#4ade80':'#f87171'};letter-spacing:-0.3px">${messBalance>=0?'+':'\u2212'}৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>
   </div>`;
 
