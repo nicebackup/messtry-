@@ -230,10 +230,14 @@ html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
 /* ── PRINT OVERLAY ── */
 #print-overlay { font-family:'Hind Siliguri','Poppins',sans-serif; }
 @media print {
-  body > *:not(#print-overlay) { display:none !important; }
-  #print-overlay { display:block !important; position:static !important; overflow:visible !important; background:#fff !important; }
-  #print-overlay-toolbar { display:none !important; }
-  #print-overlay-content { padding:0 !important; }
+  /* সব কিছু hide করো */
+  body > *:not(#sc-report) { display:none !important; }
+  /* report screen দেখাও */
+  #sc-report { display:block !important; position:static !important; min-height:auto !important; }
+  #sc-report .app-header { display:none !important; }
+  #sc-report .btn { display:none !important; }
+  #sc-report .content { padding:10px !important; max-width:100% !important; }
+  #print-overlay { display:none !important; }
 }
 
 /* ── ALL MEMBERS BILL SUMMARY CARD ── */
@@ -1292,7 +1296,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       </select>
     </div>
     <div class="card"><div class="sec-title">📊 রিপোর্ট</div><div id="rpt-rows"><p class="muted tc">মাস নির্বাচন করুন</p></div></div>
-    <button class="btn btn-primary" onclick="makePDF('report')">📄 মাসিক রিপোর্ট PDF</button>
+    <button class="btn btn-primary" onclick="makePDF('report')">🖨️ Print / PDF সেভ করুন</button>
   </div>
 </div>
 
@@ -4441,189 +4445,61 @@ function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
 }
 
 function makePDF(type){
-  // Build an off-screen render div with full Bengali support
-  const today = tod(); // আজকের তারিখ
+  // সরাসরি window.print() — সবচেয়ে নির্ভরযোগ্য পদ্ধতি
+  if(type==='report'){
+    // রিপোর্ট স্ক্রিনে আছি, loadReport() আগে call করে তারপর print
+    loadReport();
+    setTimeout(()=>{ window.print(); }, 300);
+    return;
+  }
+  if(type==='bill'){
+    // Bill screen থেকে call হয়
+    setTimeout(()=>{ window.print(); }, 100);
+    return;
+  }
+  // daily — পুরনো logic
+  const today = tod();
   const mmKey=messMonthKey();
   const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost}=calcMealRate(mmKey);
-  const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
-
-  let html=`<div style="font-family:'Hind Siliguri',sans-serif;background:#fff;padding:16px;width:780px;color:#1a2e22;">
-    <div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:20px;font-weight:700;font-family:'Poppins',sans-serif;">Midland Quarter</div>
-        <div style="font-size:11px;opacity:.8;margin-top:2px;">${DB.siteNote||'মেস ম্যানেজমেন্ট'} | Generated: ${new Date().toLocaleDateString('en-GB')}</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:13px;font-weight:600;">${type==='daily'?'দৈনিক রিপোর্ট':'মাসিক রিপোর্ট'}</div>
-        <div style="font-size:11px;opacity:.8;">${type==='daily'?'হিসাবকাল: '+today:('হিসাবকাল: '+messMonthLabel())}</div>
-      </div>
-    </div>`;
-
-  if(type==='report'||type==='bill'){
-    // Summary cards
-    html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
-      <div style="background:#e8f5e9;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #1a6b3c;">
-        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">মোট বাজার</div>
-        <div style="font-size:18px;font-weight:700;color:#1a6b3c;">৳ ${bazar.toLocaleString()}</div>
-      </div>
-      <div style="background:#e3f2fd;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #1565c0;">
-        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">অন্যান্য খরচ</div>
-        <div style="font-size:18px;font-weight:700;color:#1565c0;">৳ ${others.toLocaleString()}</div>
-      </div>
-      <div style="background:#fff3e0;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #e65100;">
-        <div style="font-size:10px;color:#5a7a65;margin-bottom:4px;">বাবুর্চি বিল</div>
-        <div style="font-size:18px;font-weight:700;color:#e65100;">৳ ${(cookFoodCost||0).toFixed(2)}</div>
-      </div>
-      <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:10px;color:rgba(255,255,255,.8);margin-bottom:4px;">প্রতি মিল রেট</div>
-        <div style="font-size:20px;font-weight:700;color:#fff;">৳ ${pm.toFixed(2)}</div>
-      </div>
-    </div>`;
-    // Member table
-    html+=`<table style="width:100%;border-collapse:collapse;font-size:11px;">
-      <thead><tr style="background:#1a6b3c;color:#fff;">
-        <th style="padding:8px 8px;text-align:left;min-width:90px;">সদস্যের নাম</th>
-        <th style="padding:8px 5px;text-align:center;">ধরন</th>
-        <th style="padding:8px 5px;text-align:right;">পূর্বের<br>ব্যালেন্স</th>
-        <th style="padding:8px 5px;text-align:right;">জমা</th>
-        <th style="padding:8px 5px;text-align:right;">মোট<br>ব্যালেন্স</th>
-        <th style="padding:8px 5px;text-align:right;">মিল</th>
-        <th style="padding:8px 5px;text-align:right;">মিল বিল</th>
-        <th style="padding:8px 5px;text-align:right;">অন্যান্য</th>
-        <th style="padding:8px 5px;text-align:right;">বাবুর্চি<br>বিল</th>
-        <th style="padding:8px 5px;text-align:right;color:#fcd34d;">মোট বিল</th>
-        <th style="padding:8px 8px;text-align:right;">নেট<br>ব্যালেন্স</th>
-      </tr></thead><tbody>`;
-    const pdfOfRate=getOfficeMealRate(mmKey);
-    // job ID অনুযায়ী sort (numeric হলে number হিসেবে, নাহলে alphabetically)
-    const sortedUsers=[...nonCookUsers].sort((a,b)=>{
-      const ai=parseInt(a.job)||0, bi=parseInt(b.job)||0;
-      if(ai&&bi) return ai-bi;
-      return (a.job||'').localeCompare(b.job||'');
-    });
-    sortedUsers.forEach((u,ri)=>{
-      const myMeals=messMonthMeals(u.u,mmKey);
-      const isOffU=isOfficeMealUser(u);
-      const appRate=isOffU?(pdfOfRate||pm):pm;
-      const mealBill=myMeals*appRate;
-      const {othersShare,cookBillShare,cookFoodShare}=isOffU?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
-      const totalBill=mealBill+othersShare+cookBillShare+cookFoodShare;
-
-      // ব্যালেন্স হিসাব
-      const prevBal=u.prevBalance||0;
-      const totalBal=u.balance||0;
-      // জমা = মোট ব্যালেন্স - পূর্বের ব্যালেন্স (এই মাসে net deposit)
-      const thisMonthDeposit=totalBal-prevBal;
-      const netBal=totalBal-totalBill;
-
-      const bg=ri%2===0?'#f4f7f5':'#fff';
-      const netColor=netBal>=0?'#2e7d32':'#e53935';
-      const typeLabel=isOffU?'অফিস':u.type==='inside'?'ইন':'আউট';
-      const fmt=v=>'৳'+Math.abs(v).toFixed(2);
-      html+=`<tr style="background:${bg};">
-        <td style="padding:6px 8px;font-weight:600;font-size:11px;">${u.name}<br><span style="font-size:9px;color:#5a7a65;font-weight:400;">ID- ${u.job||'—'}</span></td>
-        <td style="padding:6px 5px;text-align:center;font-size:10px;">${typeLabel}</td>
-        <td style="padding:6px 5px;text-align:right;color:${prevBal>=0?'#2e7d32':'#e53935'};">${prevBal>=0?'':'-'}${fmt(prevBal)}</td>
-        <td style="padding:6px 5px;text-align:right;color:#1565c0;">${fmt(thisMonthDeposit)}</td>
-        <td style="padding:6px 5px;text-align:right;font-weight:600;color:${totalBal>=0?'#1a6b3c':'#e53935'};">${totalBal>=0?'':'-'}${fmt(totalBal)}</td>
-        <td style="padding:6px 5px;text-align:right;color:#1a6b3c;font-weight:700;">${myMeals.toFixed(2)}</td>
-        <td style="padding:6px 5px;text-align:right;">${fmt(mealBill)}</td>
-        <td style="padding:6px 5px;text-align:right;color:#1565c0;">${isOffU?'—':fmt(othersShare)}</td>
-        <td style="padding:6px 5px;text-align:right;color:#e65100;">${isOffU?'—':fmt(cookFoodShare)}</td>
-        <td style="padding:6px 5px;text-align:right;font-weight:700;color:#e53935;">${fmt(totalBill)}</td>
-        <td style="padding:6px 8px;text-align:right;font-weight:700;color:${netColor};">${netBal>=0?'+':'-'}${fmt(netBal)}</td>
-      </tr>`;
-    });
-    // বাবুর্চির সারি
-    const pdfCookUsers=DB.users.filter(u=>u.type==='cook');
-    if(pdfCookUsers.length){
-      html+=`<tr style="background:#f0fdf4;">
-        <td colspan="11" style="padding:6px 8px;font-size:11px;font-weight:700;color:#1a6b3c;border-top:2px solid #1a6b3c;">👨‍🍳 বাবুর্চি (মিল রেটে অন্তর্ভুক্ত, বিল আলাদা)</td>
-      </tr>`;
-      pdfCookUsers.forEach((u,ri)=>{
-        const myMeals=messMonthMeals(u.u,mmKey);
-        const bg=ri%2===0?'#f4f7f5':'#fff';
-        html+=`<tr style="background:${bg};opacity:.85;">
-          <td style="padding:6px 8px;font-weight:600;">${u.name}<br><span style="font-size:9px;color:#5a7a65;font-weight:400;">ID: ${u.u} · বাবুর্চি</span></td>
-          <td style="padding:6px 5px;text-align:center;font-size:10px;">বাবুর্চি</td>
-          <td colspan="3" style="padding:6px 5px;text-align:center;font-size:10px;color:#5a7a65;">—</td>
-          <td style="padding:6px 5px;text-align:right;color:#f59e0b;font-weight:700;">${myMeals.toFixed(2)}</td>
-          <td colspan="5" style="padding:6px 5px;text-align:center;font-size:10px;color:#5a7a65;">মিল রেটে অন্তর্ভুক্ত — পৃথক বিল প্রযোজ্য</td>
-        </tr>`;
-      });
-    }
-    html+='</tbody></table>';
-
-  } else {
-    // Daily report
-    let totB=0,totL=0,totD=0;
-    DB.users.forEach(u=>{
-      const mm2=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      totB+=mTV('b',mm2.b,today); totL+=mTV('l',mm2.l,today); totD+=mTV('d',mm2.d,today);
-    });
-    html+=`<div style="background:#e8f5e9;border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-around;text-align:center;">
-      <div><div style="font-size:10px;color:#5a7a65;">সকাল</div><div style="font-size:20px;font-weight:700;color:#1a6b3c;">${totB.toFixed(2)}</div></div>
-      <div><div style="font-size:10px;color:#5a7a65;">দুপুর</div><div style="font-size:20px;font-weight:700;color:#1a6b3c;">${totL.toFixed(2)}</div></div>
-      <div><div style="font-size:10px;color:#5a7a65;">রাত</div><div style="font-size:20px;font-weight:700;color:#1a6b3c;">${totD.toFixed(2)}</div></div>
-      <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:6px;padding:8px 16px;"><div style="font-size:10px;color:rgba(255,255,255,.8);">মোট মিল</div><div style="font-size:20px;font-weight:700;color:#fff;">${(totB+totL+totD).toFixed(2)}</div></div>
-    </div>`;
-    html+=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="background:#1a6b3c;color:#fff;">
-        <th style="padding:8px 10px;text-align:left;">নাম</th>
-        <th style="padding:8px 6px;text-align:center;">রুম</th>
-        <th style="padding:8px 6px;text-align:center;">সকাল</th>
-        <th style="padding:8px 6px;text-align:center;">দুপুর</th>
-        <th style="padding:8px 6px;text-align:center;">রাত</th>
-        <th style="padding:8px 10px;text-align:right;">মোট</th>
-      </tr></thead><tbody>`;
-    DB.users.forEach((u,ri)=>{
-      const meal=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      const bm=meal.b,lm=meal.l,dm=meal.d;
-      const bL=bm.t==='off'?'—':(bm.q>1?bm.t+bm.q:bm.t);
-      const lL=lm.t==='off'?'—':(lm.q>1?lm.t+lm.q:lm.t);
-      const dL=dm.t==='off'?'—':(dm.q>1?dm.t+dm.q:dm.t);
-      const bv=mTV('b',bm,today), lv=mTV('l',lm,today), dv=mTV('d',dm,today);
-      const bg=ri%2===0?'#f4f7f5':'#fff';
-      const bColor=bm.t==='off'?'#aaa':bm.t==='P'?'#2e7d32':'#1565c0';
-      const lColor=lm.t==='off'?'#aaa':lm.t==='P'?'#2e7d32':'#1565c0';
-      const dColor=dm.t==='off'?'#aaa':dm.t==='P'?'#2e7d32':'#1565c0';
-      html+=`<tr style="background:${bg};">
-        <td style="padding:7px 10px;font-weight:600;">${u.name}<br><span style="font-size:10px;color:#5a7a65;font-weight:400;">${u.job||'-'}</span></td>
-        <td style="padding:7px 6px;text-align:center;font-size:11px;">${u.room||'-'}</td>
-        <td style="padding:7px 6px;text-align:center;font-weight:700;color:${bColor};">${bL}</td>
-        <td style="padding:7px 6px;text-align:center;font-weight:700;color:${lColor};">${lL}</td>
-        <td style="padding:7px 6px;text-align:center;font-weight:700;color:${dColor};">${dL}</td>
-        <td style="padding:7px 10px;text-align:right;font-weight:700;color:#1a6b3c;">${(bv+lv+dv).toFixed(2)}</td>
-      </tr>`;
-    });
-    html+='</tbody></table>';
-  }
-
-  html+=`<div style="margin-top:14px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;">
-    Midland Quarter Mess Management | ${new Date().toLocaleDateString('en-GB')} | Powered by Firebase
-  </div></div>`;
-
-  // ── ইন-অ্যাপ Print Overlay — কোনো popup block হয় না ──
+  let html=`<div id="print-daily-content" style="font-family:'Hind Siliguri',sans-serif;background:#fff;padding:16px;color:#1a2e22;">
+    <h2 style="color:#1a6b3c;margin-bottom:12px;">Midland Quarter — দৈনিক রিপোর্ট (${today})</h2>`;
+  let totB=0,totL=0,totD=0;
+  DB.users.forEach(u=>{
+    const mm2=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+    totB+=mTV('b',mm2.b,today); totL+=mTV('l',mm2.l,today); totD+=mTV('d',mm2.d,today);
+  });
+  html+=`<p style="margin-bottom:10px">সকাল: ${totB.toFixed(2)} | দুপুর: ${totL.toFixed(2)} | রাত: ${totD.toFixed(2)} | মোট: ${(totB+totL+totD).toFixed(2)} মিল</p>`;
+  html+=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:#1a6b3c;color:#fff;">
+      <th style="padding:7px;text-align:left;">নাম</th>
+      <th style="padding:7px;text-align:center;">সকাল</th>
+      <th style="padding:7px;text-align:center;">দুপুর</th>
+      <th style="padding:7px;text-align:center;">রাত</th>
+      <th style="padding:7px;text-align:right;">মোট</th>
+    </tr></thead><tbody>`;
+  DB.users.forEach((u,ri)=>{
+    const meal=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+    const bv=mTV('b',meal.b,today), lv=mTV('l',meal.l,today), dv=mTV('d',meal.d,today);
+    const bL=meal.b.t==='off'?'—':(meal.b.q>1?meal.b.t+meal.b.q:meal.b.t);
+    const lL=meal.l.t==='off'?'—':(meal.l.q>1?meal.l.t+meal.l.q:meal.l.t);
+    const dL=meal.d.t==='off'?'—':(meal.d.q>1?meal.d.t+meal.d.q:meal.d.t);
+    html+=`<tr style="background:${ri%2===0?'#f4f7f5':'#fff'}">
+      <td style="padding:6px 7px;font-weight:600">${esc(u.name)}</td>
+      <td style="padding:6px 7px;text-align:center">${bL}</td>
+      <td style="padding:6px 7px;text-align:center">${lL}</td>
+      <td style="padding:6px 7px;text-align:center">${dL}</td>
+      <td style="padding:6px 7px;text-align:right;font-weight:700;color:#1a6b3c">${(bv+lv+dv).toFixed(2)}</td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
   const overlay = document.getElementById('print-overlay');
   const content = document.getElementById('print-overlay-content');
-  if(!overlay || !content){ toast('❌ Overlay element পাওয়া যায়নি!'); return; }
-  // Update toolbar title
-  const titleEl = document.getElementById('print-overlay-title');
-  if(titleEl) titleEl.textContent = type==='daily' ? '📅 দৈনিক রিপোর্ট' : '📊 মাসিক রিপোর্ট';
-  // Inline style for embedded content
-  const inlineStyle = `<style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body,div{font-family:'Hind Siliguri','Poppins',sans-serif;}
-    table{border-collapse:collapse;width:100%;}
-    th,td{padding:6px 8px;border:1px solid #d0e4d8;font-size:11px;}
-    th{background:#1a6b3c;color:#fff;font-weight:600;}
-    tr:nth-child(even) td{background:#f4f7f5;}
-  </style>`;
-  content.innerHTML = inlineStyle + html;
-  overlay.style.display = 'block';
-  overlay.scrollTop = 0;
-  document.body.style.overflow = 'hidden';
-  toast('✅ রিপোর্ট লোড হয়েছে!');
+  if(overlay && content){
+    content.innerHTML = html;
+    overlay.style.display = 'block';
+    overlay.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closePrintOverlay(){
