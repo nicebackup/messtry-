@@ -4442,6 +4442,7 @@ function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
 
 function makePDF(type){
   // Build an off-screen render div with full Bengali support
+  const today = tod(); // আজকের তারিখ
   const mmKey=messMonthKey();
   const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost}=calcMealRate(mmKey);
   const nonCookUsers=DB.users.filter(u=>u.type!=='cook');
