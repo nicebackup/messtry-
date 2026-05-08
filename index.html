@@ -1992,8 +1992,19 @@ auth.onAuthStateChanged(fbUser=>{
       // Sync CU into DB.users array so role checks & meal data work correctly
       if(DB.users){
         const idx = DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
-        if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; }
-        else {
+        if(idx>=0){
+          // ✅ BUG FIX: balance ও prevBalance সবসময় messData/users থেকে রাখতে হবে।
+          // users/{uid} পাথে balance কখনো আপডেট হয় না (রেজিস্ট্রেশনের সময় 0 সেট হয়),
+          // তাই CU.balance দিয়ে DB.users[idx].balance overwrite হলে ডিপোজিট হারিয়ে যায়।
+          const savedBalance = DB.users[idx].balance;
+          const savedPrevBalance = DB.users[idx].prevBalance;
+          DB.users[idx] = {...DB.users[idx], ...CU};
+          if(savedBalance !== undefined) DB.users[idx].balance = savedBalance;
+          if(savedPrevBalance !== undefined) DB.users[idx].prevBalance = savedPrevBalance;
+          // CU-তেও সঠিক balance রাখো যাতে UI সঠিক দেখায়
+          CU.balance = savedBalance !== undefined ? savedBalance : 0;
+          if(savedPrevBalance !== undefined) CU.prevBalance = savedPrevBalance;
+        } else {
           // ✅ নতুন সদস্য — DB.users এ যোগ করে সাথে সাথে Firebase-এ save
           // এটা না করলে অন্য সদস্যরা তাকে দেখতে পায় না যতক্ষণ সে মিল save না করে
           DB.users.push({...CU});
