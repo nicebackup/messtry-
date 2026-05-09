@@ -4547,7 +4547,7 @@ function makePDF(type){
       ? (document.getElementById('rpt-month')?.value || messMonthKey())
       : messMonthKey();
     const calc = calcMealRate(mmKey);
-    const {bazar,others,othersAll,cookBillsAll,total,cookMeals,pm,cookFoodCost} = calc;
+    const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost} = calc;
     const nonCookUsers = DB.users.filter(u=>u.type!=='cook');
     const pdfOfRate = getOfficeMealRate(mmKey);
     // ── sort by job ID (fix: convert to string safely) ──
@@ -4570,7 +4570,7 @@ function makePDF(type){
     let html = `<div style="font-family:Arial,sans-serif;background:#fff;color:#1a2e22;padding:16px;">`;
 
     // ── HEADER ──
-    html += `<div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+    html += `<div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 6px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-size:18px;font-weight:700;">Midland Quarter</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px;">Mess Management | ${new Date().toLocaleDateString('en-GB')}</div>
@@ -4583,7 +4583,7 @@ function makePDF(type){
 
     if(type==='report'||type==='bill'){
       // ── SUMMARY CARDS ──
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
         <div style="background:#e8f5e9;border-radius:8px;padding:10px 12px;border-left:3px solid #1a6b3c;">
           <div style="font-size:10px;color:#5a7a65;">Total Bazar</div>
           <div style="font-size:16px;font-weight:700;color:#1a6b3c;">Tk ${bazar.toLocaleString()}</div>
@@ -4600,6 +4600,10 @@ function makePDF(type){
           <div style="font-size:10px;color:rgba(255,255,255,.8);">Meal Rate</div>
           <div style="font-size:16px;font-weight:700;color:#fff;">Tk ${pm.toFixed(2)}</div>
         </div>
+        <div style="background:#f3e5f5;border-radius:8px;padding:10px 12px;border-left:3px solid #7b1fa2;">
+          <div style="font-size:10px;color:#5a7a65;">Total Meal</div>
+          <div style="font-size:16px;font-weight:700;color:#7b1fa2;">${totalMeals.toFixed(2)}</div>
+        </div>
       </div>`;
 
       // ── TOTAL ──
@@ -4614,7 +4618,9 @@ function makePDF(type){
         <thead><tr style="background:#1a6b3c;color:#fff;">
           <th style="padding:7px 6px;text-align:left;">Name / ID</th>
           <th style="padding:7px 4px;text-align:center;">Type</th>
-          <th style="padding:7px 4px;text-align:right;">Balance</th>
+          <th style="padding:7px 4px;text-align:right;">Prev Balance</th>
+          <th style="padding:7px 4px;text-align:right;">Deposit</th>
+          <th style="padding:7px 4px;text-align:right;">Total Balance</th>
           <th style="padding:7px 4px;text-align:right;">Meals</th>
           <th style="padding:7px 4px;text-align:right;">Meal Bill</th>
           <th style="padding:7px 4px;text-align:right;">Others</th>
@@ -4632,14 +4638,23 @@ function makePDF(type){
                           : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
         const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
         const totalBal = u.balance||0;
+        // Calculate deposit this mess month
+        const monthDeposits = (DB.transactions||[])
+          .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
+          .reduce((s, tx) => s + (tx.amount||0), 0);
+        const prevBalance = totalBal - monthDeposits;
+        const depositBalance = monthDeposits;
         const netBal = totalBal - totalBill;
         const bg = ri%2===0 ? '#f4f7f5' : '#fff';
         const netColor = netBal>=0 ? '#2e7d32' : '#e53935';
         const typeLabel = isOffU?'Office':u.type==='inside'?'In':'Out';
+        const prevColor = prevBalance>=0?'#1a6b3c':'#e53935';
         html += `<tr style="background:${bg}">
           <td style="padding:6px 6px;font-weight:600;">${esc(u.name)}<br><span style="font-size:9px;color:#888;font-weight:400">ID: ${esc(String(u.job||u.u))}</span></td>
           <td style="padding:6px 4px;text-align:center;font-size:10px">${typeLabel}</td>
-          <td style="padding:6px 4px;text-align:right;color:${totalBal>=0?'#1a6b3c':'#e53935'}">${totalBal>=0?'':'-'}${Math.abs(totalBal).toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:${prevColor}">${prevBalance>=0?'':'-'}${Math.abs(prevBalance).toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#1565c0;font-weight:600">${depositBalance>0?'+':''}${depositBalance.toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:${totalBal>=0?'#1a6b3c':'#e53935'};font-weight:700">${totalBal>=0?'':'-'}${Math.abs(totalBal).toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:#1a6b3c;font-weight:700">${myMeals.toFixed(2)}</td>
           <td style="padding:6px 4px;text-align:right">${mealBill.toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'-':sh.othersShare.toFixed(0)}</td>
@@ -4655,7 +4670,7 @@ function makePDF(type){
         html += `<tr style="background:#f0fdf4;opacity:.85">
           <td style="padding:6px 6px;font-weight:600">Cook: ${esc(u.name)}</td>
           <td style="padding:6px 4px;text-align:center;font-size:10px">Cook</td>
-          <td colspan="2" style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
+          <td colspan="4" style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
           <td style="padding:6px 4px;text-align:right;color:#f59e0b;font-weight:700">${myMeals.toFixed(2)} meals</td>
           <td colspan="4" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">Included in meal rate</td>
         </tr>`;
