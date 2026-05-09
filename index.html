@@ -3884,7 +3884,20 @@ function toggleBlockMember(){
   const u=DB.users.find(x=>x.u===currentDetailUser); if(!u) return;
   const action=u.blocked?'আনব্লক':'ব্লক';
   showModal(`${action} করুন`,`${u.name} কে ${action} করবেন?`,()=>{
-    u.blocked=!u.blocked; saveDB(); openMemberDetail(currentDetailUser); toast(`✅ ${u.name} কে ${action} করা হয়েছে!`);
+    u.blocked=!u.blocked;
+    saveDB();
+    // ✅ users/{uid}/blocked sync — না হলে login-এ block কাজ করে না
+    const doBlockSync = uid => {
+      firebase.database().ref('users/'+uid+'/blocked').set(u.blocked||null).catch(()=>{});
+    };
+    if(u.uid){ doBlockSync(u.uid); }
+    else {
+      firebase.database().ref('users').once('value', snap=>{
+        snap.forEach(child=>{ const d=child.val(); if(d&&d.u===u.u) doBlockSync(child.key); });
+      }).catch(()=>{});
+    }
+    openMemberDetail(currentDetailUser);
+    toast(`✅ ${u.name} কে ${action} করা হয়েছে!`);
   });
 }
 
@@ -3976,6 +3989,18 @@ function saveProfile(){
   cu.address=newAddr||cu.address||'';
 
   saveDB();
+
+  // ✅ users/{uid} path-ও update করো — না হলে refresh-এ পুরনো data ফিরে আসে
+  if(CU.uid){
+    firebase.database().ref('users/'+CU.uid).update({
+      name:    cu.name,
+      mobile:  cu.mob||'',
+      room:    cu.room||'',
+      jobId:   cu.job||'',
+      address: cu.address||'',
+    }).catch(e=>console.warn('Profile uid sync error:',e));
+  }
+
   pfEditMode(false);
   loadProfile();
   toast('✅ প্রোফাইল আপডেট হয়েছে!');
@@ -4106,6 +4131,25 @@ function renderManagerInfo(){
     mgrs.forEach(u=>{ const usr=DB.users.find(x=>x.u===u); if(usr) sel.innerHTML+=`<option value="${esc(u)}">${esc(usr.name)} (ID: ${esc(u)})</option>`; });
   }
 }
+// ✅ SHARED HELPER — uid থাকলে সরাসরি, না থাকলে Firebase-এ খুঁজে role update করো
+function syncRole(uname, role){
+  const u = DB.users.find(x=>x.u===uname);
+  const doUpdate = uid => {
+    firebase.database().ref('roles/'+uid).set({role}).catch(e=>console.warn('syncRole roles:',e));
+    firebase.database().ref('users/'+uid+'/role').set(role).catch(e=>console.warn('syncRole users:',e));
+  };
+  if(u?.uid){
+    doUpdate(u.uid);
+  } else {
+    firebase.database().ref('users').once('value', snap=>{
+      snap.forEach(child=>{
+        const d=child.val();
+        if(d&&(d.u===uname||d.mobile===uname||child.key===uname)) doUpdate(child.key);
+      });
+    }).catch(()=>{});
+  }
+}
+
 function setManager(){
   if(!isOnline()){ noNetPopup(); return; }
   const month=document.getElementById('mgr-month').value, uname=document.getElementById('mgr-sel').value;
@@ -4113,11 +4157,9 @@ function setManager(){
   if(!DB.managers[month]) DB.managers[month]=[];
   if(DB.managers[month].length>=10){ toast('❌ সর্বোচ্চ ১০ জন ম্যানেজার রাখা যাবে!'); return; }
   if(!DB.managers[month].includes(uname)) DB.managers[month].push(uname);
-  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='member'){ u.role='manager';
-    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'manager'}).catch(e=>console.warn('Role update:',e));
-  }
+  const u=DB.users.find(x=>x.u===uname);
+  if(u && u.role==='member'){ u.role='manager'; syncRole(uname,'manager'); }
   saveDB(); renderManagerInfo();
-  // refresh remove list
   const sel=document.getElementById('mgr-remove');
   sel.innerHTML='<option value="">-- ম্যানেজার নির্বাচন --</option>';
   (DB.managers[month]||[]).forEach(u=>{ const usr=DB.users.find(x=>x.u===u); if(usr) sel.innerHTML+=`<option value="${esc(u)}">${esc(usr.name)}</option>`; });
@@ -4128,9 +4170,8 @@ function removeManager(){
   const month=document.getElementById('mgr-month').value, uname=document.getElementById('mgr-remove').value;
   if(!month||!uname){ toast('❌ ম্যানেজার নির্বাচন করুন!'); return; }
   if(DB.managers[month]) DB.managers[month]=DB.managers[month].filter(u=>u!==uname);
-  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='manager'){ u.role='member';
-    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'member'}).catch(e=>console.warn('Role update:',e));
-  }
+  const u=DB.users.find(x=>x.u===uname);
+  if(u && u.role==='manager'){ u.role='member'; syncRole(uname,'member'); }
   saveDB(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
 function saveCfg(){
@@ -4195,7 +4236,21 @@ function saveEditMem(){
   u.job=newJob;
   if(['inside','outside','cook'].includes(newType)) u.type=newType;
   if(newJoined) u.joined=newJoined;
-  saveDB(); toast('✅ সদস্যের তথ্য সংরক্ষিত হয়েছে!'); closeAdmPopup(); initAdmin();
+
+  saveDB();
+
+  // ✅ users/{uid} path-ও update করো — না হলে refresh-এ পুরনো data ফিরে আসে
+  if(u.uid){
+    firebase.database().ref('users/'+u.uid).update({
+      name:   u.name||'',
+      mobile: u.mob||'',
+      room:   u.room||'',
+      jobId:  u.job||'',
+      type:   u.type||'inside',
+    }).catch(e=>console.warn('EditMem uid sync error:',e));
+  }
+
+  toast('✅ সদস্যের তথ্য সংরক্ষিত হয়েছে!'); closeAdmPopup(); initAdmin();
 }
 // Delete member
 function deleteMember(){
@@ -4241,9 +4296,8 @@ function addController(){
   const uname=document.getElementById('ctrl-add-sel').value; if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
   if(DB.controllers.length>=5){ toast('❌ সর্বোচ্চ ৫ জন Controller রাখা যাবে!'); return; }
   if(!DB.controllers.includes(uname)) DB.controllers.push(uname);
-  const u=DB.users.find(x=>x.u===uname); if(u){ u.role='controller';
-    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'controller'}).catch(e=>console.warn('Role update:',e));
-  }
+  const u=DB.users.find(x=>x.u===uname);
+  if(u){ u.role='controller'; syncRole(uname,'controller'); }
   saveDB(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
 }
 function removeController(){
@@ -4251,9 +4305,9 @@ function removeController(){
   const uname=document.getElementById('ctrl-rem-sel').value; if(!uname){ toast('❌ Controller নির্বাচন করুন!'); return; }
   if(uname===CU.u){ toast('❌ নিজেকে Controller থেকে বাদ দেওয়া যাবে না!'); return; }
   DB.controllers=DB.controllers.filter(c=>c!==uname);
-  const u=DB.users.find(x=>x.u===uname); if(u&&u.role==='controller'){ u.role='member';
-    if(u.uid) firebase.database().ref('roles/'+u.uid).set({role:'member'}).catch(e=>console.warn('Role update:',e));
-  }
+  const u=DB.users.find(x=>x.u===uname);
+  if(u&&u.role==='controller'){ u.role='member'; }
+  syncRole(uname,'member');
   saveDB(); renderControllerList(); toast('✅ Controller বাদ দেওয়া হয়েছে!');
 }
 
