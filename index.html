@@ -4448,24 +4448,38 @@ function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
 }
 
 function makePDF(type){
-  // সবচেয়ে সহজ ও নির্ভরযোগ্য: browser-এর native print
-  window.print();
-}
-    if(false){
-      // ── হেডার ──
-      html += `<div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-size:18px;font-weight:700;">Midland Quarter</div>
-          <div style="font-size:10px;opacity:.8;margin-top:2px;">${DB.siteNote||'মেস ম্যানেজমেন্ট'} | ${new Date().toLocaleDateString('en-GB')}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;font-weight:600;">মাসিক রিপোর্ট</div>
-          <div style="font-size:10px;opacity:.8">${messMonthLabel()}</div>
-        </div>
-      </div>`;
+  try{
+    const today = tod();
+    const mmKey = (type==='report'||type==='bill')
+      ? (document.getElementById('rpt-month')?.value || messMonthKey())
+      : messMonthKey();
+    const calc = calcMealRate(mmKey);
+    const {bazar,others,othersAll,cookBillsAll,total,cookMeals,pm,cookFoodCost} = calc;
+    const nonCookUsers = DB.users.filter(u=>u.type!=='cook');
+    const pdfOfRate = getOfficeMealRate(mmKey);
+    const sortedUsers = [...nonCookUsers].sort((a,b)=>{
+      const ai=parseInt(a.job)||0, bi=parseInt(b.job)||0;
+      if(ai&&bi) return ai-bi;
+      return (a.job||'').localeCompare(b.job||'');
+    });
 
+    let html = `<div style="font-family:'Hind Siliguri',sans-serif;background:#fff;color:#1a2e22;padding:16px;">`;
+
+    // ── হেডার ──
+    html += `<div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:18px;font-weight:700;">Midland Quarter</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px;">${esc(DB.siteNote||'মেস ম্যানেজমেন্ট')} | ${new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:600;">${type==='daily'?'দৈনিক রিপোর্ট':'মাসিক রিপোর্ট'}</div>
+        <div style="font-size:10px;opacity:.8">${type==='daily'?today:messMonthLabel()}</div>
+      </div>
+    </div>`;
+
+    if(type==='report'||type==='bill'){
       // ── সারসংক্ষেপ কার্ড ──
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
         <div style="background:#e8f5e9;border-radius:8px;padding:10px 12px;border-left:3px solid #1a6b3c;">
           <div style="font-size:10px;color:#5a7a65;">মোট বাজার</div>
           <div style="font-size:16px;font-weight:700;color:#1a6b3c;">৳${bazar.toLocaleString()}</div>
@@ -4475,7 +4489,7 @@ function makePDF(type){
           <div style="font-size:16px;font-weight:700;color:#1565c0;">৳${others.toLocaleString()}</div>
         </div>
         <div style="background:#fff3e0;border-radius:8px;padding:10px 12px;border-left:3px solid #e65100;">
-          <div style="font-size:10px;color:#5a7a65;">বাবুর্চি খাদ্য বিল</div>
+          <div style="font-size:10px;color:#5a7a65;">বাবুর্চি খরচ</div>
           <div style="font-size:16px;font-weight:700;color:#e65100;">৳${(cookFoodCost||0).toFixed(0)}</div>
         </div>
         <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:8px;padding:10px 12px;">
@@ -4490,42 +4504,42 @@ function makePDF(type){
         <span style="font-size:18px;font-weight:700;color:#fcd34d;">৳${total.toLocaleString()}</span>
       </div>`;
 
-      // ── সদস্যদের বিল টেবিল ──
+      // ── বিল টেবিল ──
       html += `<div style="font-size:13px;font-weight:700;color:#1a6b3c;margin-bottom:8px;">👥 সদস্যদের বিল বিবরণী</div>`;
       html += `<table style="width:100%;border-collapse:collapse;font-size:11px;">
-        <thead>
-          <tr style="background:#1a6b3c;color:#fff;">
-            <th style="padding:7px 6px;text-align:left;">নাম / ID</th>
-            <th style="padding:7px 4px;text-align:center;">ধরন</th>
-            <th style="padding:7px 4px;text-align:right;">জমা (৳)</th>
-            <th style="padding:7px 4px;text-align:right;">মিল</th>
-            <th style="padding:7px 4px;text-align:right;">মিল বিল</th>
-            <th style="padding:7px 4px;text-align:right;">অন্যান্য</th>
-            <th style="padding:7px 4px;text-align:right;">মোট বিল</th>
-            <th style="padding:7px 6px;text-align:right;">নেট ব্যালেন্স</th>
-          </tr>
-        </thead>
-        <tbody>`;
+        <thead><tr style="background:#1a6b3c;color:#fff;">
+          <th style="padding:7px 6px;text-align:left;">নাম / ID</th>
+          <th style="padding:7px 4px;text-align:center;">ধরন</th>
+          <th style="padding:7px 4px;text-align:right;">জমা ৳</th>
+          <th style="padding:7px 4px;text-align:right;">মিল</th>
+          <th style="padding:7px 4px;text-align:right;">মিল বিল ৳</th>
+          <th style="padding:7px 4px;text-align:right;">অন্যান্য ৳</th>
+          <th style="padding:7px 4px;text-align:right;">বাবুর্চি ৳</th>
+          <th style="padding:7px 4px;text-align:right;color:#fcd34d;">মোট বিল ৳</th>
+          <th style="padding:7px 6px;text-align:right;">নেট ৳</th>
+        </tr></thead><tbody>`;
 
       sortedUsers.forEach((u,ri)=>{
         const myMeals = messMonthMeals(u.u, mmKey);
         const isOffU = isOfficeMealUser(u);
         const appRate = isOffU ? (pdfOfRate||pm) : pm;
         const mealBill = myMeals * appRate;
-        const shares = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0} : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
-        const totalBill = mealBill + shares.othersShare + shares.cookFoodShare;
+        const sh = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0}
+                          : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+        const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
         const totalBal = u.balance||0;
         const netBal = totalBal - totalBill;
         const bg = ri%2===0 ? '#f4f7f5' : '#fff';
         const netColor = netBal>=0 ? '#2e7d32' : '#e53935';
         const typeLabel = isOffU?'অফিস':u.type==='inside'?'ইন':'আউট';
         html += `<tr style="background:${bg}">
-          <td style="padding:6px 6px;font-weight:600;font-size:11px">${esc(u.name)}<br><span style="font-size:9px;color:#888;font-weight:400">ID:${esc(u.job||u.u)}</span></td>
+          <td style="padding:6px 6px;font-weight:600;">${esc(u.name)}<br><span style="font-size:9px;color:#888;font-weight:400">ID:${esc(u.job||u.u)}</span></td>
           <td style="padding:6px 4px;text-align:center;font-size:10px">${typeLabel}</td>
-          <td style="padding:6px 4px;text-align:right;color:#1565c0">${totalBal>=0?'':'-'}৳${Math.abs(totalBal).toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:${totalBal>=0?'#1a6b3c':'#e53935'}">${totalBal>=0?'':'-'}৳${Math.abs(totalBal).toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:#1a6b3c;font-weight:700">${myMeals.toFixed(2)}</td>
           <td style="padding:6px 4px;text-align:right">৳${mealBill.toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'—':'৳'+shares.othersShare.toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'—':'৳'+sh.othersShare.toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#e65100">${isOffU?'—':'৳'+sh.cookFoodShare.toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;font-weight:700;color:#e53935">৳${totalBill.toFixed(0)}</td>
           <td style="padding:6px 6px;text-align:right;font-weight:700;color:${netColor}">${netBal>=0?'+':'-'}৳${Math.abs(netBal).toFixed(0)}</td>
         </tr>`;
@@ -4539,16 +4553,17 @@ function makePDF(type){
           <td style="padding:6px 4px;text-align:center;font-size:10px">বাবুর্চি</td>
           <td colspan="2" style="padding:6px 4px;text-align:center;color:#888;font-size:10px">—</td>
           <td style="padding:6px 4px;text-align:right;color:#f59e0b;font-weight:700">${myMeals.toFixed(2)} মিল</td>
-          <td colspan="3" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">মিল রেটে অন্তর্ভুক্ত</td>
+          <td colspan="4" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">মিল রেটে অন্তর্ভুক্ত</td>
         </tr>`;
       });
 
-      html += `</tbody></table>`;
-      html += `<div style="margin-top:12px;font-size:10px;color:#aaa;border-top:1px solid #e2e8f0;padding-top:8px;text-align:center;">Midland Quarter | ${new Date().toLocaleDateString('en-GB')} | ${messMonthLabel()}</div>`;
+      html += `</tbody></table>
+        <div style="margin-top:12px;font-size:10px;color:#aaa;border-top:1px solid #e2e8f0;padding-top:8px;text-align:center;">
+          Midland Quarter | ${new Date().toLocaleDateString('en-GB')} | ${messMonthLabel()}
+        </div>`;
 
     } else {
       // ── দৈনিক রিপোর্ট ──
-      html += `<div style="font-size:16px;font-weight:700;color:#1a6b3c;margin-bottom:10px;">📅 দৈনিক মিল রিপোর্ট — ${today}</div>`;
       let totB=0,totL=0,totD=0;
       DB.users.forEach(u=>{
         const m=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
@@ -4562,11 +4577,11 @@ function makePDF(type){
       </div>`;
       html += `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:#1a6b3c;color:#fff">
-          <th style="padding:7px;text-align:left">নাম</th>
-          <th style="padding:7px;text-align:center">সকাল</th>
-          <th style="padding:7px;text-align:center">দুপুর</th>
-          <th style="padding:7px;text-align:center">রাত</th>
-          <th style="padding:7px;text-align:right">মোট</th>
+          <th style="padding:7px 8px;text-align:left">নাম</th>
+          <th style="padding:7px 6px;text-align:center">সকাল</th>
+          <th style="padding:7px 6px;text-align:center">দুপুর</th>
+          <th style="padding:7px 6px;text-align:center">রাত</th>
+          <th style="padding:7px 8px;text-align:right">মোট</th>
         </tr></thead><tbody>`;
       DB.users.forEach((u,ri)=>{
         const m=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
@@ -4575,26 +4590,46 @@ function makePDF(type){
         const lL=m.l.t==='off'?'—':(m.l.q>1?m.l.t+m.l.q:m.l.t);
         const dL=m.d.t==='off'?'—':(m.d.q>1?m.d.t+m.d.q:m.d.t);
         html+=`<tr style="background:${ri%2===0?'#f4f7f5':'#fff'}">
-          <td style="padding:6px 7px;font-weight:600">${esc(u.name)}</td>
-          <td style="padding:6px 7px;text-align:center">${bL}</td>
-          <td style="padding:6px 7px;text-align:center">${lL}</td>
-          <td style="padding:6px 7px;text-align:center">${dL}</td>
-          <td style="padding:6px 7px;text-align:right;font-weight:700;color:#1a6b3c">${(bv+lv+dv).toFixed(2)}</td>
+          <td style="padding:6px 8px;font-weight:600">${esc(u.name)}</td>
+          <td style="padding:6px;text-align:center">${bL}</td>
+          <td style="padding:6px;text-align:center">${lL}</td>
+          <td style="padding:6px;text-align:center">${dL}</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:700;color:#1a6b3c">${(bv+lv+dv).toFixed(2)}</td>
         </tr>`;
       });
       html += '</tbody></table>';
     }
 
-    // ── Overlay তে দেখাও ──
+    html += '</div>';
+
+    // ── Overlay-এ দেখাও ──
     const overlay = document.getElementById('print-overlay');
     const content = document.getElementById('print-overlay-content');
     const titleEl = document.getElementById('print-overlay-title');
-    if(!overlay){ toast('❌ Overlay নেই!'); return; }
-    if(titleEl) titleEl.textContent = (type==='daily') ? '📅 দৈনিক রিপোর্ট' : '📊 মাসিক রিপোর্ট';
-    content.innerHTML = `<style>*{box-sizing:border-box}table{border-collapse:collapse;width:100%}th,td{padding:5px 6px;border:1px solid #d0e4d8;font-size:11px}th{background:#1a6b3c;color:#fff}tr:nth-child(even) td{background:#f4f7f5}</style>` + html;
+    if(!overlay||!content){ toast('❌ Overlay পাওয়া যায়নি!'); return; }
+    if(titleEl) titleEl.textContent = type==='daily' ? '📅 দৈনিক রিপোর্ট' : '📊 মাসিক রিপোর্ট';
+    content.innerHTML = `<style>
+      *{box-sizing:border-box}
+      table{border-collapse:collapse;width:100%}
+      th,td{padding:5px 6px;border:1px solid #d0e4d8}
+      th{background:#1a6b3c!important;color:#fff!important}
+      tr:nth-child(even) td{background:#f0f7f3}
+    </style>` + html;
     overlay.style.display = 'block';
     overlay.scrollTop = 0;
     document.body.style.overflow = 'hidden';
+
+  } catch(err){
+    toast('❌ Error: ' + (err.message||String(err)));
+    console.error('makePDF error:', err);
+  }
+}
+
+function closePrintOverlay(){
+  const ov = document.getElementById('print-overlay');
+  if(ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+}
 
 // ═══════════════════════════════════════════════
 // ALL MEMBERS BILL MODAL (Home "মিল রেট" click)
