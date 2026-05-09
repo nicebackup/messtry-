@@ -1439,7 +1439,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="card">
       <div class="sec-title">⚙️ Admin কার্যক্রম</div>
       <div class="adm-item ctrl-only" onclick="tog('card-mgr')"><div class="adm-icon">👑</div><div><div class="adm-lbl">ম্যানেজার নিয়োগ</div><div class="adm-sub">প্রতি মাসের ম্যানেজার সেট করুন (সর্বোচ্চ ১০ জন)</div></div></div>
-      <div class="adm-item" onclick="tog('card-cfg')"><div class="adm-icon">🍽️</div><div><div class="adm-lbl">মিল মান কনফিগারেশন</div><div class="adm-sub">সকাল/দুপুর/রাতের মিল মান পরিবর্তন</div></div></div>
       <div class="adm-item" onclick="tog('card-adm-meal')"><div class="adm-icon">🔓</div><div><div class="adm-lbl">যেকোনো সদস্যের মিল এডিট</div><div class="adm-sub">যেকোনো তারিখ — Lock নেই</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-edit-mem')"><div class="adm-icon">✏️</div><div><div class="adm-lbl">সদস্যের তথ্য সম্পাদনা</div><div class="adm-sub">নাম, রুম, ফোন, ধরন পরিবর্তন</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-del-mem')"><div class="adm-icon">🗑️</div><div><div class="adm-lbl">সদস্য মুছে ফেলুন</div><div class="adm-sub">মেস ছেড়ে যাওয়া সদস্য ডিলিট</div></div></div>
@@ -1458,19 +1457,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <button class="btn btn-primary btn-sm" onclick="setManager()" style="width:100%;margin-bottom:8px">✅ ম্যানেজার যোগ করুন</button>
       <div class="form-group" style="margin-top:12px"><label class="form-label">ম্যানেজার বাদ দিন</label><select id="mgr-remove" class="form-input"><option value="">-- ম্যানেজার নির্বাচন --</option></select></div>
       <button class="btn btn-danger btn-sm" onclick="removeManager()" style="width:100%">❌ ম্যানেজার বাদ দিন</button>
-    </div>
-
-    <!-- Config Card -->
-    <div class="card" id="card-cfg" style="display:none">
-      <div class="sec-title">🍽️ মিল মান সেটিং</div>
-      <p style="font-size:12px;color:var(--text-light);margin-bottom:14px">তারিখ খালি = ডিফল্ট মান</p>
-      <div class="form-group"><label class="form-label">তারিখ (ঐচ্ছিক)</label><input type="date" id="cfg-date" class="form-input"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
-        <div><label class="form-label">☀️ সকাল</label><input type="number" step="0.25" min="0" id="cfg-bv" class="form-input" value="0.75"></div>
-        <div><label class="form-label">🌞 দুপুর</label><input type="number" step="0.25" min="0" id="cfg-lv" class="form-input" value="1.5"></div>
-        <div><label class="form-label">🌙 রাত</label><input type="number" step="0.25" min="0" id="cfg-dv" class="form-input" value="0.75"></div>
-      </div>
-      <button class="btn btn-primary" onclick="saveCfg()">✅ সেভ করুন</button>
     </div>
 
     <!-- Admin Meal Edit -->
@@ -1595,6 +1581,36 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <div class="header-sub">Mess Rules</div>
   </div>
   <div class="content">
+
+    <!-- Meal Config: Insider -->
+    <div id="rules-cfg-insider" style="display:none">
+      <div class="card" style="border-left:4px solid var(--primary)">
+        <div class="sec-title">🏠 মিল মান কনফিগারেশন (Insider)</div>
+        <p style="font-size:12px;color:var(--text-light);margin-bottom:14px">ইনসাইডারদের মিল মান · তারিখ খালি = ডিফল্ট মান</p>
+        <div class="form-group"><label class="form-label">তারিখ (ঐচ্ছিক)</label><input type="date" id="cfg-date-insider" class="form-input"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div><label class="form-label">🌤️ সকাল</label><input type="number" step="0.25" min="0" id="cfg-bv-insider" class="form-input" value="0.75"></div>
+          <div><label class="form-label">☀️ দুপুর</label><input type="number" step="0.25" min="0" id="cfg-lv-insider" class="form-input" value="1.5"></div>
+          <div><label class="form-label">🌙 রাত</label><input type="number" step="0.25" min="0" id="cfg-dv-insider" class="form-input" value="0.75"></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveCfg('insider')">✅ Insider মিল মান সেভ</button>
+      </div>
+
+      <!-- Meal Config: Outsider -->
+      <div class="card" style="border-left:4px solid var(--accent)">
+        <div class="sec-title">🌍 মিল মান কনফিগারেশন (Outsider)</div>
+        <p style="font-size:12px;color:var(--text-light);margin-bottom:14px">আউটসাইডারদের মিল মান · তারিখ খালি = ডিফল্ট মান</p>
+        <div class="form-group"><label class="form-label">তারিখ (ঐচ্ছিক)</label><input type="date" id="cfg-date-outsider" class="form-input"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div><label class="form-label">🌤️ সকাল</label><input type="number" step="0.25" min="0" id="cfg-bv-outsider" class="form-input" value="0.75"></div>
+          <div><label class="form-label">☀️ দুপুর</label><input type="number" step="0.25" min="0" id="cfg-lv-outsider" class="form-input" value="1.5"></div>
+          <div><label class="form-label">🌙 রাত</label><input type="number" step="0.25" min="0" id="cfg-dv-outsider" class="form-input" value="0.75"></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveCfg('outsider')">✅ Outsider মিল মান সেভ</button>
+      </div>
+    </div>
+
+    <!-- Rules Text -->
     <div class="card">
       <div class="sec-title">📋 মেসের নিয়মাবলী</div>
       <div id="rules-display" style="font-size:15px;line-height:1.9;color:var(--text);white-space:pre-line;min-height:80px;padding:8px 0">
@@ -1889,7 +1905,16 @@ function migrateDB(){
   if(!DB.others) DB.others=[];
   if(!DB.transactions) DB.transactions=[];
   if(!DB.mealRates) DB.mealRates={};
-  if(!DB.cfg) DB.cfg={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
+  if(!DB.cfg) DB.cfg={insider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}},outsider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}}};
+  // Migrate old flat cfg structure to new insider/outsider structure
+  if(DB.cfg.def && !DB.cfg.insider){
+    const oldDef=DB.cfg.def, oldByDate=DB.cfg.byDate||{};
+    DB.cfg={insider:{def:{...oldDef},byDate:{...oldByDate}},outsider:{def:{...oldDef},byDate:{...oldByDate}}};
+  }
+  if(!DB.cfg.insider) DB.cfg.insider={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
+  if(!DB.cfg.outsider) DB.cfg.outsider={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
+  if(!DB.cfg.insider.byDate) DB.cfg.insider.byDate={};
+  if(!DB.cfg.outsider.byDate) DB.cfg.outsider.byDate={};
   if(DB.siteNote===undefined) DB.siteNote='আশুগঞ্জ, ব্রাহ্মণবাড়িয়া';
   if(!DB.notice) DB.notice={text:'',popupEnabled:false};
   if(!DB.rules) DB.rules={text:''};
@@ -2827,7 +2852,7 @@ function refreshHome(){
   let tb=0,tl=0,tdv=0, cbQ=0,clQ=0,cdQ=0;
   DB.users.filter(u=>!u.blocked).forEach(u=>{
     const m=DB.meals[u.u+'_'+viewDate]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-    tb+=mTV('b',m.b,viewDate); tl+=mTV('l',m.l,viewDate); tdv+=mTV('d',m.d,viewDate);
+    tb+=mTV('b',m.b,viewDate,u.type); tl+=mTV('l',m.l,viewDate,u.type); tdv+=mTV('d',m.d,viewDate,u.type);
     if(m.b&&m.b.t!=='off') cbQ+=(m.b.q||1);
     if(m.l&&m.l.t!=='off') clQ+=(m.l.q||1);
     if(m.d&&m.d.t!=='off') cdQ+=(m.d.q||1);
@@ -2895,7 +2920,7 @@ function showMyMealHistory(){
       </tr>`;
     dates.forEach((d,ri)=>{
       const meal=DB.meals[CU.u+'_'+d]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      const bv=mTV('b',meal.b,d), lv=mTV('l',meal.l,d), dv=mTV('d',meal.d,d);
+      const bv=mTV('b',meal.b,d,CU&&CU.type), lv=mTV('l',meal.l,d,CU&&CU.type), dv=mTV('d',meal.d,d,CU&&CU.type);
       grand+=bv+lv+dv;
       const fmtCell=(mv,slot_m)=>{
         if(!slot_m||slot_m.t==='off') return `<td style="text-align:center;color:var(--text-light);padding:7px 4px;font-size:11px">—</td>`;
@@ -3121,7 +3146,7 @@ function loadMealDate(){
     hlPQO(t,m.t||'off',false);
     ['P','Q','off'].forEach(v=>{ const b=document.getElementById('btn-'+t+'-'+v); if(b) b.disabled=locked; });
     document.getElementById('lock-'+t).style.display=locked?'block':'none';
-    document.getElementById('cfg-'+t).textContent='মিল মান: '+getCfg(t,mealDate);
+    document.getElementById('cfg-'+t).textContent='মিল মান: '+getCfg(t,mealDate,CU&&CU.type);
     calcMeal(t);
   });
   document.getElementById('save-meal-btn').disabled=locked;
@@ -3145,7 +3170,7 @@ function hlPQO(t,val,adm){
 function calcMeal(t){
   const qty=parseInt(document.getElementById('qty-'+t).value)||1;
   const sel=getSel(t);
-  const base=getCfg(t,mealDate);
+  const base=getCfg(t,mealDate,CU&&CU.type);
   let total=0,label='বন্ধ';
   if(sel==='P'){
     total=qty*base;
@@ -3171,7 +3196,7 @@ function saveMeal(){
   const bQ=parseInt(document.getElementById('qty-b').value)||1;
   const lQ=parseInt(document.getElementById('qty-l').value)||1;
   const dQ=parseInt(document.getElementById('qty-d').value)||1;
-  const bv=mealTypeValue('b',bT,bQ,mealDate), lv=mealTypeValue('l',lT,lQ,mealDate), dv=mealTypeValue('d',dT,dQ,mealDate);
+  const bv=mealTypeValue('b',bT,bQ,mealDate,CU&&CU.type), lv=mealTypeValue('l',lT,lQ,mealDate,CU&&CU.type), dv=mealTypeValue('d',dT,dQ,mealDate,CU&&CU.type);
   const bLabel=bT==='off'?'off':(bQ>1?bT+bQ:bT);
   const lLabel=lT==='off'?'off':(lQ>1?lT+lQ:lT);
   const dLabel=dT==='off'?'off':(dQ>1?dT+dQ:dT);
@@ -3185,29 +3210,32 @@ function fmtMealLine(t,q,v){
   const label=q>1?t+q:t;
   return `${label} = ${v.toFixed(2)} meals`;
 }
-function mealTypeValue(slot,type,qty,date){
+function mealTypeValue(slot,type,qty,date,utype){
   if(type==='off') return 0;
-  if(type==='P') return qty*getCfg(slot,date);
-  if(type==='Q') return qty*getCfg(slot,date);
+  if(type==='P') return qty*getCfg(slot,date,utype);
+  if(type==='Q') return qty*getCfg(slot,date,utype);
   return 0;
 }
 
 // ═══════════════════════════════════════════════
 // CFG
 // ═══════════════════════════════════════════════
-function getCfg(t,dateStr){
-  if(DB.cfg.byDate&&DB.cfg.byDate[dateStr]&&DB.cfg.byDate[dateStr][t]!==undefined) return DB.cfg.byDate[dateStr][t];
-  return DB.cfg.def[t]||(t==='l'?1.5:0.75);
+function getCfg(t,dateStr,utype){
+  const grp=DB.cfg[(utype==='outside'?'outsider':'insider')]||DB.cfg.insider;
+  if(grp&&grp.byDate&&grp.byDate[dateStr]&&grp.byDate[dateStr][t]!==undefined) return grp.byDate[dateStr][t];
+  return (grp&&grp.def&&grp.def[t]!=null)?grp.def[t]:(t==='l'?1.5:0.75);
 }
-function mTV(t,m,dateStr){
+function mTV(t,m,dateStr,utype){
   if(!m||m.t==='off') return 0;
-  if(m.t==='P') return (m.q||1)*getCfg(t,dateStr);
-  if(m.t==='Q') return (m.q||1)*getCfg(t,dateStr);
+  if(m.t==='P') return (m.q||1)*getCfg(t,dateStr,utype);
+  if(m.t==='Q') return (m.q||1)*getCfg(t,dateStr,utype);
   return 0;
 }
 function dayMeals(uname,dateStr){
   const meal=DB.meals[uname+'_'+dateStr]; if(!meal) return 0;
-  return ['b','l','d'].reduce((s,t)=>s+mTV(t,meal[t],dateStr),0);
+  const u=DB.users.find(x=>x.u===uname);
+  const utype=u?u.type:'inside';
+  return ['b','l','d'].reduce((s,t)=>s+mTV(t,meal[t],dateStr,utype),0);
 }
 function messMonthMeals(uname, mmKey){
   let total=0;
@@ -3915,7 +3943,7 @@ function memdetTab(tab){
     let grandTotal=0;
     days.forEach(d=>{
       const m=DB.meals[u.u+'_'+d]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      const b=mTV('b',m.b,d),l=mTV('l',m.l,d),dv=mTV('d',m.d,d); grandTotal+=b+l+dv;
+      const b=mTV('b',m.b,d,u.type),l=mTV('l',m.l,d,u.type),dv=mTV('d',m.d,d,u.type); grandTotal+=b+l+dv;
       const fc=(v,slot_m)=>{
         if(v<=0) return `<td style="text-align:center;color:var(--text-light);font-size:11px">off</td>`;
         const lbl=slot_m.t+(( slot_m.q||1)>1?(slot_m.q||1):'');
@@ -4104,9 +4132,6 @@ function initAdmin(){
       mgrMonSel.appendChild(opt);
     }
   }
-  document.getElementById('cfg-bv').value=DB.cfg.def.b;
-  document.getElementById('cfg-lv').value=DB.cfg.def.l;
-  document.getElementById('cfg-dv').value=DB.cfg.def.d;
   document.getElementById('adm-dt').value=tod();
   renderManagerInfo();
   renderControllerList();
@@ -4233,15 +4258,23 @@ function removeManager(){
   if(u && u.role==='manager'){ u.role='member'; syncRole(uname,'member'); }
   saveDB(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
-function saveCfg(){
+function saveCfg(grpKey){
   if(!isOnline()){ noNetPopup(); return; }
-  const dateStr=document.getElementById('cfg-date').value;
-  const bv=parseFloat(document.getElementById('cfg-bv').value)||0.75;
-  const lv=parseFloat(document.getElementById('cfg-lv').value)||1.5;
-  const dv=parseFloat(document.getElementById('cfg-dv').value)||0.75;
-  if(dateStr){ if(!DB.cfg.byDate) DB.cfg.byDate={}; DB.cfg.byDate[dateStr]={b:bv,l:lv,d:dv}; toast('✅ '+dateStr+' এর মিল মান সেট!'); }
-  else{ DB.cfg.def={b:bv,l:lv,d:dv}; toast('✅ ডিফল্ট মিল মান সেভ!'); }
-  saveDB(); closeAdmPopup();
+  const dateStr=document.getElementById('cfg-date-'+grpKey).value;
+  const bv=parseFloat(document.getElementById('cfg-bv-'+grpKey).value)||0.75;
+  const lv=parseFloat(document.getElementById('cfg-lv-'+grpKey).value)||1.5;
+  const dv=parseFloat(document.getElementById('cfg-dv-'+grpKey).value)||0.75;
+  const grp=grpKey==='outsider'?'outsider':'insider';
+  if(!DB.cfg[grp]) DB.cfg[grp]={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
+  if(!DB.cfg[grp].byDate) DB.cfg[grp].byDate={};
+  if(dateStr){
+    DB.cfg[grp].byDate[dateStr]={b:bv,l:lv,d:dv};
+    toast('✅ '+dateStr+' ('+(grp==='insider'?'Insider':'Outsider')+') মিল মান সেট!');
+  } else {
+    DB.cfg[grp].def={b:bv,l:lv,d:dv};
+    toast('✅ '+(grp==='insider'?'Insider':'Outsider')+' ডিফল্ট মিল মান সেভ!');
+  }
+  saveDB();
 }
 function loadAdmMeal(){
   const uname=document.getElementById('adm-mem').value, dateStr=document.getElementById('adm-dt').value;
@@ -4392,9 +4425,9 @@ function downloadDayPDF(){
   let totBM=0,totLM=0,totDM=0;
   DB.users.filter(u=>!u.blocked).forEach(u=>{
     const meal=DB.meals[u.u+'_'+dt]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-    if(meal.b&&meal.b.t!=='off'){ totBQ+=(meal.b.q||1); totBM+=mTV('b',meal.b,dt); }
-    if(meal.l&&meal.l.t!=='off'){ totLQ+=(meal.l.q||1); totLM+=mTV('l',meal.l,dt); }
-    if(meal.d&&meal.d.t!=='off'){ totDQ+=(meal.d.q||1); totDM+=mTV('d',meal.d,dt); }
+    if(meal.b&&meal.b.t!=='off'){ totBQ+=(meal.b.q||1); totBM+=mTV('b',meal.b,dt,u.type); }
+    if(meal.l&&meal.l.t!=='off'){ totLQ+=(meal.l.q||1); totLM+=mTV('l',meal.l,dt,u.type); }
+    if(meal.d&&meal.d.t!=='off'){ totDQ+=(meal.d.q||1); totDM+=mTV('d',meal.d,dt,u.type); }
   });
   const grandTotal=(totBM+totLM+totDM).toFixed(2);
 
@@ -4406,7 +4439,7 @@ function downloadDayPDF(){
     const bL=bm.t==='off'?'off':(bm.q>1?bm.t+bm.q:bm.t);
     const lL=lm.t==='off'?'off':(lm.q>1?lm.t+lm.q:lm.t);
     const dL=dm.t==='off'?'off':(dm.q>1?dm.t+dm.q:dm.t);
-    const bv=mTV('b',bm,dt), lv=mTV('l',lm,dt), dv=mTV('d',dm,dt);
+    const bv=mTV('b',bm,dt,u.type), lv=mTV('l',lm,dt,u.type), dv=mTV('d',dm,dt,u.type);
     const rowTotal=(bv+lv+dv).toFixed(2);
     const bg=ri%2===0?'#f4f7f5':'#ffffff';
     const cellStyle=(type,val,mv)=>{
@@ -4716,7 +4749,7 @@ function makePDF(type){
       let totB=0,totL=0,totD=0;
       DB.users.forEach(u=>{
         const m=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-        totB+=mTV('b',m.b,today); totL+=mTV('l',m.l,today); totD+=mTV('d',m.d,today);
+        totB+=mTV('b',m.b,today,u.type); totL+=mTV('l',m.l,today,u.type); totD+=mTV('d',m.d,today,u.type);
       });
       html += `<div style="background:#e8f5e9;border-radius:8px;padding:10px;margin-bottom:12px;display:flex;gap:10px;text-align:center;">
         <div style="flex:1"><div style="font-size:10px;color:#5a7a65">Breakfast</div><div style="font-size:18px;font-weight:700;color:#1a6b3c">${totB.toFixed(2)}</div></div>
@@ -5045,9 +5078,26 @@ function clearNotice(){
 // ═══════════════════════════════════════════════
 function initRules(){
   if(!DB.rules) DB.rules={text:''};
+  if(!DB.cfg) DB.cfg={insider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}},outsider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}}};
   const canEdit=CU&&isManagerOrCtrl();
+  // Show/hide edit cards
   const editCard=document.getElementById('rules-edit-card');
   if(editCard) editCard.style.display=canEdit?'block':'none';
+  const cfgBlock=document.getElementById('rules-cfg-insider');
+  if(cfgBlock) cfgBlock.style.display=canEdit?'block':'none';
+  // Populate insider cfg
+  if(canEdit){
+    ['insider','outsider'].forEach(grp=>{
+      const cfg=DB.cfg[grp]||{def:{b:0.75,l:1.5,d:0.75}};
+      document.getElementById('cfg-bv-'+grp).value=cfg.def.b;
+      document.getElementById('cfg-lv-'+grp).value=cfg.def.l;
+      document.getElementById('cfg-dv-'+grp).value=cfg.def.d;
+      document.getElementById('cfg-date-'+grp).value='';
+    });
+    const ta=document.getElementById('rules-text-input');
+    if(ta) ta.value=DB.rules.text||'';
+  }
+  // Display rules text
   const rd=document.getElementById('rules-display');
   if(rd){
     if(DB.rules.text&&DB.rules.text.trim()){
@@ -5056,10 +5106,6 @@ function initRules(){
     } else {
       rd.innerHTML='<p class="muted tc">কোনো নিয়মাবলী যুক্ত হয়নি</p>';
     }
-  }
-  if(canEdit){
-    const ta=document.getElementById('rules-text-input');
-    if(ta) ta.value=DB.rules.text||'';
   }
 }
 function saveRules(){
@@ -5286,7 +5332,7 @@ function ofmsShiftDate(delta){
     if(entry && entry.style.display !== 'none') ofmsPrefill(key);
     ['b','l','d'].forEach(t => {
       const cfgEl = document.getElementById('ofms-cfg-'+key+'-'+t);
-      if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate);
+      if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate, 'inside');
       ofmsCalcMeal(key, t);
     });
   });
@@ -5300,7 +5346,7 @@ function ofmsLoadDate(){
     if(entry && entry.style.display !== 'none') ofmsPrefill(key);
     ['b','l','d'].forEach(t => {
       const cfgEl = document.getElementById('ofms-cfg-'+key+'-'+t);
-      if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate);
+      if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate, 'inside');
       ofmsCalcMeal(key, t);
     });
   });
@@ -5316,7 +5362,7 @@ function ofmsPrefill(key){
     if(qty){ qty.value = slot.q||1; qty.disabled = (slot.t==='off'); }
     ofmsHlPQO(key, t, slot.t||'off');
     const cfgEl = document.getElementById('ofms-cfg-'+key+'-'+t);
-    if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate);
+    if(cfgEl) cfgEl.textContent = 'মিল মান: '+getCfg(t, ofmsDate, 'inside');
     ofmsCalcMeal(key, t);
   });
 }
@@ -5348,7 +5394,7 @@ function ofmsCalcMeal(key, t){
   if(!calcEl) return;
   const sel = ofmsGetSel(key, t);
   const qty = parseInt(document.getElementById('ofms-qty-'+key+'-'+t)?.value)||1;
-  const base = getCfg(t, ofmsDate||tod());
+  const base = getCfg(t, ofmsDate||tod(), 'inside');
   if(sel==='off'){ calcEl.textContent='বন্ধ'; return; }
   const total = qty*base;
   const tag = qty>1?sel+qty:sel;
