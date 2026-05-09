@@ -229,18 +229,19 @@ html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
 @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
 /* ── PRINT ── */
 @media print {
-  /* সব screen ও UI element hide */
-  body > *:not(#sc-report) { display:none !important; }
-  #sc-report { display:block !important; position:static !important; min-height:auto !important; background:#fff !important; }
-  #sc-report .app-header,
-  #sc-report .card:first-child,
-  #sc-report .btn { display:none !important; }
-  #sc-report .content { padding:8px !important; }
-  /* dark mode reset for print */
-  * { color:#000 !important; background:transparent !important; }
-  table { border-collapse:collapse !important; width:100% !important; }
-  th { background:#1a6b3c !important; color:#fff !important; }
-  td, th { border:1px solid #999 !important; padding:5px 6px !important; font-size:11px !important; }
+  /* overlay open থাকলে শুধু overlay print হবে */
+  body > *:not(#print-overlay) { display:none !important; }
+  #print-overlay {
+    display:block !important;
+    position:static !important;
+    overflow:visible !important;
+    background:#fff !important;
+    height:auto !important;
+  }
+  #print-overlay-toolbar { display:none !important; }
+  #print-overlay-content { padding:0 !important; }
+  /* dark mode reset */
+  #print-overlay-content * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
 
 /* ── ALL MEMBERS BILL SUMMARY CARD ── */
@@ -4527,13 +4528,13 @@ function makePDF(type){
         <thead><tr style="background:#1a6b3c;color:#fff;">
           <th style="padding:7px 6px;text-align:left;">Name / ID</th>
           <th style="padding:7px 4px;text-align:center;">Type</th>
-          <th style="padding:7px 4px;text-align:right;">Balance Tk</th>
+          <th style="padding:7px 4px;text-align:right;">Balance</th>
           <th style="padding:7px 4px;text-align:right;">Meals</th>
-          <th style="padding:7px 4px;text-align:right;">Meal Bill Tk</th>
-          <th style="padding:7px 4px;text-align:right;">Others Tk</th>
-          <th style="padding:7px 4px;text-align:right;">Cook Tk</th>
-          <th style="padding:7px 4px;text-align:right;">Total Bill Tk</th>
-          <th style="padding:7px 6px;text-align:right;">Net Tk</th>
+          <th style="padding:7px 4px;text-align:right;">Meal Bill</th>
+          <th style="padding:7px 4px;text-align:right;">Others</th>
+          <th style="padding:7px 4px;text-align:right;">Cook</th>
+          <th style="padding:7px 4px;text-align:right;">Total Bill</th>
+          <th style="padding:7px 6px;text-align:right;">Net</th>
         </tr></thead><tbody>`;
 
       sortedUsers.forEach((u,ri)=>{
