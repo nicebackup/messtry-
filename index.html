@@ -3005,7 +3005,7 @@ function exportWhoEatsPDF(){
   const doc  = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
   const mL=15, mR=195, mT=15;
   const slotBn  = WE_SLOT_LABELS[_weSlot] || _weSlot;
-  const slotMap = {b:'Morning', l:'Afternoon', d:'Night'};
+  const slotMap = {b:'Morning', l:'Lunch', d:'Night'};
   const slotAsc = slotMap[_weSlot] || _weSlot;
 
   // ── Title block ──
@@ -4387,7 +4387,7 @@ function downloadDayPDF(){
       return `<td style="padding:8px 6px;text-align:center;font-weight:700;color:${c};font-size:13px;">${val}<br><span style="font-size:10px;font-weight:400;color:#666;">${mv.toFixed(2)}</span></td>`;
     };
     rows+=`<tr style="background:${bg};border-top:1px solid #e0ece6;">
-      <td style="padding:8px 10px;font-weight:600;font-size:13px;">${u.name}<br><span style="font-size:10px;color:#888;font-weight:400;">${u.job||'-'} | Room ${u.room||'-'}</span></td>
+      <td style="padding:8px 10px;font-weight:600;font-size:13px;">${u.name}<br><span style="font-size:12px;color:#1a6b3c;font-weight:700;">${u.job||u.u}</span></td>
       ${cellStyle(bm.t,bL,bv)}
       ${cellStyle(lm.t,lL,lv)}
       ${cellStyle(dm.t,dL,dv)}
@@ -4417,7 +4417,7 @@ function downloadDayPDF(){
         <div style="font-size:11px;color:#999;margin-top:2px;">${totBM.toFixed(2)} Meals</div>
       </div>
       <div style="background:#e8f5e9;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #2e7d32;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">☀️ Afternoon</div>
+        <div style="font-size:11px;color:#777;margin-bottom:4px;">☀️ Lunch</div>
         <div style="font-size:22px;font-weight:700;color:#2e7d32;">${totLQ}</div>
         <div style="font-size:11px;color:#999;margin-top:2px;">${totLM.toFixed(2)} Meals</div>
       </div>
@@ -4445,7 +4445,7 @@ function downloadDayPDF(){
         <tr style="background:#1a6b3c;color:#fff;">
           <th style="padding:10px 10px;text-align:left;font-size:13px;">Member Name</th>
           <th style="padding:10px 6px;text-align:center;font-size:13px;">🌅 Morning</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">☀️ Afternoon</th>
+          <th style="padding:10px 6px;text-align:center;font-size:13px;">☀️ Lunch</th>
           <th style="padding:10px 6px;text-align:center;font-size:13px;">🌙 Night</th>
           <th style="padding:10px 10px;text-align:right;font-size:13px;">Total Meals</th>
         </tr>
