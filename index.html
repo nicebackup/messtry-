@@ -496,12 +496,12 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 .who-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
 .who-tag{background:var(--success-light);color:var(--success);border:1px solid #c8e6c9;border-radius:20px;padding:4px 12px;font-size:13px;}
 /* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:center;z-index:100;box-shadow:0 -4px 20px rgba(0,0,0,.07);}
-.bottom-nav .nav-btn{flex:none;width:80px;}
-.nav-btn{flex:0 0 80px;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;font-size:10px;font-family:inherit;color:var(--text-light);}
+.bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:center;z-index:100;box-shadow:0 -2px 10px rgba(0,0,0,.07);}
+.bottom-nav .nav-btn{flex:none;width:72px;}
+.nav-btn{flex:0 0 72px;padding:5px 0 4px;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;cursor:pointer;font-size:10px;font-family:inherit;color:var(--text-light);}
 @media(max-width:599px){.nav-btn{flex:1;}}
 .nav-btn.active{color:var(--primary);}
-.nav-icon{font-size:22px;}
+.nav-icon{font-size:20px;}
 .pb-nav{padding-bottom:70px;}
 /* SECTIONS */
 .sec-title{font-size:16px;font-weight:700;color:var(--primary-dark);margin-bottom:14px;}
@@ -1010,14 +1010,14 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="menu-item in" id="menu-officemeal" onclick="sec('officemeal')" style="display:none"><div class="menu-icon">🏢</div><div class="menu-lbl">অফিস মিল</div><div class="menu-sub">MEPL / MPCL</div></div>
       <div class="menu-item" onclick="sec('report')"><div class="menu-icon">📊</div><div class="menu-lbl">মাসিক রিপোর্ট</div><div class="menu-sub">Monthly Report</div></div>
       <div class="menu-item" onclick="sec('members')"><div class="menu-icon">👥</div><div class="menu-lbl">সদস্য তালিকা</div><div class="menu-sub">All Members</div></div>
-      <div class="menu-item in" onclick="sec('notice')"><div class="menu-icon">📢</div><div class="menu-lbl">নোটিশ</div><div class="menu-sub">Notice Board</div></div>
+      <div class="menu-item in" onclick="sec('rules')"><div class="menu-icon">📋</div><div class="menu-lbl">নিয়মাবলী</div><div class="menu-sub">Rules</div></div>
       <div class="menu-item dg" id="admin-btn" onclick="sec('admin')" style="display:none"><div class="menu-icon">⚙️</div><div class="menu-lbl">Admin Panel</div><div class="menu-sub">পরিচালনা</div></div>
     </div>
   </div>
   <div class="bottom-nav">
     <button class="nav-btn active" onclick="goHome()"><span class="nav-icon">🏠</span>হোম</button>
     <button class="nav-btn" onclick="sec('meal')"><span class="nav-icon">🍽️</span>মিল</button>
-    <button class="nav-btn" onclick="sec('bazar')"><span class="nav-icon">🛒</span>বাজার</button>
+    <button class="nav-btn" onclick="sec('notice')"><span class="nav-icon">📢</span>নোটিশ</button>
     <button class="nav-btn" onclick="sec('members')"><span class="nav-icon">👥</span>সদস্য</button>
     <button class="nav-btn" onclick="sec('profile')"><span class="nav-icon">👤</span>প্রোফাইল</button>
   </div>
@@ -1587,7 +1587,33 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   </div>
 </div>
 
-<!-- ═══════════ NOTICE POPUP MODAL ═══════════ -->
+<!-- ═══════════ RULES ═══════════ -->
+<div id="sc-rules" class="screen">
+  <div class="app-header">
+    <button class="header-back" onclick="goHome()">← Home</button>
+    <div class="header-title">📋 নিয়মাবলী</div>
+    <div class="header-sub">Mess Rules</div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="sec-title">📋 মেসের নিয়মাবলী</div>
+      <div id="rules-display" style="font-size:15px;line-height:1.9;color:var(--text);white-space:pre-line;min-height:80px;padding:8px 0">
+        <p class="muted tc">কোনো নিয়মাবলী যুক্ত হয়নি</p>
+      </div>
+    </div>
+    <div class="card" id="rules-edit-card" style="display:none">
+      <div class="sec-title">✏️ নিয়মাবলী সম্পাদনা</div>
+      <div class="form-group">
+        <label class="form-label">নিয়মাবলীর বিষয়বস্তু</label>
+        <textarea id="rules-text-input" class="form-input" rows="10" style="resize:vertical;line-height:1.7" placeholder="নিয়মাবলী লিখুন..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveRules()">✅ সেভ করুন</button>
+      <button class="btn btn-danger" style="margin-top:6px" onclick="clearRules()">🗑️ মুছুন</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-bg notice-modal-center" id="notice-popup-modal">
   <div class="modal" style="border-radius:20px;max-height:80vh">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -1866,6 +1892,7 @@ function migrateDB(){
   if(!DB.cfg) DB.cfg={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
   if(DB.siteNote===undefined) DB.siteNote='আশুগঞ্জ, ব্রাহ্মণবাড়িয়া';
   if(!DB.notice) DB.notice={text:'',popupEnabled:false};
+  if(!DB.rules) DB.rules={text:''};
   if(!DB.cookBills) DB.cookBills=[];
   if(!DB.officeMealRates) DB.officeMealRates={};
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
@@ -2283,6 +2310,7 @@ function sec(s){
   if(s==='officemeal'){ initOfficeMealScreen(); showSc('officemeal'); return; }
   if(s==='messmanager'){ newMessManagerScreen(); return; }
   if(s==='notice'){ initNotice(); showSc('notice'); return; }
+  if(s==='rules'){ initRules(); showSc('rules'); return; }
   if(s==='whoeats'){ showSc('whoeats'); return; }
 }
 
@@ -5009,6 +5037,43 @@ function clearNotice(){
   if(!isOnline()){ noNetPopup(); return; }
   showModal('নোটিশ মুছুন','নোটিশ মুছে ফেলবেন?',()=>{
     DB.notice.text=''; saveDB(); initNotice(); toast('✅ নোটিশ মুছে ফেলা হয়েছে!');
+  });
+}
+
+// ═══════════════════════════════════════════════
+// RULES
+// ═══════════════════════════════════════════════
+function initRules(){
+  if(!DB.rules) DB.rules={text:''};
+  const canEdit=CU&&isManagerOrCtrl();
+  const editCard=document.getElementById('rules-edit-card');
+  if(editCard) editCard.style.display=canEdit?'block':'none';
+  const rd=document.getElementById('rules-display');
+  if(rd){
+    if(DB.rules.text&&DB.rules.text.trim()){
+      rd.textContent=DB.rules.text;
+      rd.style.color='var(--text)';
+    } else {
+      rd.innerHTML='<p class="muted tc">কোনো নিয়মাবলী যুক্ত হয়নি</p>';
+    }
+  }
+  if(canEdit){
+    const ta=document.getElementById('rules-text-input');
+    if(ta) ta.value=DB.rules.text||'';
+  }
+}
+function saveRules(){
+  if(!isOnline()){ noNetPopup(); return; }
+  const ta=document.getElementById('rules-text-input');
+  const text=ta?(ta.value||'').trim().slice(0,5000):'';
+  DB.rules.text=text;
+  saveDB(); initRules();
+  toast('✅ নিয়মাবলী সেভ হয়েছে!');
+}
+function clearRules(){
+  if(!isOnline()){ noNetPopup(); return; }
+  showModal('নিয়মাবলী মুছুন','নিয়মাবলী মুছে ফেলবেন?',()=>{
+    DB.rules.text=''; saveDB(); initRules(); toast('✅ নিয়মাবলী মুছে ফেলা হয়েছে!');
   });
 }
 function showNoticePopup(){
