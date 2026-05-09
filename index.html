@@ -2484,8 +2484,14 @@ function doLogin(){
         // Sync into DB.users so meal/bazar/role checks work
         if(DB.users){
           const idx=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
-          if(idx>=0){ DB.users[idx]={...DB.users[idx],...CU}; }
-          else {
+          if(idx>=0){
+            // DB.users থেকে actual balance preserve করো — CU.balance সবসময় 0 হতে পারে
+            const savedBal     = DB.users[idx].balance;
+            const savedPrevBal = DB.users[idx].prevBalance;
+            DB.users[idx] = {...DB.users[idx], ...CU};
+            if(savedBal     !== undefined){ DB.users[idx].balance     = savedBal;     CU.balance     = savedBal;     }
+            if(savedPrevBal !== undefined){ DB.users[idx].prevBalance = savedPrevBal; CU.prevBalance = savedPrevBal; }
+          } else {
             DB.users.push({...CU});
             // নতুন সদস্য — Firebase-এ শুধু এই user-টা push (পুরো array replace না)
             const ni = DB.users.length-1;
