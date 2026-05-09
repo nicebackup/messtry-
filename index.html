@@ -1604,24 +1604,23 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   <div class="content" style="padding:0">
 
     <!-- Sticky Header -->
-    <div style="position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px 0">
-      <!-- Row 1: back | title centered | pdf -->
-      <div style="display:grid;grid-template-columns:36px 1fr 60px;align-items:center;margin-bottom:2px">
+    <div style="position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:6px 14px 0">
+      <!-- Row 1: back | title+date | pdf -->
+      <div style="display:grid;grid-template-columns:36px 1fr 60px;align-items:center;gap:4px;margin-bottom:4px">
         <button onclick="goHome()" style="background:none;border:none;cursor:pointer;color:var(--text);font-size:22px;padding:0;line-height:1;text-align:left">‹</button>
-        <div style="text-align:center">
-          <div id="we-slot-lbl" style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:.5px"></div>
+        <div style="text-align:center;line-height:1.2">
+          <div id="we-slot-lbl" style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:.5px"></div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:1px">
+            <span id="we-date-lbl" style="font-weight:600"></span>
+            <span id="we-day-lbl" style="margin-left:5px"></span>
+          </div>
         </div>
         <button id="we-pdf-btn" onclick="exportWhoEatsPDF()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 0;font-size:11px;font-weight:700;cursor:pointer;width:100%">PDF</button>
       </div>
-      <!-- Row 2: date + day centered -->
-      <div style="text-align:center;margin-bottom:8px">
-        <span id="we-date-lbl" style="font-size:12px;font-weight:600;color:var(--text)"></span>
-        <span id="we-day-lbl"  style="font-size:11px;color:var(--text-light);margin-left:6px"></span>
-      </div>
       <!-- Toggle: Plant / Quarter -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin:0 -14px;padding:0 14px">
-        <button id="we-tog-p" onclick="setWeView('P')" style="flex:1;background:none;border:none;border-bottom:3px solid var(--primary);padding:8px 4px;font-size:13px;font-weight:700;cursor:pointer;color:var(--primary);transition:all .18s">প্ল্যান্ট</button>
-        <button id="we-tog-q" onclick="setWeView('Q')" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-light);transition:all .18s">কোয়ার্টার</button>
+        <button id="we-tog-p" onclick="setWeView('P')" style="flex:1;background:none;border:none;border-bottom:3px solid var(--primary);padding:6px 4px;font-size:13px;font-weight:700;cursor:pointer;color:var(--primary);transition:all .18s">প্ল্যান্ট</button>
+        <button id="we-tog-q" onclick="setWeView('Q')" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:6px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-light);transition:all .18s">কোয়ার্টার</button>
       </div>
     </div>
 
@@ -3006,12 +3005,12 @@ function exportWhoEatsPDF(){
   const doc  = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
   const mL=15, mR=195, mT=15;
   const slotBn  = WE_SLOT_LABELS[_weSlot] || _weSlot;
-  const slotMap = {b:'Sokal', l:'Dupur', d:'Raat'};
+  const slotMap = {b:'Morning', l:'Afternoon', d:'Night'};
   const slotAsc = slotMap[_weSlot] || _weSlot;
 
   // ── Title block ──
   doc.setFontSize(14); doc.setFont('helvetica','bold');
-  doc.text(slotAsc+' - Plante Khabe', 105, mT+6, {align:'center'});
+  doc.text(slotAsc+' Meals @ Plant', 105, mT+6, {align:'center'});
   doc.setFontSize(11); doc.setFont('helvetica','normal');
   doc.text('('+_weDate+')', 105, mT+13, {align:'center'});
 
@@ -3042,9 +3041,9 @@ function exportWhoEatsPDF(){
   doc.line(mL, y, mR, y); y+=7;
   const total = _wePlanters.reduce((a,e)=>a+e.qty,0);
   doc.setFontSize(13); doc.setFont('helvetica','bold');
-  doc.text('Mot: '+total+' Meal', 105, y, {align:'center'});
+  doc.text('Total: '+total+' Meals', 105, y, {align:'center'});
 
-  doc.save(slotAsc+'_plant_'+_weDate+'.pdf');
+  doc.save(slotAsc+'@Plant_'+_weDate+'.pdf');
   toast('PDF ডাউনলোড হচ্ছে!');
 }
 
@@ -4348,14 +4347,17 @@ function removeController(){
 // ═══════════════════════════════════════════════
 function downloadDayPDF(){
   const dt = homeViewDate || tod();
-  const days=['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
-  const months=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mmonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const dtObj = new Date(dt+'T00:00:00');
   const dayName = days[dtObj.getDay()];
   const dateLabel = `${dtObj.getDate()} ${months[dtObj.getMonth()]} ${dtObj.getFullYear()}`;
   const messName = 'Midland Quarter';
-  const siteNote = DB.siteNote || 'মেস ম্যানেজমেন্ট';
-  const mmLabel = messMonthLabel(dtObj);
+  const siteNote = DB.siteNote || 'Mess Management';
+  // English mess month label
+  const _mmObj = (()=>{ const {y,m}=getMessMonth(dtObj); const nm=(m+1)%12,ny=m===11?y+1:y; return mmonths[m]+' 11 – '+mmonths[nm]+' 10, '+y; })();
+  const mmLabel = _mmObj;
 
   // Build totals
   let totBQ=0,totLQ=0,totDQ=0;
@@ -4385,7 +4387,7 @@ function downloadDayPDF(){
       return `<td style="padding:8px 6px;text-align:center;font-weight:700;color:${c};font-size:13px;">${val}<br><span style="font-size:10px;font-weight:400;color:#666;">${mv.toFixed(2)}</span></td>`;
     };
     rows+=`<tr style="background:${bg};border-top:1px solid #e0ece6;">
-      <td style="padding:8px 10px;font-weight:600;font-size:13px;">${u.name}<br><span style="font-size:10px;color:#888;font-weight:400;">${u.job||'-'} | রুম ${u.room||'-'}</span></td>
+      <td style="padding:8px 10px;font-weight:600;font-size:13px;">${u.name}<br><span style="font-size:10px;color:#888;font-weight:400;">${u.job||'-'} | Room ${u.room||'-'}</span></td>
       ${cellStyle(bm.t,bL,bv)}
       ${cellStyle(lm.t,lL,lv)}
       ${cellStyle(dm.t,dL,dv)}
@@ -4399,10 +4401,10 @@ function downloadDayPDF(){
       <div>
         <div style="font-size:22px;font-weight:700;font-family:'Poppins',sans-serif;letter-spacing:.5px;">${messName}</div>
         <div style="font-size:12px;opacity:.8;margin-top:3px;">${siteNote}</div>
-        <div style="font-size:11px;opacity:.7;margin-top:2px;">মেস মাস: ${mmLabel}</div>
+        <div style="font-size:11px;opacity:.7;margin-top:2px;">Mess Month: ${mmLabel}</div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:14px;font-weight:700;background:rgba(255,255,255,.2);border-radius:8px;padding:6px 14px;margin-bottom:6px;">📋 দৈনিক মিল রিপোর্ট</div>
+        <div style="font-size:14px;font-weight:700;background:rgba(255,255,255,.2);border-radius:8px;padding:6px 14px;margin-bottom:6px;">📋 Daily Meal Report</div>
         <div style="font-size:15px;font-weight:700;">${dateLabel}</div>
         <div style="font-size:13px;opacity:.85;">${dayName}</div>
       </div>
@@ -4410,55 +4412,55 @@ function downloadDayPDF(){
     <!-- Summary Row -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div style="background:#fff3e0;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #e65100;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">🌅 সকাল</div>
+        <div style="font-size:11px;color:#777;margin-bottom:4px;">🌅 Morning</div>
         <div style="font-size:22px;font-weight:700;color:#e65100;">${totBQ}</div>
-        <div style="font-size:11px;color:#999;margin-top:2px;">${totBM.toFixed(2)} মিল</div>
+        <div style="font-size:11px;color:#999;margin-top:2px;">${totBM.toFixed(2)} Meals</div>
       </div>
       <div style="background:#e8f5e9;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #2e7d32;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">☀️ দুপুর</div>
+        <div style="font-size:11px;color:#777;margin-bottom:4px;">☀️ Afternoon</div>
         <div style="font-size:22px;font-weight:700;color:#2e7d32;">${totLQ}</div>
-        <div style="font-size:11px;color:#999;margin-top:2px;">${totLM.toFixed(2)} মিল</div>
+        <div style="font-size:11px;color:#999;margin-top:2px;">${totLM.toFixed(2)} Meals</div>
       </div>
       <div style="background:#e3f2fd;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #1565c0;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">🌙 রাত</div>
+        <div style="font-size:11px;color:#777;margin-bottom:4px;">🌙 Night</div>
         <div style="font-size:22px;font-weight:700;color:#1565c0;">${totDQ}</div>
-        <div style="font-size:11px;color:#999;margin-top:2px;">${totDM.toFixed(2)} মিল</div>
+        <div style="font-size:11px;color:#999;margin-top:2px;">${totDM.toFixed(2)} Meals</div>
       </div>
       <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:10px;padding:12px 10px;text-align:center;">
-        <div style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px;">মোট মিল</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px;">Total Meals</div>
         <div style="font-size:22px;font-weight:700;color:#fff;">${grandTotal}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">সর্বমোট</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">Grand Total</div>
       </div>
     </div>
     <!-- Legend -->
     <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
-      <span style="background:#e8f5e9;color:#2e7d32;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">P = প্ল্যান্ট</span>
-      <span style="background:#e3f2fd;color:#1565c0;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">Q = কোয়ার্টার</span>
-      <span style="background:#ffebee;color:#c62828;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">off = বন্ধ</span>
-      <span style="font-size:11px;color:#888;">সংখ্যা × মিল মান = মোট মিল</span>
+      <span style="background:#e8f5e9;color:#2e7d32;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">P = Plant</span>
+      <span style="background:#e3f2fd;color:#1565c0;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">Q = Quarter</span>
+      <span style="background:#ffebee;color:#c62828;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">off = Off</span>
+      <span style="font-size:11px;color:#888;">Count × Value = Total Meals</span>
     </div>
     <!-- Table -->
     <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:10px;overflow:hidden;">
       <thead>
         <tr style="background:#1a6b3c;color:#fff;">
-          <th style="padding:10px 10px;text-align:left;font-size:13px;">সদস্যের নাম</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">🌅 সকাল</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">☀️ দুপুর</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">🌙 রাত</th>
-          <th style="padding:10px 10px;text-align:right;font-size:13px;">মোট মিল</th>
+          <th style="padding:10px 10px;text-align:left;font-size:13px;">Member Name</th>
+          <th style="padding:10px 6px;text-align:center;font-size:13px;">🌅 Morning</th>
+          <th style="padding:10px 6px;text-align:center;font-size:13px;">☀️ Afternoon</th>
+          <th style="padding:10px 6px;text-align:center;font-size:13px;">🌙 Night</th>
+          <th style="padding:10px 10px;text-align:right;font-size:13px;">Total Meals</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
         <tr style="background:#0f4526;color:#fff;font-weight:700;">
-          <td style="padding:10px 10px;font-size:13px;">মোট (সংখ্যা)</td>
+          <td style="padding:10px 10px;font-size:13px;">Total (Count)</td>
           <td style="padding:10px 6px;text-align:center;font-size:14px;">${totBQ}</td>
           <td style="padding:10px 6px;text-align:center;font-size:14px;">${totLQ}</td>
           <td style="padding:10px 6px;text-align:center;font-size:14px;">${totDQ}</td>
           <td style="padding:10px 10px;text-align:right;font-size:15px;color:#fcd34d;">${grandTotal}</td>
         </tr>
         <tr style="background:#1a6b3c;color:rgba(255,255,255,.8);">
-          <td style="padding:8px 10px;font-size:11px;">মোট (মিল)</td>
+          <td style="padding:8px 10px;font-size:11px;">Total (Meals)</td>
           <td style="padding:8px 6px;text-align:center;font-size:12px;">${totBM.toFixed(2)}</td>
           <td style="padding:8px 6px;text-align:center;font-size:12px;">${totLM.toFixed(2)}</td>
           <td style="padding:8px 6px;text-align:center;font-size:12px;">${totDM.toFixed(2)}</td>
