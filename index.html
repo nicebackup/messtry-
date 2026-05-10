@@ -1869,7 +1869,7 @@ function noNetPopup(){
     <div style="background:var(--card);border-radius:18px;padding:28px 24px;max-width:320px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
       <div style="font-size:48px;margin-bottom:12px">📡</div>
       <div style="font-size:17px;font-weight:700;color:var(--danger);margin-bottom:8px">ইন্টারনেট সংযোগ নেই!</div>
-      <div style="font-size:13px;color:var(--text-light);margin-bottom:20px;line-height:1.5">ডেটা এন্ট্রি করতে ইন্টারনেট সংযোগ চালু করুন।<br>সকল তথ্য Real-Time Firebase এ সংরক্ষিত হয়।</div>
+      <div style="font-size:13px;color:var(--text-light);margin-bottom:20px;line-height:1.5">ডেটা এন্ট্রি করতে ইন্টারনেট সংযোগ চালু করুন।</div>
       <button onclick="document.getElementById('no-net-popup').remove()" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">ঠিক আছে</button>
     </div>
   `;
@@ -1961,7 +1961,17 @@ function migrateDB(){
 function loadDB(){
   // Show loading overlay
   document.getElementById('fb-loading').style.display='flex';
+
+  // ── Offline timeout: যদি ৭ সেকেন্ডে Firebase সাড়া না দেয় → offline mode ──
+  const offlineTimer = setTimeout(()=>{
+    if(!_dbLoaded){
+      document.getElementById('fb-loading').style.display='none';
+      noNetPopup();
+    }
+  }, 7000);
+
   dbRef.on('value', snap=>{
+    clearTimeout(offlineTimer); // Firebase সাড়া দিয়েছে — timer বাতিল
     const data = snap.val();
     if(data){
       DB = data;
@@ -1993,10 +2003,8 @@ function loadDB(){
     }
     // Hide loading overlay only after onAuthStateChanged handles routing
   }, err=>{
+    clearTimeout(offlineTimer);
     console.error('Firebase read error:', err);
-    // ✅ সাথে সাথে toast না দিয়ে 4 সেকেন্ড অপেক্ষা করি।
-    // যদি এর মধ্যে Firebase connect হয়ে যায় (_dbLoaded=true), toast দেখাব না।
-    // এতে page load-এর সময় false alarm বন্ধ হবে।
     setTimeout(()=>{
       if(!_dbLoaded){
         document.getElementById('fb-loading').style.display='none';
@@ -2666,10 +2674,15 @@ function doLogin(){
       });
     }).catch(err=>{ al.textContent='❌ ডেটা লোড ব্যর্থ: '+err.message; al.className='alert alert-danger show'; if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } });
   }).catch(err=>{
-    let msg = '❌ Login ব্যর্থ!';
-    if(err.code==='auth/user-not-found'||err.code==='auth/wrong-password'||err.code==='auth/invalid-credential') msg='❌ Email বা পাসওয়ার্ড ভুল!';
-    else if(err.code==='auth/too-many-requests') msg='❌ অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
-    else if(err.code==='auth/network-request-failed') msg='❌ ইন্টারনেট সংযোগ চেক করুন!';
+    let msg = '⚠️ Login failed. Please try again.';
+    if(err.code==='auth/user-not-found'||err.code==='auth/wrong-password'||err.code==='auth/invalid-credential')
+      msg='✗ Incorrect email or password.';
+    else if(err.code==='auth/invalid-email')
+      msg='✗ Invalid email address format.';
+    else if(err.code==='auth/too-many-requests')
+      msg='⚠️ Too many failed attempts. Please wait and try again.';
+    else if(err.code==='auth/network-request-failed')
+      msg='✗ No internet connection. Please check your network.';
     al.textContent = msg; al.className='alert alert-danger show';
     if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
   });
