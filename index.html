@@ -998,7 +998,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       </div>
       <div class="stat-card" onclick="showAllMembersBill()" style="cursor:pointer;border:1px solid var(--border);">
         <div class="stat-num" id="st-bill" style="color:var(--accent)">৳ 0</div>
-        <div class="stat-lbl">মিল রেট <span style="font-size:10px;color:var(--accent)">↗ সব হিসাব</span></div>
+        <div class="stat-lbl">মিল রেট <span style="font-size:10px;color:var(--accent)">↗ আমার হিসাব</span></div>
       </div>
     </div>
     <!-- Quick Actions -->
@@ -1721,7 +1721,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 <div class="modal-bg" id="all-members-bill-modal" onclick="if(event.target===this)closeAllMembersBill()">
   <div class="modal" style="max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="modal-title" style="margin:0">📊 সকল সদস্যের হিসাব</div>
+      <div class="modal-title" style="margin:0">📋 মাসিক হিসাব বিবরণী</div>
       <button onclick="closeAllMembersBill()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-family:inherit;color:var(--text);font-size:13px">✕ বন্ধ</button>
     </div>
     <div id="all-members-bill-content">লোড হচ্ছে...</div>
@@ -4832,8 +4832,11 @@ function makePDF(type){
         const monthDeposits = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
           .reduce((s, tx) => s + (tx.amount||0), 0);
-        const prevBalance = totalBal - monthDeposits;
-        const depositBalance = monthDeposits;
+        const monthWithdrawals = (DB.transactions||[])
+          .filter(tx => tx.uname===u.u && tx.type==='withdraw' && dateInMessMonth(tx.date, mmKey))
+          .reduce((s, tx) => s + (tx.amount||0), 0);
+        const prevBalance = u.prevBalance||0;
+        const depositBalance = monthDeposits - monthWithdrawals;
         const netBal = totalBal - totalBill;
         const bg = ri%2===0 ? '#f4f7f5' : '#fff';
         const netColor = netBal>=0 ? '#2e7d32' : '#e53935';
@@ -4947,7 +4950,7 @@ function closePrintOverlay(){
 }
 
 // ═══════════════════════════════════════════════
-// ALL MEMBERS BILL MODAL (Home "মিল রেট" click)
+// মাসিক হিসাব বিবরণী MODAL (Home "মিল রেট" click)
 // ═══════════════════════════════════════════════
 function showAllMembersBill(){
   const mmKey=messMonthKey();
@@ -4955,26 +4958,21 @@ function showAllMembersBill(){
   const modal=document.getElementById('all-members-bill-modal');
   const content=document.getElementById('all-members-bill-content');
 
-  // ── office meal calc ──
+  // ── office meal summary ──
   const ofUsers=getOfficeMealUsers();
   const ofMls=ofUsers.reduce((s,u)=>s+messMonthMeals(u.u,mmKey),0);
   const ofRateMain=getOfficeMealRate(mmKey);
   const ofBill=ofMls*ofRateMain;
 
   // ── মেস ফান্ড ──
-  // সূত্র: (সকল সদস্যের মোট ব্যালেন্স) − (বাজার খরচ + অন্যান্য খরচ)
-  // অর্থাৎ: ম্যানেজারের কাছে যত টাকা জমা আছে, সেখান থেকে মোট খরচ বাদ দিলে বাকিটাই মেস ফান্ড
-  let totalDeposited = 0;
-  DB.users.filter(u=>u.type!=='cook').forEach(u=>{
-    totalDeposited += (u.balance||0);
-  });
-  const messBalance = totalDeposited - bazar - others;
+  let totalDeposited=0;
+  DB.users.filter(u=>u.type!=='cook').forEach(u=>{ totalDeposited+=(u.balance||0); });
+  const messBalance=totalDeposited-bazar-others;
 
+  // ── Summary Hero Card (সবাই দেখবে) ──
   let html=`
   <div class="summary-hero-card" style="border-radius:14px;padding:16px;margin-bottom:14px;">
     <div style="font-size:11px;opacity:.75;letter-spacing:.5px;margin-bottom:8px">${messMonthLabel()}</div>
-
-    <!-- প্রতি মিল রেট + মোট খরচ -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
       <div>
         <div style="font-size:32px;font-weight:800;line-height:1;letter-spacing:-0.5px">৳ ${pm.toFixed(2)}</div>
@@ -4985,111 +4983,120 @@ function showAllMembersBill(){
         <div style="font-size:11px;opacity:.75;margin-top:2px">মোট খরচ</div>
       </div>
     </div>
-
-    <!-- বাজার / অন্যান্য / বাবুর্চি বিল -->
     <div class="amb-grid">
-      <div class="amb-cell">
-        <div class="amb-lbl">বাজার</div>
-        <div class="amb-val amb-green">৳${bazar.toLocaleString()}</div>
-      </div>
-      <div class="amb-cell amb-sep">
-        <div class="amb-lbl">অন্যান্য</div>
-        <div class="amb-val amb-green">৳${others.toLocaleString()}</div>
-      </div>
-      <div class="amb-cell amb-sep">
-        <div class="amb-lbl">বাবুর্চি বিল</div>
-        <div class="amb-val amb-orange">৳${(cookFoodCost||0).toFixed(0)}</div>
-      </div>
+      <div class="amb-cell"><div class="amb-lbl">বাজার</div><div class="amb-val amb-green">৳${bazar.toLocaleString()}</div></div>
+      <div class="amb-cell amb-sep"><div class="amb-lbl">অন্যান্য</div><div class="amb-val amb-green">৳${others.toLocaleString()}</div></div>
+      <div class="amb-cell amb-sep"><div class="amb-lbl">বাবুর্চি বিল</div><div class="amb-val amb-orange">৳${(cookFoodCost||0).toFixed(0)}</div></div>
     </div>
-
-    <!-- নেট মিল / বাবুর্চির মিল / অফিস মিল -->
     <div class="amb-grid amb-grid2">
-      <div class="amb-cell">
-        <div class="amb-lbl">নেট মিল (সবার)</div>
-        <div class="amb-val">${parseFloat(netMeals.toFixed(2))}</div>
-      </div>
-      <div class="amb-cell amb-sep">
-        <div class="amb-lbl">বাবুর্চির মিল</div>
-        <div class="amb-val amb-orange">${parseFloat(cookMeals.toFixed(2))}</div>
-      </div>
+      <div class="amb-cell"><div class="amb-lbl">নেট মিল (সবার)</div><div class="amb-val">${parseFloat(netMeals.toFixed(2))}</div></div>
+      <div class="amb-cell amb-sep"><div class="amb-lbl">বাবুর্চির মিল</div><div class="amb-val amb-orange">${parseFloat(cookMeals.toFixed(2))}</div></div>
       <div class="amb-cell amb-sep">
         <div class="amb-lbl">অফিস মিল<br><span style="font-size:9px;opacity:.7">MEPL+MPCL</span></div>
         <div class="amb-val amb-blue">${parseFloat(ofMls.toFixed(1))}মিল</div>
         <div class="amb-val amb-blue" style="font-size:12px">৳${ofBill.toFixed(0)}</div>
       </div>
     </div>
-
-    <!-- মেস ফান্ড -->
     <div class="amb-fund">
       <div style="font-size:12px;opacity:.85">🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)</div>
       <div style="font-size:20px;font-weight:800;color:${messBalance>=0?'#4ade80':'#f87171'};letter-spacing:-0.3px">${messBalance>=0?'+':'\u2212'}৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>
   </div>`;
 
-  const nonCookUsers=DB.users.filter(u=>u.type!=='cook')
-    .sort((a,b)=>{ const ai=parseInt(a.job)||Infinity,bi=parseInt(b.job)||Infinity; return ai-bi||((a.job||'').localeCompare(b.job||'')); });
+  // ── নিজের হিসাব (current user only) ──
+  if(!CU){ html+='<p class="muted tc" style="padding:16px">লগইন করুন</p>'; content.innerHTML=safeHTML(html); modal.classList.add('show'); return; }
+  const cu=DB.users.find(u=>u.u===CU.u);
+  if(!cu){ content.innerHTML=safeHTML(html); modal.classList.add('show'); return; }
+
+  const isOff=isOfficeMealUser(cu);
   const ofRate=getOfficeMealRate(mmKey);
-  if(!nonCookUsers.length){ html+='<p class="muted tc">কোনো সদস্য নেই</p>'; }
-  else{
-    const fmtTk=v=>{const r=Math.round(v*100)/100;return Number.isInteger(r)?r.toLocaleString('en-US'):r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
-    html+=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-    <table style="width:max-content;min-width:100%;border-collapse:collapse;font-size:11px">
-      <tr style="background:var(--primary);color:#fff">
-        <th style="padding:7px 8px;text-align:left;font-weight:600;min-width:90px;position:sticky;left:0;background:var(--primary);z-index:2">সদস্য</th>
-        <th style="text-align:right;padding:7px 6px;white-space:nowrap">মিল</th>
-        <th style="text-align:right;padding:7px 6px;white-space:nowrap">মিল বিল</th>
-        <th style="text-align:right;padding:7px 6px;white-space:nowrap">অন্যান্য</th>
-        <th style="text-align:right;padding:7px 6px;white-space:nowrap">বাবুর্চি বিল</th>
-        <th style="text-align:right;padding:7px 6px;font-weight:700;white-space:nowrap">মোট বিল</th>
-        <th style="text-align:right;padding:7px 6px;white-space:nowrap">বাকি/জমা</th>
-      </tr>`;
-    nonCookUsers.forEach((u,ri)=>{
-      const myMeals=messMonthMeals(u.u,mmKey);
-      const isOff=isOfficeMealUser(u);
-      const appliedRate=isOff?(ofRate||pm):pm;
-      const mealBill=myMeals*appliedRate;
-      const {othersShare,cookBillShare,cookFoodShare}=isOff?{othersShare:0,cookBillShare:0,cookFoodShare:0}:calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
-      const payable=mealBill+othersShare+cookBillShare+cookFoodShare;
-      const bal=u.balance||0;
-      const net=bal-payable;
-      const bg=ri%2===0?'var(--bg)':'var(--card)';
-      const netColor=net>=0?'var(--success)':'var(--danger)';
-      const rateLabel=isOff?`<div style="font-size:9px;color:var(--info);white-space:nowrap">🏢 ৳${appliedRate.toFixed(0)}/মিল</div>`:'';
-      html+=`<tr style="background:${bg};border-top:1px solid var(--border)">
-        <td style="padding:7px 8px;position:sticky;left:0;background:${bg};z-index:1;min-width:90px">
-          <div style="font-weight:600;font-size:11px;white-space:nowrap">${u.name}</div>
-          <div style="font-size:9px;color:var(--text-light);white-space:nowrap">ID- ${u.job||'—'} · ${isOff?'অফিস':u.type==='inside'?'ইন':'আউট'}</div>
-        </td>
-        <td style="text-align:right;padding:7px 6px;color:var(--primary);font-weight:600;white-space:nowrap">${parseFloat(myMeals.toFixed(2))}${rateLabel}</td>
-        <td style="text-align:right;padding:7px 6px;white-space:nowrap">৳${fmtTk(mealBill)}</td>
-        <td style="text-align:right;padding:7px 6px;color:var(--info);white-space:nowrap">${isOff?'—':'৳'+fmtTk(othersShare)}</td>
-        <td style="text-align:right;padding:7px 6px;color:var(--accent);white-space:nowrap">${isOff?'—':'৳'+fmtTk(cookFoodShare)}</td>
-        <td style="text-align:right;padding:7px 6px;font-weight:700;color:var(--danger);white-space:nowrap">৳${fmtTk(payable)}</td>
-        <td style="text-align:right;padding:7px 6px;font-weight:700;color:${netColor};white-space:nowrap">${net>=0?'+':'−'}৳${fmtTk(Math.abs(net))}</td>
-      </tr>`;
-    });
-    // বাবুর্চির সারি — আলাদা বিভাজক সহ
-    const cookUsers=DB.users.filter(u=>u.type==='cook');
-    if(cookUsers.length){
-      html+=`<tr style="background:rgba(0,0,0,.05)">
-        <td colspan="7" style="padding:5px 8px;font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.5px;border-top:2px solid var(--primary)">👨‍🍳 বাবুর্চি (মিল রেটে অন্তর্ভুক্ত, বিল আলাদা)</td>
-      </tr>`;
-      cookUsers.forEach((u,ri)=>{
-        const myMeals=messMonthMeals(u.u,mmKey);
-        const bg=ri%2===0?'var(--bg)':'var(--card)';
-        html+=`<tr style="background:${bg};border-top:1px solid var(--border);opacity:.85">
-          <td style="padding:7px 8px;position:sticky;left:0;background:${bg};z-index:1;min-width:90px">
-            <div style="font-weight:600;font-size:11px;white-space:nowrap">${u.name}</div>
-            <div style="font-size:9px;color:var(--text-light);white-space:nowrap">বাবুর্চি${u.room?' · R'+u.room:''}</div>
-          </td>
-          <td style="text-align:right;padding:7px 6px;color:#f59e0b;font-weight:600;white-space:nowrap">${parseFloat(myMeals.toFixed(2))}</td>
-          <td style="text-align:right;padding:7px 6px;font-size:10px;color:var(--text-light);white-space:nowrap" colspan="5">মিল রেটে অন্তর্ভুক্ত</td>
-        </tr>`;
-      });
-    }
-    html+=`</table></div>`;
-  }
-  content.innerHTML = safeHTML(html);
+  const appliedRate=isOff?(ofRate||pm):pm;
+
+  const myMeals=messMonthMeals(cu.u,mmKey);
+  const myShortfall=getShortfallMeals(cu.u,mmKey);
+  const myNetMeals=myMeals+myShortfall;
+  const mealBill=myNetMeals*appliedRate;
+  const {othersShare,cookBillShare,cookFoodShare}=isOff
+    ?{othersShare:0,cookBillShare:0,cookFoodShare:0}
+    :calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
+  const totalBill=mealBill+othersShare+cookFoodShare;
+
+  const prevBal=cu.prevBalance||0;
+  const totalBal=cu.balance||0;
+  const monthDep=(DB.transactions||[])
+    .filter(tx=>tx.uname===cu.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey))
+    .reduce((s,tx)=>s+(tx.amount||0),0);
+  const monthWith=(DB.transactions||[])
+    .filter(tx=>tx.uname===cu.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey))
+    .reduce((s,tx)=>s+(tx.amount||0),0);
+  const depositBal=monthDep-monthWith;
+  const netBal=totalBal-totalBill;
+
+  const fmtTk=v=>{const r=Math.round(v*100)/100;return Number.isInteger(r)?r.toLocaleString('en-US'):r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  const colP='var(--success)',colN='var(--danger)',colPBg='var(--success-light)',colNBg='var(--danger-light)';
+
+  html+=`
+  <!-- ── নিজের হিসাব header ── -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="font-size:14px;font-weight:700;color:var(--primary)">👤 আমার হিসাব</div>
+    <div style="font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--text-light)">ID: ${esc(String(cu.job||cu.u))}</div>
+    <div style="font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--text-light)">${isOff?'🏢 অফিস':cu.type==='inside'?'🏠 ইন':'🚪 আউট'}</div>
+    <div style="font-size:11px;font-weight:600;color:var(--text);margin-left:auto">${esc(cu.name)}</div>
+  </div>
+
+  <!-- ── Balance Grid ── -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center">
+      <div style="font-size:9px;color:var(--text-light);margin-bottom:4px">পূর্ববর্তী ব্যালেন্স</div>
+      <div style="font-size:14px;font-weight:800;color:${prevBal>=0?colP:colN}">${prevBal>=0?'+':'−'}৳${Math.abs(prevBal).toFixed(0)}</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center">
+      <div style="font-size:9px;color:var(--text-light);margin-bottom:4px">জমা (নেট)</div>
+      <div style="font-size:14px;font-weight:800;color:var(--info)">${depositBal>=0?'+':'−'}৳${Math.abs(depositBal).toFixed(0)}</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center">
+      <div style="font-size:9px;color:var(--text-light);margin-bottom:4px">মোট ব্যালেন্স</div>
+      <div style="font-size:14px;font-weight:800;color:${totalBal>=0?colP:colN}">${totalBal>=0?'+':'−'}৳${Math.abs(totalBal).toFixed(0)}</div>
+    </div>
+  </div>
+
+  <!-- ── Bill Breakdown ── -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.6px;margin-bottom:10px;text-transform:uppercase">বিল বিবরণী</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
+      <div style="font-size:12px;color:var(--text-light)">
+        মিল ${myShortfall>0?'('+myMeals.toFixed(2)+'+'+myShortfall.toFixed(2)+'SF)':'× '+myMeals.toFixed(2)}
+        <span style="font-size:10px;color:var(--primary)"> @ ৳${appliedRate.toFixed(2)}</span>
+      </div>
+      <div style="font-size:13px;font-weight:700">৳${fmtTk(mealBill)}</div>
+    </div>
+    ${!isOff&&othersShare>0?`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
+      <div style="font-size:12px;color:var(--text-light)">অন্যান্য ভাগ</div>
+      <div style="font-size:13px;font-weight:600;color:var(--info)">৳${fmtTk(othersShare)}</div>
+    </div>`:''}
+    ${!isOff&&cookFoodShare>0?`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
+      <div style="font-size:12px;color:var(--text-light)">বাবুর্চি বিল ভাগ</div>
+      <div style="font-size:13px;font-weight:600;color:var(--accent)">৳${fmtTk(cookFoodShare)}</div>
+    </div>`:''}
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:13px;font-weight:700">মোট বিল</div>
+      <div style="font-size:16px;font-weight:800;color:${colN}">৳${fmtTk(totalBill)}</div>
+    </div>
+  </div>
+
+  <!-- ── Net Balance ── -->
+  <div style="background:${netBal>=0?colPBg:colNBg};border:1.5px solid ${netBal>=0?colP:colN};border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:11px;color:${netBal>=0?colP:colN};font-weight:600;margin-bottom:2px">${netBal>=0?'✅ জমা আছে':'❌ বাকি আছে'}</div>
+      <div style="font-size:10px;color:var(--text-light)">ব্যালেন্স − মোট বিল</div>
+    </div>
+    <div style="font-size:22px;font-weight:900;color:${netBal>=0?colP:colN};letter-spacing:-0.5px">${netBal>=0?'+':'−'}৳${fmtTk(Math.abs(netBal))}</div>
+  </div>`;
+
+  content.innerHTML=safeHTML(html);
   modal.classList.add('show');
 }
 function closeAllMembersBill(){
