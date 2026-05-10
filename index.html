@@ -4806,9 +4806,11 @@ function makePDF(type){
         html += `<tr style="background:#f0fdf4;opacity:.85">
           <td style="padding:6px 6px;font-weight:600">Cook: ${esc(u.name)}</td>
           <td style="padding:6px 4px;text-align:center;font-size:10px">Cook</td>
-          <td colspan="4" style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
-          <td style="padding:6px 4px;text-align:right;color:#f59e0b;font-weight:700">${myMeals.toFixed(2)} meals</td>
-          <td colspan="4" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">Included in meal rate</td>
+          <td style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
+          <td style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
+          <td style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
+          <td style="padding:6px 4px;text-align:right;color:#f59e0b;font-weight:700">${myMeals.toFixed(2)}</td>
+          <td colspan="5" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">Included in meal rate</td>
         </tr>`;
       });
 
@@ -5613,7 +5615,15 @@ function triggerPWAInstall() {
   <div id="print-overlay-toolbar" style="position:sticky;top:0;z-index:10;background:#1a6b3c;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;box-shadow:0 2px 10px rgba(0,0,0,.3);">
     <button onclick="closePrintOverlay()" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">✕ বন্ধ করুন</button>
     <div id="print-overlay-title" style="font-size:14px;font-weight:700;">📊 রিপোর্ট</div>
-    <button onclick="window.print()" style="background:#fff;color:#1a6b3c;border:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print / PDF</button>
+    <button onclick="
+      const _t=document.title;
+      const k=document.getElementById('rpt-month')?.value||'';
+      const EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const [y,mo]=k.split('-').map(Number);
+      if(y&&mo){ const nm=mo%12,ny=mo===12?y+1:y; document.title=EN[mo-1]+' 11 to '+EN[nm]+' 10, '+ny; }
+      window.print();
+      setTimeout(()=>{document.title=_t;},1000);
+    " style="background:#fff;color:#1a6b3c;border:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print / PDF</button>
   </div>
   <div id="print-overlay-content" style="padding:12px;max-width:900px;margin:0 auto;"></div>
 </div>
