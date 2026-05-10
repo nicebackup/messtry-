@@ -1010,7 +1010,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="menu-item in" id="menu-officemeal" onclick="sec('officemeal')" style="display:none"><div class="menu-icon">🏢</div><div class="menu-lbl">অফিস মিল</div><div class="menu-sub">MEPL / MPCL</div></div>
       <div class="menu-item" onclick="sec('report')"><div class="menu-icon">📊</div><div class="menu-lbl">মাসিক রিপোর্ট</div><div class="menu-sub">Monthly Report</div></div>
       <div class="menu-item" onclick="sec('members')"><div class="menu-icon">👥</div><div class="menu-lbl">সদস্য তালিকা</div><div class="menu-sub">All Members</div></div>
-      <div class="menu-item in" onclick="sec('rules')"><div class="menu-icon">📋</div><div class="menu-lbl">নিয়মাবলী</div><div class="menu-sub">Rules</div></div>
+      <div class="menu-item in" id="menu-rules" onclick="sec('rules')"><div class="menu-icon">📋</div><div class="menu-lbl">নিয়মাবলী</div><div class="menu-sub">Rules</div></div>
       <div class="menu-item dg" id="admin-btn" onclick="sec('admin')" style="display:none"><div class="menu-icon">⚙️</div><div class="menu-lbl">Admin Panel</div><div class="menu-sub">পরিচালনা</div></div>
     </div>
   </div>
@@ -1578,24 +1578,59 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
   </div>
   <div class="content">
 
-    <!-- Meal Config — Manager/Controller only -->
-    <div id="rules-cfg-insider" style="display:none">
-      <div class="card" style="padding:0 4px">
-        <div class="sec-title" style="padding:14px 10px 8px">⚙️ মিল মান কনফিগারেশন</div>
-        <div class="adm-item" onclick="togRulesCfg('insider')" style="padding:13px 10px">
-          <div class="adm-icon" style="font-size:20px">🏢</div>
-          <div><div class="adm-lbl">কোয়ার্টার সদস্য (Insider)</div></div>
+    <!-- Meal Config -->
+    <div id="rules-cfg-insider">
+      <div class="card" style="padding:12px 14px 14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-light);margin-bottom:10px;letter-spacing:.3px">মিল মান কনফিগারেশন</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button onclick="togRulesCfg('insider')" style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:13px 8px;cursor:pointer;text-align:center;color:var(--text);font-family:inherit">
+            <div style="font-size:14px;font-weight:700;color:var(--primary)">কোয়ার্টার</div>
+            <div style="font-size:11px;color:var(--text-light);margin-top:3px">Insider</div>
+          </button>
+          <button onclick="togRulesCfg('outsider')" style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:13px 8px;cursor:pointer;text-align:center;color:var(--text);font-family:inherit">
+            <div style="font-size:14px;font-weight:700;color:var(--primary)">বাইরে থাকেন</div>
+            <div style="font-size:11px;color:var(--text-light);margin-top:3px">Outside</div>
+          </button>
         </div>
-        <div class="adm-item" onclick="togRulesCfg('outsider')" style="padding:13px 10px;border-bottom:none">
-          <div class="adm-icon" style="font-size:20px">🏠</div>
-          <div><div class="adm-lbl">বাইরে থাকেন (Outside)</div></div>
+      </div>
+    </div>
+
+    <!-- Shortfall Meal Entry -->
+    <div class="card">
+      <div class="sec-title" style="margin-bottom:10px">📉 Shortfall Meal Entry</div>
+
+      <!-- Search box -->
+      <div style="position:relative;margin-bottom:10px">
+        <input type="text" id="sf-search" class="form-input" placeholder="🔍 Job ID লিখুন..." autocomplete="off"
+          oninput="sfSearch()" onfocus="sfSearch()" onblur="setTimeout(()=>{const d=document.getElementById('sf-dropdown');if(d)d.style.display='none';},180)">
+        <div id="sf-dropdown" style="display:none;position:absolute;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.15);z-index:50;max-height:220px;overflow-y:auto;margin-top:2px"></div>
+      </div>
+
+      <!-- Selected member info + input + save -->
+      <div id="sf-selected" style="display:none">
+        <div id="sf-mem-info" style="background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+          <div id="sf-mem-avatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div id="sf-mem-name" style="font-size:14px;font-weight:700;color:var(--text)"></div>
+            <div id="sf-mem-sub" style="font-size:11px;color:var(--text-light)"></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text-light)">Net Meals</div>
+            <div id="sf-mem-meals" style="font-size:16px;font-weight:700;color:var(--primary)"></div>
+          </div>
         </div>
+        <!-- Compact: input + save inline -->
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="sf-amount" class="form-input" step="0.25" min="0" placeholder="Shortfall মিলের সংখ্যা লিখুন..." style="flex:1;margin:0">
+          <button onclick="saveShortfall()" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit">✅ সেভ</button>
+        </div>
+        <div id="sf-current-note" style="font-size:11px;color:var(--text-light);margin-top:6px"></div>
       </div>
     </div>
 
     <!-- Hidden popup cards -->
     <div id="card-cfg-insider" style="display:none">
-      <div class="sec-title">🏢 কোয়ার্টার সদস্য — মিল মান</div>
+      <div class="sec-title">কোয়ার্টার সদস্য — মিল মান</div>
       <p style="font-size:12px;color:var(--text-light);margin-bottom:14px">তারিখ খালি রাখলে সব দিনের জন্য ডিফল্ট মান হিসেবে সেট হবে</p>
       <div class="form-group"><label class="form-label">তারিখ (ঐচ্ছিক)</label><input type="date" id="cfg-date-insider" class="form-input"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
@@ -1607,7 +1642,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     </div>
 
     <div id="card-cfg-outsider" style="display:none">
-      <div class="sec-title">🏠 বাইরে থাকেন — মিল মান</div>
+      <div class="sec-title">বাইরে থাকেন — মিল মান</div>
       <p style="font-size:12px;color:var(--text-light);margin-bottom:14px">তারিখ খালি রাখলে সব দিনের জন্য ডিফল্ট মান হিসেবে সেট হবে</p>
       <div class="form-group"><label class="form-label">তারিখ (ঐচ্ছিক)</label><input type="date" id="cfg-date-outsider" class="form-input"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
@@ -1618,24 +1653,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <button class="btn btn-primary" onclick="saveCfg('outsider')">✅ সেভ করুন</button>
     </div>
 
-    <!-- Rules Text -->
-    <div class="card">
-      <div class="sec-title">📋 মেসের নিয়মাবলী</div>
-      <div id="rules-display" style="font-size:15px;line-height:1.9;color:var(--text);white-space:pre-line;min-height:80px;padding:8px 0">
-        <p class="muted tc">কোনো নিয়মাবলী যুক্ত হয়নি</p>
-      </div>
-    </div>
-    <div class="card" id="rules-edit-card" style="display:none">
-      <div class="sec-title">✏️ নিয়মাবলী সম্পাদনা</div>
-      <div class="form-group">
-        <textarea id="rules-text-input" class="form-input" rows="10" style="resize:vertical;line-height:1.7" placeholder="নিয়মাবলী লিখুন..."></textarea>
-      </div>
-      <button class="btn btn-primary" onclick="saveRules()">✅ সেভ করুন</button>
-      <button class="btn btn-danger" style="margin-top:6px" onclick="clearRules()">🗑️ মুছুন</button>
-    </div>
   </div>
 </div>
-
 
 
 <div class="modal-bg notice-modal-center" id="notice-popup-modal">
@@ -1926,6 +1945,7 @@ function migrateDB(){
   if(DB.siteNote===undefined) DB.siteNote='আশুগঞ্জ, ব্রাহ্মণবাড়িয়া';
   if(!DB.notice) DB.notice={text:'',popupEnabled:false};
   if(!DB.rules) DB.rules={text:''};
+  if(!DB.shortfall) DB.shortfall={};
   if(!DB.cookBills) DB.cookBills=[];
   if(!DB.officeMealRates) DB.officeMealRates={};
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
@@ -2416,7 +2436,10 @@ function sec(s){
   if(s==='officemeal'){ initOfficeMealScreen(); showSc('officemeal'); return; }
   if(s==='messmanager'){ newMessManagerScreen(); return; }
   if(s==='notice'){ initNotice(); showSc('notice'); return; }
-  if(s==='rules'){ initRules(); showSc('rules'); return; }
+  if(s==='rules'){
+    if(!CU||!isManagerOrCtrl()) return;
+    initRules(); showSc('rules'); return;
+  }
   if(s==='whoeats'){ showSc('whoeats'); return; }
 }
 
@@ -2965,6 +2988,8 @@ function refreshHome(){
   if(omEl) omEl.style.display=mgr?'block':'none';
   document.getElementById('menu-deposit').style.display='block';
   document.getElementById('admin-btn').style.display=isManagerOrCtrl()?'block':'none';
+  const rulesEl=document.getElementById('menu-rules');
+  if(rulesEl) rulesEl.style.display=isManagerOrCtrl()?'block':'none';
 
   // Auto-reset to today every time goHome is called fresh
   if(!homeViewDate) homeViewDate=null;
@@ -3330,6 +3355,14 @@ function messMonthMeals(uname, mmKey){
   });
   return total;
 }
+// ── Shortfall helpers ──
+function getShortfallMeals(uname, mmKey){
+  if(!DB.shortfall) return 0;
+  return parseFloat(DB.shortfall[uname+'_'+mmKey]||0);
+}
+function getNetMemberMeals(uname, mmKey){
+  return messMonthMeals(uname, mmKey) + getShortfallMeals(uname, mmKey);
+}
 
 // ═══════════════════════════════════════════════
 // MEAL RATE CALCULATION
@@ -3344,13 +3377,13 @@ function getCookMeals(mmKey){
   return cookMeals;
 }
 function getNetMeals(mmKey){
-  // নেট মিল = সবার মোট মিল - বাবুর্চির মিল - অফিস মিলের মিল
+  // নেট মিল = সবার মোট মিল (shortfall সহ) - বাবুর্চির মিল - অফিস মিলের মিল
   let totalMeals=0;
-  DB.users.forEach(u=>{ totalMeals+=messMonthMeals(u.u,mmKey); });
-  const cookMeals=getCookMeals(mmKey);
+  DB.users.forEach(u=>{ totalMeals+=getNetMemberMeals(u.u,mmKey); });
+  const cookMeals=getCookMeals(mmKey); // cook এর shortfall নেই, actual meals
   // অফিস মিল (MEPL/MPCL) বাদ দিতে হবে — আলাদা রেটে হিসাব হয়
   let officeMeals=0;
-  DB.users.filter(u=>isOfficeMealUser(u)).forEach(u=>{ officeMeals+=messMonthMeals(u.u,mmKey); });
+  DB.users.filter(u=>isOfficeMealUser(u)).forEach(u=>{ officeMeals+=getNetMemberMeals(u.u,mmKey); });
   // নেট মিল = সদস্যদের মিল (বাবুর্চি বাদ, অফিস মিল বাদ)
   return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-cookMeals-officeMeals};
 }
@@ -3819,7 +3852,8 @@ function loadBill(){
   const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost}=calcMealRate(mmKey);
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
   const myMeals=messMonthMeals(CU.u,mmKey);
-  const mealBill=myMeals*pm;
+  const myNetMeals=getNetMemberMeals(CU.u,mmKey);
+  const mealBill=myNetMeals*pm;
 
   // Use new split-aware calculation
   const {othersShare,cookBillShare,cookFoodShare}=calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
@@ -3827,7 +3861,7 @@ function loadBill(){
   let netPayable, mealBillDisplay=mealBill;
   if(isOfficeMealUser(cu)){
     const ofRate=getOfficeMealRate(mmKey);
-    mealBillDisplay=myMeals*ofRate;
+    mealBillDisplay=myNetMeals*ofRate;
     netPayable=mealBillDisplay; // no misc for office
   } else {
     netPayable=mealBill+othersShare+cookBillShare+cookFoodShare;
@@ -3842,7 +3876,7 @@ function loadBill(){
   document.getElementById('bl-others-s').textContent='৳ '+(others+cookBillsTotal).toLocaleString();
   // নেট মিল দেখাও (বাবুর্চি বাদে)
   document.getElementById('bl-meals-s').textContent=isOfficeMealUser(cu)?'অফিস মিল':netMeals.toFixed(2);
-  document.getElementById('bl-my-meals').textContent=myMeals.toFixed(2)+' মিল';
+  document.getElementById('bl-my-meals').textContent=myNetMeals.toFixed(2)+' মিল'+(myMeals!==myNetMeals?' ('+myMeals.toFixed(2)+'+'+getShortfallMeals(CU.u,mmKey).toFixed(2)+')':'');
   document.getElementById('bl-meal-bill').textContent='৳ '+mealBillDisplay.toFixed(2);
   document.getElementById('bl-other-share').textContent='৳ '+othersShare.toFixed(2);
   document.getElementById('bl-cook-food-share').textContent='৳ '+(cookFoodShare||0).toFixed(2);
@@ -4775,6 +4809,8 @@ function makePDF(type){
           <th style="padding:7px 4px;text-align:right;">Deposit</th>
           <th style="padding:7px 4px;text-align:right;">Total Balance</th>
           <th style="padding:7px 4px;text-align:right;">Meals</th>
+          <th style="padding:7px 4px;text-align:right;">S/F</th>
+          <th style="padding:7px 4px;text-align:right;background:#145a32;">Net Meals</th>
           <th style="padding:7px 4px;text-align:right;">Meal Bill</th>
           <th style="padding:7px 4px;text-align:right;">Others</th>
           <th style="padding:7px 4px;text-align:right;">Cook</th>
@@ -4784,14 +4820,15 @@ function makePDF(type){
 
       sortedUsers.forEach((u,ri)=>{
         const myMeals = messMonthMeals(u.u, mmKey);
+        const myShortfall = getShortfallMeals(u.u, mmKey);
+        const myNetMeals = myMeals + myShortfall;
         const isOffU = isOfficeMealUser(u);
         const appRate = isOffU ? (pdfOfRate||pm) : pm;
-        const mealBill = myMeals * appRate;
+        const mealBill = myNetMeals * appRate;
         const sh = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0}
                           : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
         const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
         const totalBal = u.balance||0;
-        // Calculate deposit this mess month
         const monthDeposits = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
           .reduce((s, tx) => s + (tx.amount||0), 0);
@@ -4808,7 +4845,9 @@ function makePDF(type){
           <td style="padding:6px 4px;text-align:right;color:${prevColor}">${prevBalance>=0?'':'-'}${Math.abs(prevBalance).toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:#1565c0;font-weight:600">${depositBalance>0?'+':''}${depositBalance.toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:${totalBal>=0?'#1a6b3c':'#e53935'};font-weight:700">${totalBal>=0?'':'-'}${Math.abs(totalBal).toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;color:#1a6b3c;font-weight:700">${myMeals.toFixed(2)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#555">${myMeals.toFixed(2)}</td>
+          <td style="padding:6px 4px;text-align:right;color:${myShortfall>0?'#e65100':'#aaa'};font-size:10px">${myShortfall>0?'+'+myShortfall.toFixed(2):'-'}</td>
+          <td style="padding:6px 4px;text-align:right;color:#1a6b3c;font-weight:700;background:#f0f9f4">${myNetMeals.toFixed(2)}</td>
           <td style="padding:6px 4px;text-align:right">${mealBill.toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'-':sh.othersShare.toFixed(0)}</td>
           <td style="padding:6px 4px;text-align:right;color:#e65100">${isOffU?'-':sh.cookFoodShare.toFixed(0)}</td>
@@ -4827,7 +4866,9 @@ function makePDF(type){
           <td style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
           <td style="padding:6px 4px;text-align:center;color:#888;font-size:10px">-</td>
           <td style="padding:6px 4px;text-align:right;color:#f59e0b;font-weight:700">${myMeals.toFixed(2)}</td>
-          <td colspan="5" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">Included in meal rate</td>
+          <td style="padding:6px 4px;text-align:center;color:#aaa;font-size:10px">-</td>
+          <td style="padding:6px 4px;text-align:center;color:#aaa;font-size:10px">${myMeals.toFixed(2)}</td>
+          <td colspan="6" style="padding:6px 4px;text-align:center;font-size:10px;color:#888">Included in meal rate</td>
         </tr>`;
       });
 
@@ -5169,36 +5210,97 @@ function clearNotice(){
 // RULES
 // ═══════════════════════════════════════════════
 function initRules(){
-  if(!DB.rules) DB.rules={text:''};
   if(!DB.cfg) DB.cfg={insider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}},outsider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}}};
-  const canEdit=CU&&isManagerOrCtrl();
-  // Show/hide edit cards
-  const editCard=document.getElementById('rules-edit-card');
-  if(editCard) editCard.style.display=canEdit?'block':'none';
-  const cfgBlock=document.getElementById('rules-cfg-insider');
-  if(cfgBlock) cfgBlock.style.display=canEdit?'block':'none';
-  // Populate insider cfg
-  if(canEdit){
-    ['insider','outsider'].forEach(grp=>{
-      const cfg=DB.cfg[grp]||{def:{b:0.75,l:1.5,d:0.75}};
-      document.getElementById('cfg-bv-'+grp).value=cfg.def.b;
-      document.getElementById('cfg-lv-'+grp).value=cfg.def.l;
-      document.getElementById('cfg-dv-'+grp).value=cfg.def.d;
-      document.getElementById('cfg-date-'+grp).value='';
-    });
-    const ta=document.getElementById('rules-text-input');
-    if(ta) ta.value=DB.rules.text||'';
+  ['insider','outsider'].forEach(grp=>{
+    const cfg=DB.cfg[grp]||{def:{b:0.75,l:1.5,d:0.75}};
+    const bv=document.getElementById('cfg-bv-'+grp);
+    const lv=document.getElementById('cfg-lv-'+grp);
+    const dv=document.getElementById('cfg-dv-'+grp);
+    const dt=document.getElementById('cfg-date-'+grp);
+    if(bv) bv.value=cfg.def.b;
+    if(lv) lv.value=cfg.def.l;
+    if(dv) dv.value=cfg.def.d;
+    if(dt) dt.value='';
+  });
+  // Reset shortfall UI
+  const sfSel=document.getElementById('sf-selected');
+  const sfSrc=document.getElementById('sf-search');
+  if(sfSel) sfSel.style.display='none';
+  if(sfSrc) sfSrc.value='';
+}
+
+let _sfUser=null;
+function sfSearch(){
+  const q=(document.getElementById('sf-search').value||'').trim();
+  const dd=document.getElementById('sf-dropdown');
+  const users=DB.users.filter(u=>u.type!=='cook'&&!isOfficeMealUser(u));
+  let matches;
+  if(!q){ matches=users; }
+  else {
+    const exact=users.filter(u=>String(u.job||'').toLowerCase()===q.toLowerCase());
+    const starts=users.filter(u=>String(u.job||'').toLowerCase().startsWith(q.toLowerCase())&&String(u.job||'').toLowerCase()!==q.toLowerCase());
+    matches=[...exact,...starts];
   }
-  // Display rules text
-  const rd=document.getElementById('rules-display');
-  if(rd){
-    if(DB.rules.text&&DB.rules.text.trim()){
-      rd.textContent=DB.rules.text;
-      rd.style.color='var(--text)';
-    } else {
-      rd.innerHTML='<p class="muted tc">কোনো নিয়মাবলী যুক্ত হয়নি</p>';
-    }
+  if(!matches.length){
+    dd.innerHTML='<div style="padding:10px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
+    dd.style.display='block'; return;
   }
+  const mmKey=messMonthKey();
+  dd.innerHTML=safeHTML(matches.slice(0,12).map(u=>{
+    const netM=getNetMemberMeals(u.u,mmKey);
+    const sf=getShortfallMeals(u.u,mmKey);
+    const typeLabel=u.type==='inside'?'In':'Out';
+    return `<div data-uname="${esc(u.u)}" data-action="sf-select" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">${esc(u.name[0])}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(u.name)}</div>
+        <div style="font-size:11px;color:var(--text-light)">ID: ${esc(String(u.job||'-'))} · ${typeLabel}${sf>0?' · S/F: +'+sf.toFixed(2):''}</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:var(--primary)">${netM.toFixed(2)}</div>
+    </div>`;
+  }).join(''));
+  dd.style.display='block';
+  dd.onmousedown=function(e){
+    const item=e.target.closest('[data-action="sf-select"]');
+    if(item){ e.preventDefault(); sfSelectMember(item.getAttribute('data-uname')); }
+  };
+}
+function sfSelectMember(uname){
+  const u=DB.users.find(x=>x.u===uname); if(!u) return;
+  _sfUser=u;
+  const mmKey=messMonthKey();
+  const actual=messMonthMeals(u.u,mmKey);
+  const sf=getShortfallMeals(u.u,mmKey);
+  const net=actual+sf;
+  const typeLabel=u.type==='inside'?'Insider (কোয়ার্টার)':'Outside (বাইরে)';
+  document.getElementById('sf-search').value='';
+  document.getElementById('sf-dropdown').style.display='none';
+  document.getElementById('sf-mem-avatar').textContent=u.name[0];
+  document.getElementById('sf-mem-name').textContent=u.name;
+  document.getElementById('sf-mem-sub').textContent='ID: '+String(u.job||u.u)+' · '+typeLabel;
+  document.getElementById('sf-mem-meals').textContent=net.toFixed(2);
+  document.getElementById('sf-amount').value=sf>0?sf:'';
+  document.getElementById('sf-current-note').textContent=sf>0?'বর্তমান Shortfall: '+sf.toFixed(2)+' মিল · নতুন সংখ্যা দিলে replace হবে':'';
+  document.getElementById('sf-selected').style.display='block';
+}
+function saveShortfall(){
+  if(!isOnline()){ noNetPopup(); return; }
+  if(!_sfUser){ toast('❌ আগে সদস্য নির্বাচন করুন'); return; }
+  const amt=parseFloat(document.getElementById('sf-amount').value);
+  if(isNaN(amt)||amt<0){ toast('❌ সঠিক সংখ্যা দিন'); return; }
+  const mmKey=messMonthKey();
+  if(!DB.shortfall) DB.shortfall={};
+  if(amt===0){
+    delete DB.shortfall[_sfUser.u+'_'+mmKey];
+  } else {
+    DB.shortfall[_sfUser.u+'_'+mmKey]=amt;
+  }
+  saveDB();
+  // Update display
+  const net=getNetMemberMeals(_sfUser.u,mmKey);
+  document.getElementById('sf-mem-meals').textContent=net.toFixed(2);
+  document.getElementById('sf-current-note').textContent=amt>0?'বর্তমান Shortfall: '+amt.toFixed(2)+' মিল':'';
+  toast('✅ '+_sfUser.name+' এর Shortfall '+amt.toFixed(2)+' মিল সেভ হয়েছে!');
 }
 function saveRules(){
   if(!isOnline()){ noNetPopup(); return; }
