@@ -1718,14 +1718,12 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 </div>
 
 <!-- ═══════════ ALL MEMBERS BILL MODAL ═══════════ -->
-<div class="modal-bg" id="all-members-bill-modal" onclick="if(event.target===this)closeAllMembersBill()">
-  <div class="modal" style="max-height:90vh;overflow-y:auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="modal-title" style="margin:0">📋 মাসিক হিসাব বিবরণী</div>
-      <button onclick="closeAllMembersBill()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-family:inherit;color:var(--text);font-size:13px">✕ বন্ধ</button>
-    </div>
-    <div id="all-members-bill-content">লোড হচ্ছে...</div>
+<!-- ═══════════ মাসিক হিসাব বিবরণী — FULL SCREEN ═══════════ -->
+<div id="sc-mybill" class="screen">
+  <div style="position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;">
+    <button class="header-back" onclick="goHome()">← Home</button>
   </div>
+  <div class="content pb-nav" id="mybill-content" style="padding-top:14px">লোড হচ্ছে...</div>
 </div>
 
 
@@ -4950,13 +4948,12 @@ function closePrintOverlay(){
 }
 
 // ═══════════════════════════════════════════════
-// মাসিক হিসাব বিবরণী MODAL (Home "মিল রেট" click)
+// মাসিক হিসাব বিবরণী SCREEN (Home "মিল রেট" click)
 // ═══════════════════════════════════════════════
 function showAllMembersBill(){
   const mmKey=messMonthKey();
   const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost}=calcMealRate(mmKey);
-  const modal=document.getElementById('all-members-bill-modal');
-  const content=document.getElementById('all-members-bill-content');
+  const content=document.getElementById('mybill-content');
 
   // ── office meal summary ──
   const ofUsers=getOfficeMealUsers();
@@ -4971,7 +4968,7 @@ function showAllMembersBill(){
 
   // ── Summary Hero Card (সবাই দেখবে) ──
   let html=`
-  <div class="summary-hero-card" style="border-radius:14px;padding:16px;margin-bottom:14px;">
+  <div class="summary-hero-card card" style="border:none;border-radius:14px;padding:16px;margin-bottom:14px;">
     <div style="font-size:11px;opacity:.75;letter-spacing:.5px;margin-bottom:8px">${messMonthLabel()}</div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
       <div>
@@ -5004,9 +5001,9 @@ function showAllMembersBill(){
   </div>`;
 
   // ── নিজের হিসাব (current user only) ──
-  if(!CU){ html+='<p class="muted tc" style="padding:16px">লগইন করুন</p>'; content.innerHTML=safeHTML(html); modal.classList.add('show'); return; }
+  if(!CU){ html+='<p class="muted tc" style="padding:16px">লগইন করুন</p>'; content.innerHTML=safeHTML(html); showSc('mybill'); return; }
   const cu=DB.users.find(u=>u.u===CU.u);
-  if(!cu){ content.innerHTML=safeHTML(html); modal.classList.add('show'); return; }
+  if(!cu){ content.innerHTML=safeHTML(html); showSc('mybill'); return; }
 
   const isOff=isOfficeMealUser(cu);
   const ofRate=getOfficeMealRate(mmKey);
@@ -5051,7 +5048,7 @@ function showAllMembersBill(){
       <div style="font-size:14px;font-weight:800;color:${prevBal>=0?colP:colN}">${prevBal>=0?'+':'−'}৳${Math.abs(prevBal).toFixed(0)}</div>
     </div>
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center">
-      <div style="font-size:9px;color:var(--text-light);margin-bottom:4px">জমা (নেট)</div>
+      <div style="font-size:9px;color:var(--text-light);margin-bottom:4px">জমা</div>
       <div style="font-size:14px;font-weight:800;color:var(--info)">${depositBal>=0?'+':'−'}৳${Math.abs(depositBal).toFixed(0)}</div>
     </div>
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center">
@@ -5061,23 +5058,23 @@ function showAllMembersBill(){
   </div>
 
   <!-- ── Bill Breakdown ── -->
-  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px">
     <div style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.6px;margin-bottom:10px;text-transform:uppercase">বিল বিবরণী</div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
       <div style="font-size:12px;color:var(--text-light)">
         মিল ${myShortfall>0?'('+myMeals.toFixed(2)+'+'+myShortfall.toFixed(2)+'SF)':'× '+myMeals.toFixed(2)}
-        <span style="font-size:10px;color:var(--primary)"> @ ৳${appliedRate.toFixed(2)}</span>
+        <span style="font-size:10px;color:var(--primary)"> × ৳${appliedRate.toFixed(2)}</span>
       </div>
       <div style="font-size:13px;font-weight:700">৳${fmtTk(mealBill)}</div>
     </div>
     ${!isOff&&othersShare>0?`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
-      <div style="font-size:12px;color:var(--text-light)">অন্যান্য ভাগ</div>
+      <div style="font-size:12px;color:var(--text-light)">অন্যান্য বিল</div>
       <div style="font-size:13px;font-weight:600;color:var(--info)">৳${fmtTk(othersShare)}</div>
     </div>`:''}
     ${!isOff&&cookFoodShare>0?`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
-      <div style="font-size:12px;color:var(--text-light)">বাবুর্চি বিল ভাগ</div>
+      <div style="font-size:12px;color:var(--text-light)">বাবুর্চি বিল</div>
       <div style="font-size:13px;font-weight:600;color:var(--accent)">৳${fmtTk(cookFoodShare)}</div>
     </div>`:''}
     <div style="height:1px;background:var(--border);margin:8px 0"></div>
@@ -5097,11 +5094,9 @@ function showAllMembersBill(){
   </div>`;
 
   content.innerHTML=safeHTML(html);
-  modal.classList.add('show');
+  showSc('mybill');
 }
-function closeAllMembersBill(){
-  document.getElementById('all-members-bill-modal').classList.remove('show');
-}
+function closeAllMembersBill(){ goHome(); }
 
 // ═══════════════════════════════════════════════
 // MESS MANAGER SCREEN
