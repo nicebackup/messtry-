@@ -1201,7 +1201,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="card">
         <div class="sec-title">&#128181; টাকা জমা / ফেরত</div>
         <div class="form-group" style="position:relative;">
-          <label class="form-label">সদস্য নির্বাচন (নাম / ID / মোবাইল দিয়ে খুঁজুন)</label>
           <input type="text" id="dep-mem-search" class="form-input" placeholder="🔍 Job ID লিখুন (যেমন: 1120)" autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
           <input type="hidden" id="dep-mem" value="">
           <div id="dep-mem-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(26,107,60,0.15);"></div>
@@ -3659,25 +3658,30 @@ function renderDepMyHistory(){
 function depMemSearch(){
   const q=(document.getElementById('dep-mem-search').value||'').trim();
   const dd=document.getElementById('dep-mem-dropdown');
-  if(!q){ dd.style.display='none'; return; }
   const users=DB.users.filter(u=>u.type!=='cook');
-  // ID only: exact match first, then starts-with
-  const exact=users.filter(u=>(u.job||'').toLowerCase()===q.toLowerCase());
-  const starts=users.filter(u=>(u.job||'').toLowerCase().startsWith(q.toLowerCase()) && (u.job||'').toLowerCase()!==q.toLowerCase());
-  const matches=[...exact,...starts];
+  let matches;
+  if(!q){
+    // খালি থাকলে সব দেখাও
+    matches=users;
+  } else {
+    // String conversion নিশ্চিত করো — u.job number হতে পারে
+    const exact=users.filter(u=>String(u.job||'').toLowerCase()===q.toLowerCase());
+    const starts=users.filter(u=>String(u.job||'').toLowerCase().startsWith(q.toLowerCase()) && String(u.job||'').toLowerCase()!==q.toLowerCase());
+    matches=[...exact,...starts];
+  }
   if(!matches.length){
     dd.innerHTML='<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
     dd.style.display='block'; return;
   }
-  dd.innerHTML = safeHTML(matches.slice(0,10).map(u=>{
+  dd.innerHTML = safeHTML(matches.slice(0,15).map(u=>{
     const bal=u.balance||0;
     const balColor=bal>=0?'var(--success)':'var(--danger)';
     const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString():'-৳'+Math.abs(bal).toLocaleString();
-    return`<div data-uname="${esc(u.u)}" data-action="select-dep-mem" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='var(--success-light)'" onmouseout="this.style.background=''">
+    return`<div data-uname="${esc(u.u)}" data-action="select-dep-mem" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
       <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${esc(u.name[0])}</div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(u.name)}</div>
-        <div style="font-size:12px;color:var(--primary);font-weight:600">ID: ${esc(u.job||'-')}</div>
+        <div style="font-size:12px;color:var(--primary);font-weight:600">ID: ${esc(String(u.job||'-'))}</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:${balColor}">${balTxt}</div>
     </div>`;
@@ -3698,7 +3702,7 @@ function selectDepMem(uname){
   const bal=u.balance||0;
   // Use textContent-safe approach for the selected name display
   document.getElementById('dep-mem-selected-name').innerHTML = safeHTML(
-    `✅ ${esc(u.name)} &nbsp;<span style="font-size:11px;color:var(--text-light)">| 🪪 ${esc(u.job||'-')} | 🏠 রুম ${esc(u.room||'-')}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString()}</span>`
+    `✅ ${esc(u.name)} &nbsp;<span style="font-size:11px;color:var(--text-light)">| ID: ${esc(String(u.job||'-'))}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString()}</span>`
   );
   showMemberBalance();
 }
