@@ -1202,7 +1202,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <div class="sec-title">&#128181; টাকা জমা / ফেরত</div>
         <div class="form-group" style="position:relative;">
           <label class="form-label">সদস্য নির্বাচন (নাম / ID / মোবাইল দিয়ে খুঁজুন)</label>
-          <input type="text" id="dep-mem-search" class="form-input" placeholder="&#128269; নাম, Job ID বা মোবাইল নম্বর লিখুন..." autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
+          <input type="text" id="dep-mem-search" class="form-input" placeholder="🔍 Job ID লিখুন (যেমন: 1120)" autocomplete="off" oninput="depMemSearch()" onfocus="depMemSearch()">
           <input type="hidden" id="dep-mem" value="">
           <div id="dep-mem-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(26,107,60,0.15);"></div>
           <div id="dep-mem-selected" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);align-items:center;justify-content:space-between;">
@@ -3004,7 +3004,7 @@ function showMyMealHistory(){
       };
       const bg=ri%2===0?'var(--bg)':'transparent';
       html+=`<tr style="background:${bg};border-top:1px solid var(--border)">
-        <td style="padding:7px 6px;font-size:12px;color:var(--text-light)">${d.slice(5).replace('-','/')}</td>
+        <td style="padding:7px 6px;font-size:12px;color:var(--text-light)">${d.slice(8)+'/'+d.slice(5,7)}</td>
         ${fmtCell(bv,meal.b)}${fmtCell(lv,meal.l)}${fmtCell(dv,meal.d)}
         <td style="text-align:right;padding:7px 6px;font-weight:700;color:var(--primary)">${(bv+lv+dv).toFixed(2)}</td>
       </tr>`;
@@ -3139,7 +3139,7 @@ function exportWhoEatsPDF(){
   doc.setFontSize(14); doc.setFont('helvetica','bold');
   doc.text(slotAsc+' Meals @ Plant', 105, mT+6, {align:'center'});
   doc.setFontSize(11); doc.setFont('helvetica','normal');
-  doc.text('('+_weDate+')', 105, mT+13, {align:'center'});
+  doc.text('('+fmtDate(_weDate)+')', 105, mT+13, {align:'center'});
 
   // ── Horizontal rule ──
   let y = mT+18;
@@ -3170,7 +3170,7 @@ function exportWhoEatsPDF(){
   doc.setFontSize(13); doc.setFont('helvetica','bold');
   doc.text('Total: '+total+' Meals', 105, y, {align:'center'});
 
-  doc.save(slotAsc+'@Plant_'+_weDate+'.pdf');
+  doc.save(slotAsc+'@Plant_'+fmtDate(_weDate)+'.pdf');
   toast('PDF ডাউনলোড হচ্ছে!');
 }
 
@@ -3195,13 +3195,11 @@ function shiftDate(delta){
 }
 function toISODate(d){ return d.toISOString().split('T')[0]; }
 function fmtDate(isoStr){
-  // Converts "YYYY-MM-DD" → "DD-Mon-YYYY" e.g. "16-Apr-2026"
+  // Converts "YYYY-MM-DD" → "DD-MM-YYYY" e.g. "16-04-2026"
   if(!isoStr) return '';
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const parts=isoStr.split('-');
   if(parts.length!==3) return isoStr;
-  const y=parts[0], m=parseInt(parts[1],10)-1, d=parts[2];
-  return d+'-'+(months[m]||parts[1])+'-'+y;
+  return parts[2]+'-'+parts[1]+'-'+parts[0];
 }
 function loadMealDate(){
   mealDate=document.getElementById('meal-date').value; if(!mealDate) return;
@@ -3659,15 +3657,14 @@ function renderDepMyHistory(){
   el.innerHTML=safeHTML(html)||'<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
 }
 function depMemSearch(){
-  const q=(document.getElementById('dep-mem-search').value||'').trim().toLowerCase();
+  const q=(document.getElementById('dep-mem-search').value||'').trim();
   const dd=document.getElementById('dep-mem-dropdown');
+  if(!q){ dd.style.display='none'; return; }
   const users=DB.users.filter(u=>u.type!=='cook');
-  const matches = q.length===0 ? users : users.filter(u=>
-    (u.name||'').toLowerCase().includes(q)||
-    (u.mob||'').includes(q)||
-    (u.job||'').toLowerCase().includes(q)||
-    (u.room||'').includes(q)
-  );
+  // ID only: exact match first, then starts-with
+  const exact=users.filter(u=>(u.job||'').toLowerCase()===q.toLowerCase());
+  const starts=users.filter(u=>(u.job||'').toLowerCase().startsWith(q.toLowerCase()) && (u.job||'').toLowerCase()!==q.toLowerCase());
+  const matches=[...exact,...starts];
   if(!matches.length){
     dd.innerHTML='<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
     dd.style.display='block'; return;
@@ -3680,13 +3677,12 @@ function depMemSearch(){
       <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${esc(u.name[0])}</div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(u.name)}</div>
-        <div style="font-size:11px;color:var(--text-light)">🪪 ${esc(u.job||'-')} &nbsp;·&nbsp; 📱 ${esc(u.mob||'-')} &nbsp;·&nbsp; 🏠 ${esc(u.room||'-')}</div>
+        <div style="font-size:12px;color:var(--primary);font-weight:600">ID: ${esc(u.job||'-')}</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:${balColor}">${balTxt}</div>
     </div>`;
   }).join(''));
   dd.style.display='block';
-  // Event delegation: use mousedown so it fires before blur hides the dropdown
   dd.onmousedown = function(e){
     const item = e.target.closest('[data-action="select-dep-mem"]');
     if(item){ e.preventDefault(); selectDepMem(item.getAttribute('data-uname')); }
@@ -4023,7 +4019,7 @@ function memdetTab(tab){
         const color=slot_m.t==='P'?'var(--success)':'var(--info)';
         return `<td style="text-align:center;color:${color};font-weight:700;font-size:12px">${lbl}<br><small style="font-weight:400">${v.toFixed(2)}</small></td>`;
       };
-      html+=`<tr style="border-top:1px solid var(--border)"><td style="padding:6px">${d.slice(5).replace('-','/')}</td>${fc(b,m.b)}${fc(l,m.l)}${fc(dv,m.d)}<td style="text-align:center;font-weight:700;color:var(--primary)">${(b+l+dv).toFixed(2)}</td></tr>`;
+      html+=`<tr style="border-top:1px solid var(--border)"><td style="padding:6px">${d.slice(8)+'/'+d.slice(5,7)}</td>${fc(b,m.b)}${fc(l,m.l)}${fc(dv,m.d)}<td style="text-align:center;font-weight:700;color:var(--primary)">${(b+l+dv).toFixed(2)}</td></tr>`;
     });
     html+=`</table></div>`;
     const monthTotal=messMonthMeals(u.u,mmKey);
@@ -4487,7 +4483,10 @@ function downloadDayPDF(){
   const mmonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const dtObj = new Date(dt+'T00:00:00');
   const dayName = days[dtObj.getDay()];
-  const dateLabel = `${dtObj.getDate()} ${months[dtObj.getMonth()]} ${dtObj.getFullYear()}`;
+  const dd=String(dtObj.getDate()).padStart(2,'0');
+  const mm=String(dtObj.getMonth()+1).padStart(2,'0');
+  const yyyy=dtObj.getFullYear();
+  const dateLabel = `${dd}-${mm}-${yyyy}`;
   const messName = 'Midland Quarter';
   const siteNote = DB.siteNote || 'Mess Management';
   // English mess month label
@@ -4605,7 +4604,7 @@ function downloadDayPDF(){
     </table>
     <!-- Footer -->
     <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e0ece6;padding-top:12px;">
-      <div style="font-size:10px;color:#aaa;">Generated: ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div style="font-size:10px;color:#aaa;">Generated: ${fmtDate(tod())} ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>
       <div style="font-size:10px;color:#aaa;">${messName} | Powered by Firebase</div>
     </div>
   </div>`;
@@ -4627,7 +4626,7 @@ function downloadDayPDF(){
       doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,-yPos*canvas.width/imgW/2,imgW,imgH);
       yPos+=pageH;
     }
-    doc.save('MQ_Daily_'+dt+'.pdf');
+    doc.save('MQ_Daily_'+fmtDate(dt)+'.pdf');
     toast('✅ PDF তৈরি হয়েছে!');
   }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
 }
@@ -4710,7 +4709,7 @@ function makePDF(type){
     html += `<div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 6px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-size:18px;font-weight:700;">Midland Quarter</div>
-        <div style="font-size:10px;opacity:.8;margin-top:2px;">Mess Management | ${new Date().toLocaleDateString('en-GB')}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px;">Mess Management | ${fmtDate(tod())}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:13px;font-weight:600;">${type==='daily'?'Daily Report':'Monthly Report'}</div>
@@ -4815,7 +4814,7 @@ function makePDF(type){
 
       html += `</tbody></table>
         <div style="margin-top:12px;font-size:10px;color:#aaa;border-top:1px solid #e2e8f0;padding-top:8px;text-align:center;">
-          Midland Quarter Mess Management | Generated: ${new Date().toLocaleDateString('en-GB')} | Period: ${enMonthLabel()}
+          Midland Quarter Mess Management | Generated: ${fmtDate(tod())} | Period: ${enMonthLabel()}
         </div>`;
 
     } else {
