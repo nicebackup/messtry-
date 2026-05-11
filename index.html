@@ -1182,7 +1182,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
           <div id="dep-prev-bal" style="font-size:20px;font-weight:700;color:var(--primary)">&#2547; ০</div>
         </div>
         <div class="card" style="text-align:center;padding:14px 10px">
-          <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">Deposit ব্যালেন্স</div>
+          <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">জমা</div>
           <div id="dep-dep-bal" style="font-size:20px;font-weight:700;color:var(--info)">&#2547; ০</div>
         </div>
       </div>
@@ -3699,7 +3699,12 @@ function renderDepMyHistory(){
   const el=document.getElementById('dep-my-history'); if(!el) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
   const prevBal=cu.prevBalance||0;
-  const txsAsc=DB.transactions.filter(t=>t.uname===CU.u).slice().sort((a,b)=>a.id-b.id);
+  const mmKey=messMonthKey();
+  // শুধু চলমান মাসের (11 to 10) transactions দেখাবে
+  const txsAsc=DB.transactions
+    .filter(t=>t.uname===CU.u && dateInMessMonth(t.date, mmKey))
+    .slice().sort((a,b)=>a.id-b.id);
+  // running balance শুরু হবে prevBal থেকে (handover এর নেট ব্যালেন্স)
   let running=prevBal;
   const balMap={};
   txsAsc.forEach(tx=>{running+=(tx.type==='deposit'?tx.amount:-tx.amount);balMap[tx.id]=running;});
@@ -3713,7 +3718,7 @@ function renderDepMyHistory(){
     <div style="font-size:14px;font-weight:700;color:${prevBal>=0?'var(--primary)':'var(--danger)'}">${fmtAmt(prevBal)}</div>
   </div>`;
   if(!txs.length){
-    html+='<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
+    html+='<p class="muted tc">\u098F\u0987 \u09AE\u09BE\u09B8\u09C7 \u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
   } else {
     txs.forEach(tx=>{
       const bal=balMap[tx.id];
