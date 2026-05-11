@@ -1441,7 +1441,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="adm-item ctrl-only" onclick="tog('card-ctrl')"><div class="adm-icon">⭐</div><div><div class="adm-lbl">Controller নিয়োগ</div><div class="adm-sub">নতুন Controller যোগ/বাদ দিন</div></div></div>
       <div class="adm-item" onclick="tog('card-sitenote')"><div class="adm-icon">📍</div><div><div class="adm-lbl">ঠিকানা / সাইট নোট</div><div class="adm-sub">Home এ দেখানো ঠিকানা বা শর্ট নোট</div></div></div>
       <div class="adm-item" onclick="sec('notice')"><div class="adm-icon">📢</div><div><div class="adm-lbl">নোটিশ বোর্ড</div><div class="adm-sub">নোটিশ লিখুন ও পপআপ নিয়ন্ত্রণ করুন</div></div></div>
-      <div class="adm-item ctrl-only" onclick="tog('card-handover')" style="border-left:3px solid var(--accent);padding-left:12px"><div class="adm-icon">🔄</div><div><div class="adm-lbl">মাস হস্তান্তর</div><div class="adm-sub">মাস চক্র শেষে নেট ব্যালেন্স পরবর্তী চক্রে স্থানান্তর</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-handover');initHandoverCard()" style="border-left:3px solid var(--accent);padding-left:12px"><div class="adm-icon">🔄</div><div><div class="adm-lbl">মাস হস্তান্তর</div><div class="adm-sub">মাস শেষে নেট ব্যালেন্স পরবর্তী মাসে স্থানান্তর করুন</div></div></div>
     </div>
 
     <!-- Manager Card -->
@@ -1539,13 +1539,18 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
     <!-- ── মাস হস্তান্তর CARD ── -->
     <div class="card" id="card-handover" style="display:none">
       <div class="sec-title">🔄 মাস হস্তান্তর</div>
-      <div class="alert alert-info show" style="font-size:12px;margin-bottom:10px">
-        ℹ️ মাস চক্রের শেষ দিন (১০ তারিখ) সব খরচ এন্ট্রি শেষ হলে এই বাটনে চাপুন।<br>
-        প্রতিটি সদস্যের এই মাসের নেট ব্যালেন্স পরের চক্রে <b>পূর্ববর্তী ব্যালেন্স</b> হিসেবে সেট হবে।
+      <div class="alert alert-danger show" style="font-size:12px;margin-bottom:10px">
+        ⚠️ হস্তান্তর পূর্বে সকল রিপোর্ট যাচাই করে নিন।
       </div>
-      <div id="handover-preview" style="margin-bottom:12px;font-size:12px;display:none"></div>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="previewHandover()">👁️ হস্তান্তরের পূর্বদর্শন দেখুন</button>
-      <button class="btn btn-accent" id="handover-confirm-btn" style="width:100%;display:none" onclick="doMonthHandover()">✅ নিশ্চিত করুন — মাস হস্তান্তর</button>
+      <div class="alert alert-info show" style="font-size:12px;margin-bottom:14px">
+        ℹ️ মাস শেষ হলে এই বাটনে চাপুন।<br>
+        প্রতিটি সদস্যের নেট ব্যালেন্স পরের মাসে <b>পূর্ববর্তী ব্যালেন্স</b> হিসেবে সেট হবে।
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">মাস নির্বাচন করুন</label>
+        <select id="handover-month-sel" class="form-input"></select>
+      </div>
+      <button class="btn btn-accent" style="width:100%" onclick="doMonthHandover()">🔄 মাস হস্তান্তর করুন</button>
     </div>
 
   </div>
@@ -4326,7 +4331,6 @@ function deleteMessCycle(){
 function _calcHandoverData(mmKey){
   const {othersAll,cookBillsAll,pm,cookFoodCost}=calcMealRate(mmKey);
   const ofRate=getOfficeMealRate(mmKey);
-  const fmtTk=v=>{const r=Math.round(v*100)/100;return Number.isInteger(r)?r.toLocaleString('en-US'):r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
   return DB.users.filter(u=>u.type!=='cook').map(u=>{
     const isOff=isOfficeMealUser(u);
     const appliedRate=isOff?(ofRate||pm):pm;
@@ -4348,47 +4352,48 @@ function _calcHandoverData(mmKey){
     const depositBal=monthDep-monthWith;
     const totalBal=prevBal+depositBal;
     const netBal=Math.round((totalBal-totalBill)*100)/100;
-    return {u, netBal, fmtTk};
+    return {u, netBal};
   });
 }
-function previewHandover(){
-  if(!isOnline()){ noNetPopup(); return; }
-  const mmKey=messMonthKey();
-  const rows=_calcHandoverData(mmKey);
-  const el=document.getElementById('handover-preview');
-  const btn=document.getElementById('handover-confirm-btn');
-  let html=`<div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">পরবর্তী চক্রে যা পূর্ববর্তী ব্যালেন্স হবে:</div>`;
-  rows.forEach(({u,netBal,fmtTk})=>{
-    const col=netBal>=0?'var(--success)':'var(--danger)';
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border)">
-      <div>
-        <span style="font-size:12px;font-weight:600">${esc(u.name)}</span>
-        <span style="font-size:10px;color:var(--text-light);margin-left:6px">ID: ${esc(String(u.job||u.u))}</span>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:${col}">${netBal>=0?'+':'−'}৳${fmtTk(Math.abs(netBal))}</span>
-    </div>`;
-  });
-  el.innerHTML=safeHTML(html);
-  el.style.display='block';
-  btn.style.display='block';
+function initHandoverCard(){
+  const sel=document.getElementById('handover-month-sel');
+  if(!sel) return;
+  // শুধু গত ৩ মাস দেখাবে, default = গত মাস
+  const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  const currentKey=messMonthKey();
+  sel.innerHTML='';
+  for(let i=1;i<=3;i++){
+    const now=getBSTDate();
+    const d=new Date(now.getFullYear(),now.getMonth()-i,15);
+    const key=messMonthKey(d);
+    const {y,m}=getMessMonth(d);
+    const nm=(m+1)%12;
+    const opt=document.createElement('option');
+    opt.value=key;
+    opt.textContent=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
+    if(i===1) opt.selected=true;   // default = গত মাস
+    sel.appendChild(opt);
+  }
 }
 function doMonthHandover(){
   if(!isOnline()){ noNetPopup(); return; }
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
-  const mmKey=messMonthKey();
+  const sel=document.getElementById('handover-month-sel');
+  const mmKey=sel?sel.value:messMonthKey();
+  if(!mmKey){ toast('❌ মাস নির্বাচন করুন!'); return; }
+  const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  const {y,m}=getMessMonth(new Date(mmKey+'-15'));
+  const nm=(m+1)%12;
+  const label=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
   showModal('🔄 মাস হস্তান্তর নিশ্চিত করুন',
-    'সকল সদস্যের এই মাসের নেট ব্যালেন্স পরের চক্রে পূর্ববর্তী ব্যালেন্স হিসেবে সেট হবে। এটি নিশ্চিত করবেন?',
+    `"${label}" মাসের নেট ব্যালেন্স সকল সদস্যের পূর্ববর্তী ব্যালেন্স হিসেবে সেট হবে। এটি নিশ্চিত করবেন?`,
     ()=>{
+      closeModal();   // ← popup বন্ধ করো আগে
       const rows=_calcHandoverData(mmKey);
       rows.forEach(({u,netBal})=>{ u.prevBalance=netBal; });
       saveDB();
-      // Hide confirm button after handover
-      const btn=document.getElementById('handover-confirm-btn');
-      if(btn) btn.style.display='none';
-      const el=document.getElementById('handover-preview');
-      if(el){ el.innerHTML='<div class="alert alert-success show">✅ মাস হস্তান্তর সম্পন্ন! পরের চক্রে পূর্ববর্তী ব্যালেন্স আপডেট হয়েছে।</div>'; }
-      toast('✅ মাস হস্তান্তর সম্পন্ন!');
-    }, true);
+      toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
+    });
 }
 function renderManagerInfo(){
   const m=document.getElementById('mgr-month').value||mk();
