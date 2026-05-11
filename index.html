@@ -3676,7 +3676,10 @@ function renderDepMyBalance(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
   const prevBal=cu.prevBalance||0;
-  const depBal=cu.balance||0;
+  const _rmmKey=messMonthKey();
+  const _rDep=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_rmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _rWith=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_rmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const depBal=_rDep-_rWith;
   const totalBal=prevBal+depBal;
   const fmt=v=>{const r=Math.round(v*100)/100;return(r<0?'\u2212\u09F3':'\u09F3')+Math.abs(r).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
   const col=v=>v>=0?'var(--primary)':'var(--danger)';
@@ -3735,7 +3738,10 @@ function depMemSearch(){
     dd.style.display='block'; return;
   }
   dd.innerHTML = safeHTML(matches.slice(0,15).map(u=>{
-    const bal=u.balance||0;
+    const _dmk=messMonthKey();
+    const _ddep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const _dwith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const bal=(u.prevBalance||0)+(_ddep-_dwith);
     const balColor=bal>=0?'var(--success)':'var(--danger)';
     const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString():'-৳'+Math.abs(bal).toLocaleString();
     return`<div data-uname="${esc(u.u)}" data-action="select-dep-mem" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
@@ -3760,7 +3766,10 @@ function selectDepMem(uname){
   document.getElementById('dep-mem-search').value='';
   const sel=document.getElementById('dep-mem-selected');
   sel.style.display='flex'; sel.style.alignItems='center'; sel.style.justifyContent='space-between';
-  const bal=u.balance||0;
+  const _smk=messMonthKey();
+  const _sdep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_smk)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _swith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_smk)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const bal=(u.prevBalance||0)+(_sdep-_swith);
   // Use textContent-safe approach for the selected name display
   document.getElementById('dep-mem-selected-name').innerHTML = safeHTML(
     `✅ ${esc(u.name)} &nbsp;<span style="font-size:11px;color:var(--text-light)">| ID: ${esc(String(u.job||'-'))}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString()}</span>`
@@ -3784,7 +3793,10 @@ function showMemberBalance(){
   if(!uname){ info.style.display='none'; return; }
   const u=DB.users.find(x=>x.u===uname);
   if(!u){ info.style.display='none'; return; }
-  const bal=u.balance||0;
+  const _bmk=messMonthKey();
+  const _bdep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_bmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _bwith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_bmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const bal=(u.prevBalance||0)+(_bdep-_bwith);
   info.style.display='block';
   info.className='alert '+(bal>=0?'alert-success':'alert-danger')+' show';
   info.textContent=`${u.name} এর বর্তমান ব্যালেন্স: ৳ ${Math.abs(bal).toLocaleString()} (${bal>=0?'জমা আছে':'বকেয়া আছে'})`;
@@ -3806,7 +3818,11 @@ function saveDeposit(){
   saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
   document.getElementById('dep-amt').value='';
   document.getElementById('dep-note').value='';
-  toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(u.balance).toLocaleString()}`);
+  const _tmk=messMonthKey();
+  const _tDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_tmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _tWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_tmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _tBal=(u.prevBalance||0)+(_tDep-_tWith);
+  toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(_tBal).toLocaleString()}`);
 }
 function renderDepHistory(){
   const histEl=document.getElementById('dep-history');
@@ -3881,7 +3897,7 @@ function loadBill(){
   } else {
     netPayable=mealBill+othersShare+cookBillShare+cookFoodShare;
   }
-  const bal=cu.balance||0;
+  const bal=(cu.prevBalance||0)+(()=>{const d=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);const w=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);return d-w;})();
   const net=bal-netPayable;
 
   const displayRate=isOfficeMealUser(cu)?getOfficeMealRate(mmKey):pm;
@@ -4012,7 +4028,9 @@ function loadMembers(){
   const filtered=DB.users.filter(u=>!q||(u.name.toLowerCase().includes(q)||u.room?.includes(q)||(u.job||'').toLowerCase().includes(q)));
   const html = filtered.map(u=>{
     const m=messMonthMeals(u.u,mmKey);
-    const bal=u.balance||0;
+    const _mDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const _mWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const bal=(u.prevBalance||0)+(_mDep-_mWith);
     const typeBadge=u.type==='cook'?`<span class="badge badge-cook">বাবুর্চি</span>`:isOfficeMealUser(u)?`<span class="badge badge-office">🏢 অফিস মিল</span>`:u.type==='outside'?`<span class="badge badge-outside">আউটসাইড</span>`:''
     const blockBadge=u.blocked?'<span class="badge badge-blocked">ব্লকড</span>':'';
     const ctrlBadge=isController(u)?'<span class="badge badge-ctrl">Controller</span>':'';
@@ -4041,7 +4059,10 @@ function openMemberDetail(uname){
   document.getElementById('memdet-title').textContent=u.name;
   document.getElementById('memdet-sub').textContent=`রুম ${u.room||'-'} · ${u.job||'-'}`;
   // Info card
-  const bal=u.balance||0;
+  const _dmmKey=messMonthKey();
+  const _dDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _dWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const bal=(u.prevBalance||0)+(_dDep-_dWith);
   document.getElementById('memdet-info').innerHTML = safeHTML(`
     <div class="prof-av" style="width:60px;height:60px;font-size:24px">${esc(u.name[0])}</div>
     <div style="font-size:18px;font-weight:700">${esc(u.name)}</div>
@@ -4358,11 +4379,11 @@ function _calcHandoverData(mmKey){
 function initHandoverCard(){
   const sel=document.getElementById('handover-month-sel');
   if(!sel) return;
-  // শুধু গত ৩ মাস দেখাবে, default = গত মাস
+  // চলমান মাস ও গত মাস — ২টাই যথেষ্ট (handover মাসের ১০ তারিখেও হতে পারে)
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const currentKey=messMonthKey();
   sel.innerHTML='';
-  for(let i=1;i<=3;i++){
+  for(let i=0;i<=1;i++){
     const now=getBSTDate();
     const d=new Date(now.getFullYear(),now.getMonth()-i,15);
     const key=messMonthKey(d);
@@ -4914,7 +4935,7 @@ function makePDF(type){
         const sh = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0}
                           : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
         const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
-        const totalBal = u.balance||0;
+        const totalBal = prevBalance + depositBalance;
         const monthDeposits = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
           .reduce((s, tx) => s + (tx.amount||0), 0);
