@@ -564,7 +564,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 /* MESS MONTH INFO */
 .mess-month-bar{background:linear-gradient(90deg,var(--primary-dark),var(--primary));color:#fff;border-radius:var(--radius-sm);padding:10px 16px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:8px;}
 /* TOAST */
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--primary-dark);color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:1999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:90vw;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--primary-dark);color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:10002;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:90vw;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 /* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:none;align-items:flex-end;justify-content:center;}
@@ -3700,6 +3700,7 @@ function initDeposit(){
 function renderDepMyBalance(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
+  const _rmmKey=messMonthKey();
   const prevBal=getPreBal(cu.u, _rmmKey);
   const _rDep=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_rmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _rWith=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_rmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
@@ -3743,7 +3744,7 @@ function renderDepMyHistory(){
   } else {
     txs.forEach(tx=>{
       const bal=balMap[tx.id];
-      html+=`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'\u{1F4E5}':'\u{1F4E4}'}</div><div class="tx-info" style="flex:1"><div class="tx-name">${tx.type==='deposit'?'\u099C\u09AE\u09BE':'\u0989\u09A4\u09CD\u09A4\u09CB\u09B2\u09A8'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' \u00B7 '+esc(tx.note):''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'\u2212'}\u09F3${tx.amount.toLocaleString()}</div><div style="font-size:10px;color:${bal>=0?'var(--success)':'var(--danger)'};font-weight:600">\u09AC\u09CD\u09AF\u09BE\u09B2\u09C7\u09A8\u09CD\u09B8: \u09F3${Math.abs(bal).toLocaleString()}</div></div></div>`;
+      html+=`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'\u{1F4E5}':'\u{1F4E4}'}</div><div class="tx-info" style="flex:1"><div class="tx-name">${tx.type==='deposit'?'\u099C\u09AE\u09BE':'\u0989\u09A4\u09CD\u09A4\u09CB\u09B2\u09A8'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' \u00B7 '+esc(tx.note):''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'\u2212'}\u09F3${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div><div style="font-size:10px;color:${bal>=0?'var(--success)':'var(--danger)'};font-weight:600">\u09AC\u09CD\u09AF\u09BE\u09B2\u09C7\u09A8\u09CD\u09B8: \u09F3${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div></div>`;
     });
   }
   el.innerHTML=safeHTML(html)||'<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
@@ -3772,7 +3773,7 @@ function depMemSearch(){
     const _dwith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
     const bal=getPreBal(u.u,_dmk)+(_ddep-_dwith);
     const balColor=bal>=0?'var(--success)':'var(--danger)';
-    const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString():'-৳'+Math.abs(bal).toLocaleString();
+    const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}):'-৳'+Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
     return`<div data-uname="${esc(u.u)}" data-action="select-dep-mem" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
       <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${esc(u.name[0])}</div>
       <div style="flex:1">
@@ -3801,7 +3802,7 @@ function selectDepMem(uname){
   const bal=getPreBal(u.u,_smk)+(_sdep-_swith);
   // Use textContent-safe approach for the selected name display
   document.getElementById('dep-mem-selected-name').innerHTML = safeHTML(
-    `✅ ${esc(u.name)} &nbsp;<span style="font-size:11px;color:var(--text-light)">| ID: ${esc(String(u.job||'-'))}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString()}</span>`
+    `✅ ${esc(u.name)} &nbsp;<span style="font-size:11px;color:var(--text-light)">| ID: ${esc(String(u.job||'-'))}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</span>`
   );
   showMemberBalance();
 }
@@ -3828,7 +3829,7 @@ function showMemberBalance(){
   const bal=getPreBal(u.u,_bmk)+(_bdep-_bwith);
   info.style.display='block';
   info.className='alert '+(bal>=0?'alert-success':'alert-danger')+' show';
-  info.textContent=`${u.name} এর বর্তমান ব্যালেন্স: ৳ ${Math.abs(bal).toLocaleString()} (${bal>=0?'জমা আছে':'বকেয়া আছে'})`;
+  info.textContent=`${u.name} এর বর্তমান ব্যালেন্স: ৳ ${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})} (${bal>=0?'জমা আছে':'বকেয়া আছে'})`;
 }
 function saveDeposit(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -3851,7 +3852,7 @@ function saveDeposit(){
   const _tDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_tmk)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _tWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_tmk)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _tBal=getPreBal(u.u,_tmk)+(_tDep-_tWith);
-  toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(_tBal).toLocaleString()}`);
+  toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(_tBal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}`);
 }
 function renderDepHistory(){
   const histEl=document.getElementById('dep-history');
@@ -3864,7 +3865,7 @@ function renderDepHistory(){
   const html=txs.map(tx=>{
     const u=DB.users.find(x=>x.u===tx.uname);
     const editBtn=isManagerOrCtrl()?`<button data-action="edit-tx" data-id="${tx.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;">✏️</button>`:'';
-    return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}${editBtn}</div></div>`;
+    return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}${editBtn}</div></div>`;
   }).join('');
   histEl.innerHTML = safeHTML(html)||'<p class="muted tc">কোনো লেনদেন নেই</p>';
   // Event delegation
@@ -4076,7 +4077,7 @@ function loadMembers(){
       </div>
       <div class="mem-right">
         <div class="mem-meals">${m.toFixed(2)} মিল</div>
-        <div class="${bal>=0?'mem-bal-pos':'mem-bal-neg'}">${bal>=0?'+':''}৳${Math.abs(bal).toLocaleString()}</div>
+        <div class="${bal>=0?'mem-bal-pos':'mem-bal-neg'}">${bal>=0?'+':''}৳${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div>
       </div>
     </div>`;
   }).join('')||'<p class="muted tc">কোনো সদস্য পাওয়া যায়নি</p>';
@@ -4100,7 +4101,7 @@ function openMemberDetail(uname){
     <div class="prof-av" style="width:60px;height:60px;font-size:24px">${esc(u.name[0])}</div>
     <div style="font-size:18px;font-weight:700">${esc(u.name)}</div>
     <div style="font-size:13px;color:var(--text-light);margin-top:4px">${esc(roleLabel(u.role,u))} · ${u.type==='inside'?'ইনসাইড':'আউটসাইড'}</div>
-    <div style="margin-top:8px;font-size:22px;font-weight:700;color:${bal>=0?'var(--success)':'var(--danger)'}">${bal>=0?'+':''}৳${Math.abs(bal).toLocaleString()}</div>
+    <div style="margin-top:8px;font-size:22px;font-weight:700;color:${bal>=0?'var(--success)':'var(--danger)'}">${bal>=0?'+':''}৳${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div>
     <div style="font-size:12px;color:var(--text-light)">${bal>=0?'জমা আছে':'বকেয়া আছে'}</div>
   `);
   // Manager actions
@@ -4152,7 +4153,7 @@ function memdetTab(tab){
     const txs=DB.transactions.filter(t=>t.uname===u.u).slice().reverse();
     let html=`<div class="sec-title">💵 লেনদেনের ইতিহাস</div>`;
     if(!txs.length){ html+='<p class="muted tc">কোনো লেনদেন নেই</p>'; }
-    else{ html+=txs.map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}</div></div>`).join(''); }
+    else{ html+=txs.map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div>`).join(''); }
     document.getElementById('memdet-txn-card').innerHTML = safeHTML(html);
   }
 }
@@ -4217,7 +4218,7 @@ function loadProfile(){
   const txs=DB.transactions.filter(t=>t.uname===cu.u).slice().reverse();
   document.getElementById('pf-tx-list').innerHTML = safeHTML(
     txs.length
-      ? txs.slice(0,15).map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString()}</div></div>`).join('')
+      ? txs.slice(0,15).map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div>`).join('')
       : '<p class="muted tc">কোনো লেনদেন নেই</p>'
   );
 }
@@ -5020,20 +5021,21 @@ function makePDF(type){
         const netColor = netBal>=0 ? '#2e7d32' : '#e53935';
         const typeLabel = isOffU?'Office':u.type==='inside'?'In':'Out';
         const prevColor = prevBalance>=0?'#1a6b3c':'#e53935';
+        const fN=v=>{const r=Math.round(v*100)/100;return r.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});};
         html += `<tr style="background:${bg}">
           <td style="padding:6px 6px;font-weight:600;">${esc(u.name)}<br><span style="font-size:9px;color:#888;font-weight:400">ID: ${esc(String(u.job||u.u))}</span></td>
           <td style="padding:6px 4px;text-align:center;font-size:10px">${typeLabel}</td>
-          <td style="padding:6px 4px;text-align:right;color:${prevColor}">${prevBalance>=0?'':'-'}${Math.abs(prevBalance).toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;color:#1565c0;font-weight:600">${depositBalance>0?'+':''}${depositBalance.toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;color:${totalBal>=0?'#1a6b3c':'#e53935'};font-weight:700">${totalBal>=0?'':'-'}${Math.abs(totalBal).toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right;color:${prevColor}">${prevBalance>=0?'':'-'}${fN(Math.abs(prevBalance))}</td>
+          <td style="padding:6px 4px;text-align:right;color:#1565c0;font-weight:600">${depositBalance>0?'+':''}${fN(depositBalance)}</td>
+          <td style="padding:6px 4px;text-align:right;color:${totalBal>=0?'#1a6b3c':'#e53935'};font-weight:700">${totalBal>=0?'':'-'}${fN(Math.abs(totalBal))}</td>
           <td style="padding:6px 4px;text-align:right;color:#555">${myMeals.toFixed(2)}</td>
           <td style="padding:6px 4px;text-align:right;color:${myShortfall>0?'#e65100':'#aaa'};font-size:10px">${myShortfall>0?'+'+myShortfall.toFixed(2):'-'}</td>
           <td style="padding:6px 4px;text-align:right;color:#1a6b3c;font-weight:700;background:#f0f9f4">${myNetMeals.toFixed(2)}</td>
-          <td style="padding:6px 4px;text-align:right">${mealBill.toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'-':sh.othersShare.toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;color:#e65100">${isOffU?'-':sh.cookFoodShare.toFixed(0)}</td>
-          <td style="padding:6px 4px;text-align:right;font-weight:700;color:#e53935">${totalBill.toFixed(0)}</td>
-          <td style="padding:6px 6px;text-align:right;font-weight:700;color:${netColor}">${netBal>=0?'+':'-'}${Math.abs(netBal).toFixed(0)}</td>
+          <td style="padding:6px 4px;text-align:right">${fN(mealBill)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'-':fN(sh.othersShare)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#e65100">${isOffU?'-':fN(sh.cookFoodShare)}</td>
+          <td style="padding:6px 4px;text-align:right;font-weight:700;color:#e53935">${fN(totalBill)}</td>
+          <td style="padding:6px 6px;text-align:right;font-weight:700;color:${netColor}">${netBal>=0?'+':'-'}${fN(Math.abs(netBal))}</td>
         </tr>`;
       });
 
