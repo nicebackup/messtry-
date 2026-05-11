@@ -1554,6 +1554,10 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <select id="handover-month-sel" class="form-input"></select>
       </div>
       <button class="btn btn-accent" style="width:100%" onclick="doMonthHandover()">🔄 মাস হস্তান্তর করুন</button>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:8px">⚙️ জরুরি অবস্থা — ভুল হয়ে গেলে ব্যবহার করুন</div>
+        <button class="btn" style="width:100%;background:rgba(229,57,53,.12);border:1px solid #e53935;color:#e53935;font-size:13px" onclick="resetHandoverLock()">🔓 হস্তান্তর লক রিসেট করুন</button>
+      </div>
     </div>
 
   </div>
@@ -4414,6 +4418,12 @@ function doMonthHandover(){
   const sel=document.getElementById('handover-month-sel');
   const mmKey=sel?sel.value:messMonthKey();
   if(!mmKey){ toast('❌ মাস নির্বাচন করুন!'); return; }
+  // ── handover lock: একই মাসে দ্বিতীয়বার করা যাবে না ──
+  const doneKeys=DB.handoverDone||[];
+  if(doneKeys.includes(mmKey)){
+    toast('⚠️ এই মাসের হস্তান্তর আগেই সম্পন্ন হয়েছে! আবার করা যাবে না।');
+    return;
+  }
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const {y,m}=getMessMonth(new Date(mmKey+'-15'));
   const nm=(m+1)%12;
@@ -4421,11 +4431,30 @@ function doMonthHandover(){
   showModal('🔄 মাস হস্তান্তর নিশ্চিত করুন',
     `"${label}" মাসের নেট ব্যালেন্স সকল সদস্যের পূর্ববর্তী ব্যালেন্স হিসেবে সেট হবে। এটি নিশ্চিত করবেন?`,
     ()=>{
-      closeModal();   // ← popup বন্ধ করো আগে
+      closeModal();
       const rows=_calcHandoverData(mmKey);
       rows.forEach(({u,netBal})=>{ u.prevBalance=netBal; });
+      // lock করো যেন আর না হয়
+      if(!DB.handoverDone) DB.handoverDone=[];
+      DB.handoverDone.push(mmKey);
       saveDB();
       toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
+    });
+}
+function resetHandoverLock(){
+  if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
+  const sel=document.getElementById('handover-month-sel');
+  const mmKey=sel?sel.value:messMonthKey();
+  showModal('🔓 লক রিসেট নিশ্চিত করুন',
+    'এই মাসের হস্তান্তর লক রিসেট হবে। তারপর আবার সঠিক হিসাবে হস্তান্তর করতে পারবেন। নিশ্চিত?',
+    ()=>{
+      closeModal();
+      if(!DB.handoverDone) DB.handoverDone=[];
+      DB.handoverDone=DB.handoverDone.filter(k=>k!==mmKey);
+      // সব user এর prevBalance শূন্য করো (ভুল data ঠিক করার জন্য)
+      DB.users.forEach(u=>{ if(u.type!=='cook') u.prevBalance=0; });
+      saveDB();
+      toast('✅ লক রিসেট হয়েছে। এখন সঠিক মাস হস্তান্তর করুন।');
     });
 }
 function renderManagerInfo(){
