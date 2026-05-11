@@ -1441,7 +1441,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div class="adm-item ctrl-only" onclick="tog('card-ctrl')"><div class="adm-icon">⭐</div><div><div class="adm-lbl">Controller নিয়োগ</div><div class="adm-sub">নতুন Controller যোগ/বাদ দিন</div></div></div>
       <div class="adm-item" onclick="tog('card-sitenote')"><div class="adm-icon">📍</div><div><div class="adm-lbl">ঠিকানা / সাইট নোট</div><div class="adm-sub">Home এ দেখানো ঠিকানা বা শর্ট নোট</div></div></div>
       <div class="adm-item" onclick="sec('notice')"><div class="adm-icon">📢</div><div><div class="adm-lbl">নোটিশ বোর্ড</div><div class="adm-sub">নোটিশ লিখুন ও পপআপ নিয়ন্ত্রণ করুন</div></div></div>
-      <div class="adm-item ctrl-only" onclick="tog('card-del-cycle')"><div class="adm-icon">🗓️</div><div><div class="adm-lbl">মেস মাস চক্র ডিলিট</div><div class="adm-sub">নির্দিষ্ট চক্রের সব মিল/বাজার ডেটা মুছুন</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-handover')" style="border-left:3px solid var(--accent);padding-left:12px"><div class="adm-icon">🔄</div><div><div class="adm-lbl">মাস হস্তান্তর</div><div class="adm-sub">মাস চক্র শেষে নেট ব্যালেন্স পরবর্তী চক্রে স্থানান্তর</div></div></div>
     </div>
 
     <!-- Manager Card -->
@@ -1534,6 +1534,18 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       </div>
       <div id="del-cycle-preview" style="margin-bottom:12px;font-size:12px;color:var(--text-light);display:none"></div>
       <button class="btn btn-danger" onclick="deleteMessCycle()">🗑️ এই চক্রের ডেটা মুছুন</button>
+    </div>
+
+    <!-- ── মাস হস্তান্তর CARD ── -->
+    <div class="card" id="card-handover" style="display:none">
+      <div class="sec-title">🔄 মাস হস্তান্তর</div>
+      <div class="alert alert-info show" style="font-size:12px;margin-bottom:10px">
+        ℹ️ মাস চক্রের শেষ দিন (১০ তারিখ) সব খরচ এন্ট্রি শেষ হলে এই বাটনে চাপুন।<br>
+        প্রতিটি সদস্যের এই মাসের নেট ব্যালেন্স পরের চক্রে <b>পূর্ববর্তী ব্যালেন্স</b> হিসেবে সেট হবে।
+      </div>
+      <div id="handover-preview" style="margin-bottom:12px;font-size:12px;display:none"></div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="previewHandover()">👁️ হস্তান্তরের পূর্বদর্শন দেখুন</button>
+      <button class="btn btn-accent" id="handover-confirm-btn" style="width:100%;display:none" onclick="doMonthHandover()">✅ নিশ্চিত করুন — মাস হস্তান্তর</button>
     </div>
 
   </div>
@@ -4307,6 +4319,77 @@ function deleteMessCycle(){
     initAdmin();
   });
 }
+
+// ══════════════════════════════════════════════════
+// মাস হস্তান্তর — MONTH HANDOVER
+// ══════════════════════════════════════════════════
+function _calcHandoverData(mmKey){
+  const {othersAll,cookBillsAll,pm,cookFoodCost}=calcMealRate(mmKey);
+  const ofRate=getOfficeMealRate(mmKey);
+  const fmtTk=v=>{const r=Math.round(v*100)/100;return Number.isInteger(r)?r.toLocaleString('en-US'):r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  return DB.users.filter(u=>u.type!=='cook').map(u=>{
+    const isOff=isOfficeMealUser(u);
+    const appliedRate=isOff?(ofRate||pm):pm;
+    const myMeals=messMonthMeals(u.u,mmKey);
+    const myShortfall=getShortfallMeals(u.u,mmKey);
+    const myNetMeals=myMeals+myShortfall;
+    const mealBill=myNetMeals*appliedRate;
+    const {othersShare,cookFoodShare}=isOff
+      ?{othersShare:0,cookFoodShare:0}
+      :calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+    const totalBill=mealBill+othersShare+cookFoodShare;
+    const prevBal=u.prevBalance||0;
+    const monthDep=(DB.transactions||[])
+      .filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey))
+      .reduce((s,tx)=>s+(tx.amount||0),0);
+    const monthWith=(DB.transactions||[])
+      .filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey))
+      .reduce((s,tx)=>s+(tx.amount||0),0);
+    const depositBal=monthDep-monthWith;
+    const totalBal=prevBal+depositBal;
+    const netBal=Math.round((totalBal-totalBill)*100)/100;
+    return {u, netBal, fmtTk};
+  });
+}
+function previewHandover(){
+  if(!isOnline()){ noNetPopup(); return; }
+  const mmKey=messMonthKey();
+  const rows=_calcHandoverData(mmKey);
+  const el=document.getElementById('handover-preview');
+  const btn=document.getElementById('handover-confirm-btn');
+  let html=`<div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">পরবর্তী চক্রে যা পূর্ববর্তী ব্যালেন্স হবে:</div>`;
+  rows.forEach(({u,netBal,fmtTk})=>{
+    const col=netBal>=0?'var(--success)':'var(--danger)';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border)">
+      <div>
+        <span style="font-size:12px;font-weight:600">${esc(u.name)}</span>
+        <span style="font-size:10px;color:var(--text-light);margin-left:6px">ID: ${esc(String(u.job||u.u))}</span>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:${col}">${netBal>=0?'+':'−'}৳${fmtTk(Math.abs(netBal))}</span>
+    </div>`;
+  });
+  el.innerHTML=safeHTML(html);
+  el.style.display='block';
+  btn.style.display='block';
+}
+function doMonthHandover(){
+  if(!isOnline()){ noNetPopup(); return; }
+  if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
+  const mmKey=messMonthKey();
+  showModal('🔄 মাস হস্তান্তর নিশ্চিত করুন',
+    'সকল সদস্যের এই মাসের নেট ব্যালেন্স পরের চক্রে পূর্ববর্তী ব্যালেন্স হিসেবে সেট হবে। এটি নিশ্চিত করবেন?',
+    ()=>{
+      const rows=_calcHandoverData(mmKey);
+      rows.forEach(({u,netBal})=>{ u.prevBalance=netBal; });
+      saveDB();
+      // Hide confirm button after handover
+      const btn=document.getElementById('handover-confirm-btn');
+      if(btn) btn.style.display='none';
+      const el=document.getElementById('handover-preview');
+      if(el){ el.innerHTML='<div class="alert alert-success show">✅ মাস হস্তান্তর সম্পন্ন! পরের চক্রে পূর্ববর্তী ব্যালেন্স আপডেট হয়েছে।</div>'; }
+      toast('✅ মাস হস্তান্তর সম্পন্ন!');
+    }, true);
+}
 function renderManagerInfo(){
   const m=document.getElementById('mgr-month').value||mk();
   const mgrs=DB.managers[m]||[];
@@ -5019,7 +5102,6 @@ function showAllMembersBill(){
   const totalBill=mealBill+othersShare+cookFoodShare;
 
   const prevBal=cu.prevBalance||0;
-  const totalBal=cu.balance||0;
   const monthDep=(DB.transactions||[])
     .filter(tx=>tx.uname===cu.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey))
     .reduce((s,tx)=>s+(tx.amount||0),0);
@@ -5027,6 +5109,7 @@ function showAllMembersBill(){
     .filter(tx=>tx.uname===cu.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey))
     .reduce((s,tx)=>s+(tx.amount||0),0);
   const depositBal=monthDep-monthWith;
+  const totalBal=prevBal+depositBal;   // ✅ cycle-correct: prevBal + এই মাসের নেট জমা
   const netBal=totalBal-totalBill;
 
   const fmtTk=v=>{const r=Math.round(v*100)/100;return Number.isInteger(r)?r.toLocaleString('en-US'):r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
