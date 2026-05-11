@@ -1924,10 +1924,9 @@ window.addEventListener('offline', ()=>{ noNetPopup(); });
 
 function saveDB(){
   if(!_dbLoaded){ console.warn('saveDB blocked: DB not yet loaded'); return; }
-  // ✅ CRITICAL FIX: Snapshot must be captured HERE (at call time), NOT inside
-  // setTimeout. Firebase's real-time listener fires during the 400ms delay and
-  // does `DB = snap.val()` which overwrites DB — losing our unsaved changes.
-  // Capturing the snapshot immediately ensures we always save what was intended.
+  // ── Save এর আগে duplicate সরাও (safety net) ──
+  const _sv=new Set();
+  DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
   const dbToSave = JSON.parse(JSON.stringify(DB));
   delete dbToSave.darkMode;
   if(_dbSaveTimeout) clearTimeout(_dbSaveTimeout);
@@ -1982,6 +1981,13 @@ function migrateDB(){
   });
   // Ensure balance on all users, email field defaults
   DB.users.forEach(u=>{ if(u.balance===undefined) u.balance=0; if(!u.type) u.type='inside'; if(!u.email) u.email=''; });
+  // ── Auto-dedup: একই u (username) দুইবার থাকলে সরাও ──
+  const _seen=new Set();
+  DB.users=DB.users.filter(u=>{
+    if(!u.u){ return true; } // u field নেই — রাখো
+    if(_seen.has(u.u)) return false; // duplicate — বাদ দাও
+    _seen.add(u.u); return true;
+  });
   // Migrate meals
   Object.keys(DB.meals).forEach(k=>{
     const m=DB.meals[k];
@@ -4419,6 +4425,13 @@ function doMonthHandover(){
   const sel=document.getElementById('handover-month-sel');
   const mmKey=sel?sel.value:messMonthKey();
   if(!mmKey){ toast('❌ মাস নির্বাচন করুন!'); return; }
+  // ── handover এর আগে duplicate check ──
+  const _uids=DB.users.map(u=>u.u);
+  const _dupCheck=new Set(_uids);
+  if(_dupCheck.size !== _uids.length){
+    toast('⚠️ Duplicate user পাওয়া গেছে! আগে "Duplicate User ঠিক করুন" চালান।');
+    return;
+  }
   // ── handover lock: একই মাসে দ্বিতীয়বার করা যাবে না ──
   const doneKeys=DB.handoverDone||[];
   if(doneKeys.includes(mmKey)){
@@ -4433,8 +4446,14 @@ function doMonthHandover(){
     `"${label}" মাসের নেট ব্যালেন্স সকল সদস্যের পূর্ববর্তী ব্যালেন্স হিসেবে সেট হবে। এটি নিশ্চিত করবেন?`,
     ()=>{
       closeModal();
+      const beforeCount=DB.users.length;
       const rows=_calcHandoverData(mmKey);
       rows.forEach(({u,netBal})=>{ u.prevBalance=netBal; });
+      // ── safety check: user count বদলে গেলে save করো না ──
+      if(DB.users.length !== beforeCount){
+        toast('❌ ত্রুটি: user list পরিবর্তন হয়ে গেছে! Handover বাতিল।');
+        return;
+      }
       // lock করো যেন আর না হয়
       if(!DB.handoverDone) DB.handoverDone=[];
       DB.handoverDone.push(mmKey);
