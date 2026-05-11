@@ -1720,8 +1720,8 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 <!-- ═══════════ ALL MEMBERS BILL MODAL ═══════════ -->
 <!-- ═══════════ মাসিক হিসাব বিবরণী — FULL SCREEN ═══════════ -->
 <div id="sc-mybill" class="screen">
-  <div style="position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;">
-    <button class="header-back" onclick="goHome()">← Home</button>
+  <div style="position:sticky;top:0;z-index:20;padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);">
+    <button onclick="goHome()" style="background:var(--primary);color:#fff;border:none;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.2px;">← Home</button>
   </div>
   <div class="content pb-nav" id="mybill-content" style="padding-top:14px">লোড হচ্ছে...</div>
 </div>
@@ -4968,7 +4968,7 @@ function showAllMembersBill(){
 
   // ── Summary Hero Card (সবাই দেখবে) ──
   let html=`
-  <div class="summary-hero-card card" style="border:none;border-radius:14px;padding:16px;margin-bottom:14px;">
+  <div class="summary-hero-card" style="border-radius:14px;padding:16px;margin-bottom:14px;">
     <div style="font-size:11px;opacity:.75;letter-spacing:.5px;margin-bottom:8px">${messMonthLabel()}</div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
       <div>
