@@ -1557,7 +1557,6 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
         <div style="font-size:11px;color:var(--text-light);margin-bottom:8px">⚙️ জরুরি অবস্থা — ভুল হয়ে গেলে ব্যবহার করুন</div>
         <button class="btn" style="width:100%;background:rgba(229,57,53,.12);border:1px solid #e53935;color:#e53935;font-size:13px" onclick="resetHandoverLock()">🔓 হস্তান্তর লক রিসেট করুন</button>
-        <button class="btn" style="width:100%;margin-top:8px;background:rgba(21,101,192,.12);border:1px solid #1565c0;color:#1565c0;font-size:13px" onclick="cleanupDuplicateUsers()">🧹 Duplicate User ঠিক করুন</button>
       </div>
     </div>
 
@@ -2238,6 +2237,18 @@ function dateInMessMonth(dateStr, mmKey){
   const start = new Date(my,mm-1,11), end = new Date(ny,nm-1,10);
   const dt = new Date(dy,dm-1,dd);
   return dt>=start && dt<=end;
+}
+// পরবর্তী মাসের key  e.g. "2026-04" → "2026-05"
+function nextCycleKey(mmKey){
+  const [y,m]=mmKey.split('-').map(Number);
+  const nm=m===12?1:m+1, ny=m===12?y+1:y;
+  return `${ny}-${String(nm).padStart(2,'0')}`;
+}
+// নির্দিষ্ট মাসের পূর্ববর্তী ব্যালেন্স
+// DB.prevBalances[mmKey][uname] — প্রতি মাস আলাদা
+function getPreBal(uname, mmKey){
+  return (DB.prevBalances&&DB.prevBalances[mmKey]&&DB.prevBalances[mmKey][uname]!=null)
+    ? DB.prevBalances[mmKey][uname] : 0;
 }
 function buildMessMonthOptions(){
   const sel = document.getElementById('rpt-month'); if(!sel) return;
@@ -3689,8 +3700,7 @@ function initDeposit(){
 function renderDepMyBalance(){
   if(!CU) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
-  const prevBal=cu.prevBalance||0;
-  const _rmmKey=messMonthKey();
+  const prevBal=getPreBal(cu.u, _rmmKey);
   const _rDep=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_rmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _rWith=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_rmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
   const depBal=_rDep-_rWith;
@@ -3709,8 +3719,8 @@ function renderDepMyHistory(){
   if(!CU) return;
   const el=document.getElementById('dep-my-history'); if(!el) return;
   const cu=DB.users.find(x=>x.u===CU.u)||CU;
-  const prevBal=cu.prevBalance||0;
   const mmKey=messMonthKey();
+  const prevBal=getPreBal(cu.u, mmKey);
   // শুধু চলমান মাসের (11 to 10) transactions দেখাবে
   const txsAsc=DB.transactions
     .filter(t=>t.uname===CU.u && dateInMessMonth(t.date, mmKey))
@@ -3760,7 +3770,7 @@ function depMemSearch(){
     const _dmk=messMonthKey();
     const _ddep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
     const _dwith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
-    const bal=(u.prevBalance||0)+(_ddep-_dwith);
+    const bal=getPreBal(u.u,_dmk)+(_ddep-_dwith);
     const balColor=bal>=0?'var(--success)':'var(--danger)';
     const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString():'-৳'+Math.abs(bal).toLocaleString();
     return`<div data-uname="${esc(u.u)}" data-action="select-dep-mem" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
@@ -3788,7 +3798,7 @@ function selectDepMem(uname){
   const _smk=messMonthKey();
   const _sdep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_smk)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _swith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_smk)).reduce((s,tx)=>s+(tx.amount||0),0);
-  const bal=(u.prevBalance||0)+(_sdep-_swith);
+  const bal=getPreBal(u.u,_smk)+(_sdep-_swith);
   // Use textContent-safe approach for the selected name display
   document.getElementById('dep-mem-selected-name').innerHTML = safeHTML(
     `✅ ${esc(u.name)} &nbsp;<span style="font-size:11px;color:var(--text-light)">| ID: ${esc(String(u.job||'-'))}</span> &nbsp;<span style="color:${bal>=0?'var(--success)':'var(--danger)'};font-size:12px">${bal>=0?'+':''} ৳${Math.abs(bal).toLocaleString()}</span>`
@@ -3815,7 +3825,7 @@ function showMemberBalance(){
   const _bmk=messMonthKey();
   const _bdep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_bmk)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _bwith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_bmk)).reduce((s,tx)=>s+(tx.amount||0),0);
-  const bal=(u.prevBalance||0)+(_bdep-_bwith);
+  const bal=getPreBal(u.u,_bmk)+(_bdep-_bwith);
   info.style.display='block';
   info.className='alert '+(bal>=0?'alert-success':'alert-danger')+' show';
   info.textContent=`${u.name} এর বর্তমান ব্যালেন্স: ৳ ${Math.abs(bal).toLocaleString()} (${bal>=0?'জমা আছে':'বকেয়া আছে'})`;
@@ -3840,7 +3850,7 @@ function saveDeposit(){
   const _tmk=messMonthKey();
   const _tDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_tmk)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _tWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_tmk)).reduce((s,tx)=>s+(tx.amount||0),0);
-  const _tBal=(u.prevBalance||0)+(_tDep-_tWith);
+  const _tBal=getPreBal(u.u,_tmk)+(_tDep-_tWith);
   toast(`✅ ${type==='deposit'?'জমা':'উত্তোলন'} সম্পন্ন! ব্যালেন্স: ৳${Math.abs(_tBal).toLocaleString()}`);
 }
 function renderDepHistory(){
@@ -3920,7 +3930,7 @@ function loadBill(){
   } else {
     netPayable=mealBill+othersShare+cookBillShare+cookFoodShare;
   }
-  const bal=(cu.prevBalance||0)+(()=>{const d=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);const w=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);return d-w;})();
+  const bal=getPreBal(cu.u,mmKey)+(()=>{const d=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);const w=(DB.transactions||[]).filter(tx=>tx.uname===CU.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);return d-w;})();
   const net=bal-netPayable;
 
   const displayRate=isOfficeMealUser(cu)?getOfficeMealRate(mmKey):pm;
@@ -4053,7 +4063,7 @@ function loadMembers(){
     const m=messMonthMeals(u.u,mmKey);
     const _mDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
     const _mWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
-    const bal=(u.prevBalance||0)+(_mDep-_mWith);
+    const bal=getPreBal(u.u,mmKey)+(_mDep-_mWith);
     const typeBadge=u.type==='cook'?`<span class="badge badge-cook">বাবুর্চি</span>`:isOfficeMealUser(u)?`<span class="badge badge-office">🏢 অফিস মিল</span>`:u.type==='outside'?`<span class="badge badge-outside">আউটসাইড</span>`:''
     const blockBadge=u.blocked?'<span class="badge badge-blocked">ব্লকড</span>':'';
     const ctrlBadge=isController(u)?'<span class="badge badge-ctrl">Controller</span>':'';
@@ -4085,7 +4095,7 @@ function openMemberDetail(uname){
   const _dmmKey=messMonthKey();
   const _dDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _dWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
-  const bal=(u.prevBalance||0)+(_dDep-_dWith);
+  const bal=getPreBal(u.u,_dmmKey)+(_dDep-_dWith);
   document.getElementById('memdet-info').innerHTML = safeHTML(`
     <div class="prof-av" style="width:60px;height:60px;font-size:24px">${esc(u.name[0])}</div>
     <div style="font-size:18px;font-weight:700">${esc(u.name)}</div>
@@ -4386,7 +4396,7 @@ function _calcHandoverData(mmKey){
       ?{othersShare:0,cookFoodShare:0}
       :calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
     const totalBill=mealBill+othersShare+cookFoodShare;
-    const prevBal=u.prevBalance||0;
+    const prevBal=getPreBal(u.u, mmKey);
     const monthDep=(DB.transactions||[])
       .filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey))
       .reduce((s,tx)=>s+(tx.amount||0),0);
@@ -4425,13 +4435,6 @@ function doMonthHandover(){
   const sel=document.getElementById('handover-month-sel');
   const mmKey=sel?sel.value:messMonthKey();
   if(!mmKey){ toast('❌ মাস নির্বাচন করুন!'); return; }
-  // ── handover এর আগে duplicate check ──
-  const _uids=DB.users.map(u=>u.u);
-  const _dupCheck=new Set(_uids);
-  if(_dupCheck.size !== _uids.length){
-    toast('⚠️ Duplicate user পাওয়া গেছে! আগে "Duplicate User ঠিক করুন" চালান।');
-    return;
-  }
   // ── handover lock: একই মাসে দ্বিতীয়বার করা যাবে না ──
   const doneKeys=DB.handoverDone||[];
   if(doneKeys.includes(mmKey)){
@@ -4448,27 +4451,21 @@ function doMonthHandover(){
       closeModal();
       const beforeCount=DB.users.length;
       const rows=_calcHandoverData(mmKey);
-      rows.forEach(({u,netBal})=>{ u.prevBalance=netBal; });
-      // ── safety check: user count বদলে গেলে save করো না ──
+      // ── nextCycleKey-এ store করো, যেন পরের মাসের report ঠিক থাকে ──
+      const nextKey=nextCycleKey(mmKey);
+      if(!DB.prevBalances) DB.prevBalances={};
+      if(!DB.prevBalances[nextKey]) DB.prevBalances[nextKey]={};
+      rows.forEach(({u,netBal})=>{ DB.prevBalances[nextKey][u.u]=netBal; });
+      // ── safety check ──
       if(DB.users.length !== beforeCount){
         toast('❌ ত্রুটি: user list পরিবর্তন হয়ে গেছে! Handover বাতিল।');
         return;
       }
-      // lock করো যেন আর না হয়
       if(!DB.handoverDone) DB.handoverDone=[];
       DB.handoverDone.push(mmKey);
       saveDB();
       toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
     });
-}
-function cleanupDuplicateUsers(){
-  if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
-  const seen=new Set(); let removed=0;
-  const before=DB.users.length;
-  DB.users=DB.users.filter(u=>{ if(seen.has(u.u)){ removed++; return false; } seen.add(u.u); return true; });
-  if(removed===0){ toast('✅ কোনো duplicate নেই, সব ঠিক আছে।'); return; }
-  saveDB();
-  toast(`✅ ${removed}টি duplicate user সরানো হয়েছে। (${before} → ${DB.users.length} জন)`);
 }
 function resetHandoverLock(){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
@@ -4480,8 +4477,9 @@ function resetHandoverLock(){
       closeModal();
       if(!DB.handoverDone) DB.handoverDone=[];
       DB.handoverDone=DB.handoverDone.filter(k=>k!==mmKey);
-      // সব user এর prevBalance শূন্য করো (ভুল data ঠিক করার জন্য)
-      DB.users.forEach(u=>{ if(u.type!=='cook') u.prevBalance=0; });
+      // পরের মাসের prevBalances মুছো
+      const nextKey=nextCycleKey(mmKey);
+      if(DB.prevBalances&&DB.prevBalances[nextKey]) delete DB.prevBalances[nextKey];
       saveDB();
       toast('✅ লক রিসেট হয়েছে। এখন সঠিক মাস হস্তান্তর করুন।');
     });
@@ -5014,7 +5012,7 @@ function makePDF(type){
         const monthWithdrawals = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='withdraw' && dateInMessMonth(tx.date, mmKey))
           .reduce((s, tx) => s + (tx.amount||0), 0);
-        const prevBalance = u.prevBalance||0;
+        const prevBalance = getPreBal(u.u, mmKey);
         const depositBalance = monthDeposits - monthWithdrawals;
         const totalBal = prevBalance + depositBalance;   // ✅ cycle-correct
         const netBal = totalBal - totalBill;
@@ -5148,7 +5146,7 @@ function showAllMembersBill(){
   DB.users.filter(u=>u.type!=='cook').forEach(u=>{
     const _fDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
     const _fWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
-    totalDeposited+=(u.prevBalance||0)+(_fDep-_fWith);
+    totalDeposited+=getPreBal(u.u,mmKey)+(_fDep-_fWith);
   });
   const messBalance=totalDeposited-bazar-others;
 
@@ -5204,7 +5202,7 @@ function showAllMembersBill(){
     :calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
   const totalBill=mealBill+othersShare+cookFoodShare;
 
-  const prevBal=cu.prevBalance||0;
+  const prevBal=getPreBal(cu.u, mmKey);
   const monthDep=(DB.transactions||[])
     .filter(tx=>tx.uname===cu.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey))
     .reduce((s,tx)=>s+(tx.amount||0),0);
