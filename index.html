@@ -1224,7 +1224,10 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
         <button class="btn btn-primary" onclick="saveDeposit()">&#9989; সম্পন্ন করুন</button>
       </div>
       <div class="card">
-        <div class="sec-title">&#128203; সাম্প্রতিক লেনদেন (সব সদস্য)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="sec-title" style="margin:0">&#128203; লেনদেন ইতিহাস (সব সদস্য)</div>
+          <select id="dep-hist-month" class="form-input" style="width:auto;padding:6px 10px;font-size:12px" onchange="renderDepHistory()"></select>
+        </div>
         <div id="dep-history"><p class="muted tc">কোনো লেনদেন নেই</p></div>
       </div>
     </div>
@@ -3826,8 +3829,12 @@ function saveDeposit(){
 }
 function renderDepHistory(){
   const histEl=document.getElementById('dep-history');
-  const txs=DB.transactions.slice().reverse().slice(0,20);
-  if(!txs.length){ histEl.innerHTML='<p class="muted tc">কোনো লেনদেন নেই</p>'; return; }
+  // মাস selector populate করো (প্রথমবার)
+  const selEl=document.getElementById('dep-hist-month');
+  if(selEl&&!selEl.options.length) fillMessCycleSelect(selEl,6);
+  const mmKey=(selEl&&selEl.value)||messMonthKey();
+  const txs=DB.transactions.filter(tx=>dateInMessMonth(tx.date,mmKey)).slice().reverse();
+  if(!txs.length){ histEl.innerHTML='<p class="muted tc">এই মাসে কোনো লেনদেন নেই</p>'; return; }
   const html=txs.map(tx=>{
     const u=DB.users.find(x=>x.u===tx.uname);
     const editBtn=isManagerOrCtrl()?`<button data-action="edit-tx" data-id="${tx.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;">✏️</button>`:'';
@@ -4379,7 +4386,7 @@ function _calcHandoverData(mmKey){
 function initHandoverCard(){
   const sel=document.getElementById('handover-month-sel');
   if(!sel) return;
-  // চলমান মাস ও গত মাস — ২টাই যথেষ্ট (handover মাসের ১০ তারিখেও হতে পারে)
+  // চলমান মাস ও গত মাস — ২টাই যথেষ্ট
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const currentKey=messMonthKey();
   sel.innerHTML='';
@@ -4935,7 +4942,6 @@ function makePDF(type){
         const sh = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0}
                           : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
         const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
-        const totalBal = prevBalance + depositBalance;
         const monthDeposits = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
           .reduce((s, tx) => s + (tx.amount||0), 0);
@@ -4944,6 +4950,7 @@ function makePDF(type){
           .reduce((s, tx) => s + (tx.amount||0), 0);
         const prevBalance = u.prevBalance||0;
         const depositBalance = monthDeposits - monthWithdrawals;
+        const totalBal = prevBalance + depositBalance;   // ✅ cycle-correct
         const netBal = totalBal - totalBill;
         const bg = ri%2===0 ? '#f4f7f5' : '#fff';
         const netColor = netBal>=0 ? '#2e7d32' : '#e53935';
@@ -5072,7 +5079,11 @@ function showAllMembersBill(){
 
   // ── মেস ফান্ড ──
   let totalDeposited=0;
-  DB.users.filter(u=>u.type!=='cook').forEach(u=>{ totalDeposited+=(u.balance||0); });
+  DB.users.filter(u=>u.type!=='cook').forEach(u=>{
+    const _fDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const _fWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+    totalDeposited+=(u.prevBalance||0)+(_fDep-_fWith);
+  });
   const messBalance=totalDeposited-bazar-others;
 
   // ── Summary Hero Card (সবাই দেখবে) ──
