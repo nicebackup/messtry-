@@ -1557,6 +1557,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
         <div style="font-size:11px;color:var(--text-light);margin-bottom:8px">⚙️ জরুরি অবস্থা — ভুল হয়ে গেলে ব্যবহার করুন</div>
         <button class="btn" style="width:100%;background:rgba(229,57,53,.12);border:1px solid #e53935;color:#e53935;font-size:13px" onclick="resetHandoverLock()">🔓 হস্তান্তর লক রিসেট করুন</button>
+        <button class="btn" style="width:100%;margin-top:8px;background:rgba(21,101,192,.12);border:1px solid #1565c0;color:#1565c0;font-size:13px" onclick="cleanupDuplicateUsers()">🧹 Duplicate User ঠিক করুন</button>
       </div>
     </div>
 
@@ -4441,6 +4442,15 @@ function doMonthHandover(){
       toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
     });
 }
+function cleanupDuplicateUsers(){
+  if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
+  const seen=new Set(); let removed=0;
+  const before=DB.users.length;
+  DB.users=DB.users.filter(u=>{ if(seen.has(u.u)){ removed++; return false; } seen.add(u.u); return true; });
+  if(removed===0){ toast('✅ কোনো duplicate নেই, সব ঠিক আছে।'); return; }
+  saveDB();
+  toast(`✅ ${removed}টি duplicate user সরানো হয়েছে। (${before} → ${DB.users.length} জন)`);
+}
 function resetHandoverLock(){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
   const sel=document.getElementById('handover-month-sel');
@@ -4884,9 +4894,12 @@ function makePDF(type){
     const calc = calcMealRate(mmKey);
     const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost} = calc;
     const nonCookUsers = DB.users.filter(u=>u.type!=='cook');
+    // ── deduplicate: একই u (username) দুইবার থাকলে প্রথমটা রাখো ──
+    const seenU=new Set();
+    const dedupUsers=nonCookUsers.filter(u=>{ if(seenU.has(u.u)) return false; seenU.add(u.u); return true; });
     const pdfOfRate = getOfficeMealRate(mmKey);
     // ── sort by job ID (fix: convert to string safely) ──
-    const sortedUsers = [...nonCookUsers].sort((a,b)=>{
+    const sortedUsers = [...dedupUsers].sort((a,b)=>{
       const ai=parseInt(a.job)||0, bi=parseInt(b.job)||0;
       if(ai&&bi) return ai-bi;
       return String(a.job||'').localeCompare(String(b.job||''));
