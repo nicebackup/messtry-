@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Midland Quarter - মেস ম্যানেজমেন্ট</title>
-<meta name="theme-color" content="#0f4526">
 <link rel="icon" href="favicon.ico">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a6b3c">
@@ -35,10 +34,10 @@ html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#34d399 !importan
 html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#059669,#34d399) !important;}
 html.dark-mode #fb-loading .mq-dot{background:#34d399 !important;}
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -308,7 +307,7 @@ html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
 .dark-mode ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#a78bfa);border-radius:4px;}
 .dark-mode ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#6d28d9,#8b5cf6);}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background-color .25s ease,color .25s ease,background .25s ease,border-color .25s ease,box-shadow .25s ease;}
+body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background-color .25s ease,color .25s ease;}
 /* ── RESPONSIVE WRAPPER ── */
 .screen{display:none;min-height:100vh;flex-direction:column;}
 .screen.active{display:flex;}
@@ -368,7 +367,7 @@ body{font-family:'Hind Siliguri','Poppins',sans-serif;background:var(--bg);color
 .app-header .content-inner{max-width:1100px;margin:0 auto;position:relative;width:100%;}
 .app-header::before{content:'';position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,255,255,0.07);border-radius:50%;}
 .header-logo{display:none;}
-.header-title{font-size:15px;font-weight:700;font-family:'Poppins',sans-serif;line-height:1.2;text-align:center;width:100%;}
+.header-title{font-size:15px;font-weight:700;font-family:'Hind Siliguri',sans-serif;line-height:1.2;text-align:center;width:100%;}
 .header-sub{font-size:10px;opacity:.75;margin-top:2px;text-align:center;width:100%;}
 .header-back{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:5px 11px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:500;font-family:inherit;white-space:nowrap;z-index:1;}
 .header-actions{position:absolute;top:50%;right:10px;transform:translateY(-50%);display:flex;gap:7px;align-items:center;z-index:1;}
@@ -1885,11 +1884,12 @@ function _isDBReady(){
 // DB ready হওয়া পর্যন্ত অপেক্ষা করে callback চালায়
 function _waitUntilReady(cb, timeoutMs=6000){
   if(_isDBReady()){ cb(); return; }
+  let _done = false; // guard: cb() যেন দুইবার না চলে
   const t = setInterval(()=>{
-    if(_isDBReady()){ clearInterval(t); cb(); }
+    if(_isDBReady() && !_done){ _done=true; clearInterval(t); cb(); }
   }, 50);
   // timeout-এ যাই হোক চলে যাও — আটকে থাকা যাবে না
-  setTimeout(()=>{ clearInterval(t); cb(); }, timeoutMs);
+  setTimeout(()=>{ if(!_done){ _done=true; clearInterval(t); cb(); } }, timeoutMs);
 }
 // ── Internet Check ──
 function isOnline(){ return navigator.onLine; }
@@ -1923,6 +1923,10 @@ window.addEventListener('offline', ()=>{ noNetPopup(); });
 
 function saveDB(){
   if(!_dbLoaded){ console.warn('saveDB blocked: DB not yet loaded'); return; }
+  invalidateMealIndex(); // meal index cache clear — DB change হলে
+  invalidateMemberCountsCache(); // member counts cache clear
+  invalidateTxBalCache(); // transaction balance cache clear
+  invalidateMealRateCache(); // meal rate cache clear
   // ── Save এর আগে duplicate সরাও (safety net) ──
   const _sv=new Set();
   DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
@@ -2024,6 +2028,10 @@ function loadDB(){
     if(data){
       DB = data;
       delete DB.darkMode;
+      invalidateMealIndex(); // Firebase থেকে নতুন data এলে index reset
+      invalidateMemberCountsCache();
+      invalidateTxBalCache();
+      invalidateMealRateCache();
       migrateDB();
     } else {
       // First-ever run: push default structure to Firebase
@@ -2227,16 +2235,22 @@ function messMonthKey(d){
   const {y,m} = getMessMonth(d);
   return `${y}-${String(m+1).padStart(2,'0')}`;
 }
-function dateInMessMonth(dateStr, mmKey){
-  // mmKey = "YYYY-MM" (start month)
+// ── dateInMessMonth bounds cache (string compare — no Date objects) ──
+const _dimCache = new Map();
+function _dimBounds(mmKey){
+  if(_dimCache.has(mmKey)) return _dimCache.get(mmKey);
   const [my,mm] = mmKey.split('-').map(Number);
-  const d = new Date(dateStr);
-  const dy=d.getFullYear(), dm=d.getMonth()+1, dd=d.getDate();
-  // Start: my/mm/11, End: ny/nm/10
   const nm = mm===12?1:mm+1, ny = mm===12?my+1:my;
-  const start = new Date(my,mm-1,11), end = new Date(ny,nm-1,10);
-  const dt = new Date(dy,dm-1,dd);
-  return dt>=start && dt<=end;
+  const startStr = my+'-'+String(mm).padStart(2,'0')+'-11';
+  const endStr   = ny+'-'+String(nm).padStart(2,'0')+'-10';
+  const bounds = {startStr, endStr};
+  _dimCache.set(mmKey, bounds);
+  return bounds;
+}
+function dateInMessMonth(dateStr, mmKey){
+  if(!dateStr||!mmKey) return false;
+  const {startStr, endStr} = _dimBounds(mmKey);
+  return dateStr >= startStr && dateStr <= endStr;
 }
 // পরবর্তী মাসের key  e.g. "2026-04" → "2026-05"
 function nextCycleKey(mmKey){
@@ -3386,12 +3400,43 @@ function dayMeals(uname,dateStr){
   const utype=u?u.type:'inside';
   return ['b','l','d'].reduce((s,t)=>s+mTV(t,meal[t],dateStr,utype),0);
 }
+
+// ── Meal key index: per-user এর key list একবার build করে cache করি
+// DB.meals-এর সব key scan করার বদলে user-specific list ব্যবহার হয়
+let _mealKeyIndex = null; // { uname: [dateStr, ...] }
+let _mealKeyIndexVersion = 0; // DB.meals change হলে invalidate
+function _getMealKeyIndex(){
+  const currentKeys = Object.keys(DB.meals||{});
+  const currentVer  = currentKeys.length;
+  if(!_mealKeyIndex || _mealKeyIndexVersion !== currentVer){
+    _mealKeyIndex = {};
+    _mealKeyIndexVersion = currentVer;
+    currentKeys.forEach(k=>{
+      const sep = k.indexOf('_');
+      if(sep<0) return;
+      const uname   = k.slice(0, sep);
+      const dateStr = k.slice(sep+1);
+      if(!_mealKeyIndex[uname]) _mealKeyIndex[uname]=[];
+      _mealKeyIndex[uname].push(dateStr);
+    });
+  }
+  return _mealKeyIndex;
+}
+function invalidateMealIndex(){ _mealKeyIndex = null; }
+
 function messMonthMeals(uname, mmKey){
-  let total=0;
-  Object.keys(DB.meals).forEach(k=>{
-    if(!k.startsWith(uname+'_')) return;
-    const dateStr=k.slice(uname.length+1);
-    if(dateInMessMonth(dateStr,mmKey)) total+=dayMeals(uname,dateStr);
+  const idx = _getMealKeyIndex();
+  const dates = idx[uname];
+  if(!dates||!dates.length) return 0;
+  const u = DB.users.find(x=>x.u===uname);
+  const utype = u?u.type:'inside';
+  let total = 0;
+  const {startStr, endStr} = _dimBounds(mmKey);
+  dates.forEach(dateStr=>{
+    if(dateStr < startStr || dateStr > endStr) return;
+    const meal = DB.meals[uname+'_'+dateStr];
+    if(!meal) return;
+    total += ['b','l','d'].reduce((s,t)=>s+mTV(t,meal[t],dateStr,utype), 0);
   });
   return total;
 }
@@ -3427,7 +3472,12 @@ function getNetMeals(mmKey){
   // নেট মিল = সদস্যদের মিল (বাবুর্চি বাদ, অফিস মিল বাদ)
   return {totalMeals, cookMeals, officeMeals, netMeals: totalMeals-cookMeals-officeMeals};
 }
+// ── calcMealRate result cache — একই মাসে বারবার call হলে recalc নয় ──
+let _mealRateCache = {};
+function invalidateMealRateCache(){ _mealRateCache = {}; }
+
 function calcMealRate(mmKey){
+  if(_mealRateCache[mmKey]) return _mealRateCache[mmKey];
   const bazar      = DB.bazar.filter(b=>dateInMessMonth(b.date,mmKey)).reduce((s,b)=>s+b.amount,0);
   const othersAll  = DB.others.filter(o=>dateInMessMonth(o.date,mmKey));
   const others     = othersAll.reduce((s,o)=>s+o.amount,0);
@@ -3472,19 +3522,32 @@ function calcMealRate(mmKey){
   // Override দিয়ে manual rate সেট থাকলে সেটা ব্যবহার হবে
   const pm = DB.mealRates[mmKey] || FR;
 
-  return {bazar, others, othersAll, cookBillsTotal, cookBillsAll,
+  const result = {bazar, others, othersAll, cookBillsTotal, cookBillsAll,
           total, rateBase, officeBil,
           totalMeals, cookMeals, officeMeals, netMeals, M, C, R,
           X, r1, cookFoodCost, pm};
+  _mealRateCache[mmKey] = result; // cache করো
+  return result;
 }
 
 // Calculate a single member's share of others + cook food cost
-function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
-  // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
-  if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0, cookFoodShare:0};
+// ── nonCookMembers counts cache — bill calc-এ ২০০ বার filter চলত ──
+let _memberCountsCache = null;
+function _getMemberCounts(){
+  if(_memberCountsCache) return _memberCountsCache;
   const nonCookMembers = DB.users.filter(x=>x.type!=='cook'&&!isOfficeMealUser(x));
   const insideCount    = nonCookMembers.filter(x=>x.type==='inside').length;
   const outsideCount   = nonCookMembers.filter(x=>x.type==='outside').length;
+  _memberCountsCache = {nonCookMembers, insideCount, outsideCount};
+  return _memberCountsCache;
+}
+function invalidateMemberCountsCache(){ _memberCountsCache = null; }
+
+function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
+  // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
+  if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0, cookFoodShare:0};
+  // ✅ pre-calculated — প্রতি call-এ filter() চলবে না
+  const {nonCookMembers, insideCount, outsideCount} = _getMemberCounts();
 
   // অন্যান্য খরচ — প্রতি entry-র split rule অনুযায়ী
   let othersShare = 0;
@@ -3503,7 +3566,6 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0
   });
 
   // বাবুর্চির খাবার খরচ (CB) — Inside=পূর্ণ, Outside=৫০%
-  // CB = r₁ × C — সূত্র থেকে এসেছে, cookFoodCost হিসেবে পাস হয়
   let cookFoodShare = 0;
   if(cookFoodCost > 0){
     const denom = insideCount + outsideCount*0.5;
@@ -3749,6 +3811,25 @@ function renderDepMyHistory(){
   }
   el.innerHTML=safeHTML(html)||'<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
 }
+// ── Transaction balance cache for deposit search ──
+let _txBalCache = null;
+let _txBalCacheKey = '';
+function _getTxBalCache(mmKey){
+  if(_txBalCache && _txBalCacheKey===mmKey) return _txBalCache;
+  // সব transaction একবার scan করে প্রতি user-এর dep/with sum বানাই
+  const cache = {};
+  (DB.transactions||[]).forEach(tx=>{
+    if(!dateInMessMonth(tx.date, mmKey)) return;
+    if(!cache[tx.uname]) cache[tx.uname]={dep:0,with:0};
+    if(tx.type==='deposit')  cache[tx.uname].dep  += (tx.amount||0);
+    if(tx.type==='withdraw') cache[tx.uname].with += (tx.amount||0);
+  });
+  _txBalCache = cache;
+  _txBalCacheKey = mmKey;
+  return cache;
+}
+function invalidateTxBalCache(){ _txBalCache = null; _txBalCacheKey = ''; }
+
 function depMemSearch(){
   const q=(document.getElementById('dep-mem-search').value||'').trim();
   const dd=document.getElementById('dep-mem-dropdown');
@@ -3759,18 +3840,21 @@ function depMemSearch(){
     matches=users;
   } else {
     // String conversion নিশ্চিত করো — u.job number হতে পারে
-    const exact=users.filter(u=>String(u.job||'').toLowerCase()===q.toLowerCase());
-    const starts=users.filter(u=>String(u.job||'').toLowerCase().startsWith(q.toLowerCase()) && String(u.job||'').toLowerCase()!==q.toLowerCase());
+    const qLow=q.toLowerCase();
+    const exact=users.filter(u=>String(u.job||'').toLowerCase()===qLow);
+    const starts=users.filter(u=>{ const j=String(u.job||'').toLowerCase(); return j.startsWith(qLow)&&j!==qLow; });
     matches=[...exact,...starts];
   }
   if(!matches.length){
     dd.innerHTML='<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
     dd.style.display='block'; return;
   }
+  // ✅ একবার scan করে cache — ১৫ user × ২ filter এর বদলে O(n) একবার
+  const _dmk=messMonthKey();
+  const txCache=_getTxBalCache(_dmk);
   dd.innerHTML = safeHTML(matches.slice(0,15).map(u=>{
-    const _dmk=messMonthKey();
-    const _ddep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
-    const _dwith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmk)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const tx=txCache[u.u]||{dep:0,with:0};
+    const _ddep=tx.dep, _dwith=tx.with;
     const bal=getPreBal(u.u,_dmk)+(_ddep-_dwith);
     const balColor=bal>=0?'var(--success)':'var(--danger)';
     const balTxt=bal>=0?'+৳'+Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}):'-৳'+Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -4760,7 +4844,7 @@ function downloadDayPDF(){
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#0f4526,#1a6b3c,#28a15e);color:#fff;border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <div style="font-size:22px;font-weight:700;font-family:'Poppins',sans-serif;letter-spacing:.5px;">${messName}</div>
+        <div style="font-size:22px;font-weight:700;font-family:'Hind Siliguri',sans-serif;letter-spacing:.5px;">${messName}</div>
         <div style="font-size:12px;opacity:.8;margin-top:3px;">${siteNote}</div>
         <div style="font-size:11px;opacity:.7;margin-top:2px;">Mess Month: ${mmLabel}</div>
       </div>
