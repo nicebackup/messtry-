@@ -3412,10 +3412,13 @@ function _getMealKeyIndex(){
     _mealKeyIndex = {};
     _mealKeyIndexVersion = currentVer;
     currentKeys.forEach(k=>{
-      const sep = k.indexOf('_');
-      if(sep<0) return;
-      const uname   = k.slice(0, sep);
-      const dateStr = k.slice(sep+1);
+      // ✅ FIX: date সবসময় শেষের ১০ char (YYYY-MM-DD)
+      // uname-এ underscore থাকতে পারে (যেমন u_01712345678)
+      // তাই indexOf('_') দিয়ে split ভুল — শেষ থেকে slice করতে হবে
+      if(k.length < 11) return; // minimum: "x_YYYY-MM-DD"
+      const dateStr = k.slice(-10);   // শেষ ১০ char = YYYY-MM-DD
+      const uname   = k.slice(0, k.length - 11); // বাকিটা = uname (শেষ '_' বাদে)
+      if(!uname) return;
       if(!_mealKeyIndex[uname]) _mealKeyIndex[uname]=[];
       _mealKeyIndex[uname].push(dateStr);
     });
