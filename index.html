@@ -1853,7 +1853,14 @@ function migrateDB(){
   if(!DB.others) DB.others=[];
   if(!DB.transactions) DB.transactions=[];
   if(!DB.mealRates) DB.mealRates={};
-  if(!DB.cfg) DB.cfg={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
+  // cfg normalize — Firebase-এ insider/outsider structure থাকলে def/byDate বের করি
+  if(!DB.cfg || typeof DB.cfg !== 'object') DB.cfg = {};
+  if(!DB.cfg.def){
+    // legacy insider/outsider structure থেকে def বের করি
+    const legacyDef = (DB.cfg.insider||{}).def || (DB.cfg.outsider||{}).def;
+    DB.cfg.def = legacyDef ? {...legacyDef} : {b:0.75,l:1.5,d:0.75};
+  }
+  if(!DB.cfg.byDate) DB.cfg.byDate = {};
   if(DB.siteNote===undefined) DB.siteNote='আশুগঞ্জ, ব্রাহ্মণবাড়িয়া';
   if(!DB.notice) DB.notice={text:'',popupEnabled:false};
   if(!DB.cookBills) DB.cookBills=[];
