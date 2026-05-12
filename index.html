@@ -1866,7 +1866,15 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
-const dbRef = database.ref('messData');
+const dbRef     = database.ref('messData');        // migration/fallback only
+const globalRef  = database.ref('messData/global');  // users, cfg, controllers, notice, siteNote, rules, shortfall, prevBalances, handoverDone
+const monthsRef  = database.ref('messData/months');  // per-mess-month: meals, bazar, others, transactions, managers, mealRates, officeMealRates, officeMealNotes, cookBills
+let currentMonthRef = null;
+let currentMonthKey = '';
+
+const GLOBAL_FIELDS = ['users','cfg','controllers','siteNote','notice','rules','shortfall','prevBalances','handoverDone'];
+const MONTH_FIELDS  = ['meals','bazar','others','transactions','managers','mealRates','officeMealRates','officeMealNotes','cookBills'];
+
 const auth = firebase.auth();
 
 // ═══════════════════════════════════════════════
@@ -1921,36 +1929,41 @@ function noNetPopup(){
 window.addEventListener('online',  ()=>{ const p=document.getElementById('no-net-popup'); if(p) p.remove(); toast('✅ ইন্টারনেট সংযোগ পুনরায় চালু হয়েছে!'); });
 window.addEventListener('offline', ()=>{ noNetPopup(); });
 
+// ── Global save: users, cfg, controllers, notice, siteNote, rules, shortfall, prevBalances, handoverDone ──
+let _globalSaveTimer = null;
+function saveGlobal(){
+  if(!_dbLoaded) return;
+  if(_globalSaveTimer) clearTimeout(_globalSaveTimer);
+  _globalSaveTimer = setTimeout(()=>{
+    const _sv=new Set();
+    DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
+    const data={};
+    GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
+    globalRef.set(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
+  }, 400);
+}
+
+// ── Month save: meals, bazar, others, transactions, managers, mealRates, officeMealRates, officeMealNotes, cookBills ──
+let _monthSaveTimer = null;
+function saveMonth(){
+  if(!_dbLoaded || !currentMonthRef) return;
+  if(_monthSaveTimer) clearTimeout(_monthSaveTimer);
+  _monthSaveTimer = setTimeout(()=>{
+    const data={};
+    MONTH_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
+    currentMonthRef.set(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
+  }, 400);
+}
+
+// ── saveDB() — সব পুরানো call-এর জন্য backward compatible ──
 function saveDB(){
   if(!_dbLoaded){ console.warn('saveDB blocked: DB not yet loaded'); return; }
   invalidateMealIndex();
   invalidateMemberCountsCache();
   invalidateTxBalCache();
   invalidateMealRateCache();
-  if(_dbSaveTimeout) clearTimeout(_dbSaveTimeout);
-  _dbSaveTimeout = setTimeout(()=>{
-    // ✅ FIX RACE CONDITION: snapshot এখানে নেওয়া হচ্ছে (setTimeout-এর ভেতরে)
-    // আগে বাইরে নেওয়া হত — Firebase থেকে কোনো update এলে সেটা হারিয়ে যেত
-    const _sv=new Set();
-    DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
-    const dbToSave = JSON.parse(JSON.stringify(DB));
-    delete dbToSave.darkMode;
-    dbRef.set(dbToSave)
-      .then(()=>{ _saveRetryCount=0; })
-      .catch(e=>{
-        console.error('Firebase write error:',e);
-        _saveRetryCount++;
-        if(_saveRetryCount<=3){
-          // Retry after 2 seconds
-          setTimeout(()=>{
-            dbRef.set(dbToSave).catch(err=>console.error('Retry failed:',err));
-          }, 2000);
-        } else {
-          toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।');
-          _saveRetryCount=0;
-        }
-      });
-  }, 400);
+  saveGlobal();
+  saveMonth();
 }
 
 function migrateDB(){
@@ -2010,12 +2023,119 @@ function migrateDB(){
   });
 }
 
-// Real-time listener — updates DB & UI whenever Firebase data changes
+
+// ══════════════════════════════════════════════════════════
+// MIGRATION — পুরানো single-node → মেস মাস-ভিত্তিক structure
+// ══════════════════════════════════════════════════════════
+function _runMigration(callback){
+  console.log('🔄 Migration শুরু...');
+  dbRef.once('value', snap=>{
+    const old=snap.val(); if(!old){ callback(); return; }
+
+    // ── Global data ──
+    const globalData={
+      users:       old.users       || [],
+      cfg:         old.cfg         || {insider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}},outsider:{def:{b:0.75,l:1.5,d:0.75},byDate:{}}},
+      controllers: old.controllers || [],
+      siteNote:    old.siteNote    || 'আশুগঞ্জ, ব্রাহ্মণবাড়িয়া',
+      notice:      old.notice      || {text:'',popupEnabled:false},
+      rules:       old.rules       || {text:''},
+      shortfall:   old.shortfall   || {},
+      prevBalances:old.prevBalances|| {},
+      handoverDone:old.handoverDone|| [],
+    };
+
+    // ── Month buckets ──
+    const buckets={};
+    function bkt(mmKey){
+      if(!buckets[mmKey]) buckets[mmKey]={meals:{},bazar:[],others:[],transactions:[],managers:{},mealRates:{},officeMealRates:{},officeMealNotes:[],cookBills:[]};
+      return buckets[mmKey];
+    }
+
+    // meals: key = "userId_YYYY-MM-DD"
+    Object.entries(old.meals||{}).forEach(([k,v])=>{
+      try{ const d=k.split('_').pop(); bkt(messMonthKey(new Date(d))).meals[k]=v; }
+      catch(e){ bkt(currentMonthKey).meals[k]=v; }
+    });
+    // bazar / others / transactions / officeMealNotes / cookBills
+    [['bazar','bazar'],['others','others'],['transactions','transactions'],
+     ['officeMealNotes','officeMealNotes'],['cookBills','cookBills']].forEach(([src,dst])=>{
+      (old[src]||[]).forEach(item=>{
+        try{ bkt(messMonthKey(new Date(item.date||new Date()))).bkt=undefined; bkt(messMonthKey(new Date(item.date||new Date())))[dst].push(item); }
+        catch(e){ bkt(currentMonthKey)[dst].push(item); }
+      });
+    });
+    // managers / mealRates / officeMealRates — keyed by mmKey already
+    ['managers','mealRates','officeMealRates'].forEach(field=>{
+      Object.entries(old[field]||{}).forEach(([mmKey,val])=>{ bkt(mmKey)[field][mmKey]=val; });
+    });
+
+    const writes=[globalRef.set(globalData)];
+    Object.entries(buckets).forEach(([mmKey,data])=>{ writes.push(monthsRef.child(mmKey).set(data)); });
+
+    Promise.all(writes)
+      .then(()=>{
+        const cleanups=['users','meals','bazar','others','transactions','managers',
+          'mealRates','cfg','controllers','siteNote','notice','rules','shortfall',
+          'prevBalances','handoverDone','officeMealRates','officeMealNotes','cookBills']
+          .map(f=>dbRef.child(f).remove());
+        return Promise.all(cleanups);
+      })
+      .then(()=>{ console.log('✅ Migration সম্পন্ন!'); callback(); })
+      .catch(e=>{ console.error('Migration error:',e); callback(); });
+  }).catch(e=>{ console.error('Migration read error:',e); callback(); });
+}
+
+// ── Screen refresh helper ──
+function _refreshActiveScreen(){
+  applyDark();
+  if(!CU) return;
+  const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
+  if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
+  else if(activeId==='meal') loadMealDate();
+  else if(activeId==='bazar') renderBazar();
+  else if(activeId==='others'){ renderOthers(); renderCookBills(); }
+  else if(activeId==='deposit'){ renderDepMyBalance(); renderDepMyHistory(); if(isManagerOrCtrl()){ renderDepHistory(); showMemberBalance(); } }
+  else if(activeId==='bill') loadBill();
+  else if(activeId==='report') loadReport();
+  else if(activeId==='members') loadMembers();
+  else if(activeId==='profile') loadProfile();
+  else if(activeId==='notice') initNotice();
+  else if(activeId==='rules') initRules();
+}
+
+// ── Background: global-এ missing fields পুরানো top-level থেকে copy করা ──
+let _supplementDone = false;
+function _supplementGlobalFields(){
+  if(_supplementDone) return;
+  _supplementDone = true;
+  // rules, shortfall, prevBalances, handoverDone — আগের migration-এ global-এ যায়নি
+  const toCheck = [];
+  if(!DB.rules || !DB.rules.text) toCheck.push('rules');
+  if(!DB.shortfall || !Object.keys(DB.shortfall).length) toCheck.push('shortfall');
+  if(!DB.prevBalances) toCheck.push('prevBalances');
+  if(!DB.handoverDone || !DB.handoverDone.length) toCheck.push('handoverDone');
+  if(!toCheck.length) return;
+  // পুরানো top-level থেকে read করি
+  const reads = toCheck.map(f=>
+    dbRef.child(f).once('value').then(s=>({f, v:s.val()})).catch(()=>({f, v:null}))
+  );
+  Promise.all(reads).then(results=>{
+    const updates={};
+    results.forEach(({f,v})=>{
+      if(v!==null){ DB[f]=v; updates[f]=v; }
+    });
+    if(Object.keys(updates).length) globalRef.update(updates).catch(()=>{});
+  });
+}
+
+// Real-time listener — দুটো listener: global + current mess month
 function loadDB(){
-  // Show loading overlay
   document.getElementById('fb-loading').style.display='flex';
 
-  // ── Offline timeout: যদি ৭ সেকেন্ডে Firebase সাড়া না দেয় → offline mode ──
+  currentMonthKey = messMonthKey();
+  currentMonthRef = monthsRef.child(currentMonthKey);
+
   const offlineTimer = setTimeout(()=>{
     if(!_dbLoaded){
       document.getElementById('fb-loading').style.display='none';
@@ -2023,54 +2143,75 @@ function loadDB(){
     }
   }, 7000);
 
-  dbRef.on('value', snap=>{
-    clearTimeout(offlineTimer); // Firebase সাড়া দিয়েছে — timer বাতিল
-    const data = snap.val();
-    if(data){
-      DB = data;
-      delete DB.darkMode;
-      // ✅ FIX: migrateDB আগে চালাও — migration DB.meals পরিবর্তন করতে পারে
-      // তারপর cache invalidate করো, তাহলে fresh data দিয়ে rebuild হবে
+  // global/users আছে → নতুন structure, সরাসরি listeners শুরু
+  // না থাকলে → পুরানো structure check → migration
+  globalRef.child('users').once('value')
+    .then(gSnap=>{
+      if(gSnap.val()!==null){
+        _startListeners(offlineTimer);
+      } else {
+        dbRef.child('users').once('value').then(uSnap=>{
+          if(uSnap.val()!==null){
+            const msgEl=document.querySelector('#fb-loading .mq-load-sub');
+            if(msgEl) msgEl.textContent='ডেটা আপগ্রেড হচ্ছে...';
+            _runMigration(()=>_startListeners(offlineTimer));
+          } else {
+            _startListeners(offlineTimer);
+          }
+        }).catch(()=>_startListeners(offlineTimer));
+      }
+    }).catch(()=>_startListeners(offlineTimer));
+
+  function _startListeners(timer){
+    let globalReady=false, monthReady=false;
+
+    function _checkReady(){
+      if(!globalReady||!monthReady) return;
+      clearTimeout(timer);
       migrateDB();
-      invalidateMealIndex();
-      invalidateMemberCountsCache();
-      invalidateTxBalCache();
-      invalidateMealRateCache();
-    } else {
-      // First-ever run: push default structure to Firebase
-      migrateDB();
-      const initialDB = JSON.parse(JSON.stringify(DB));
-      delete initialDB.darkMode;
-      dbRef.set(initialDB);
+      invalidateMealIndex(); invalidateMemberCountsCache(); invalidateTxBalCache(); invalidateMealRateCache();
+      _dbLoaded=true;
+      _refreshActiveScreen();
     }
-    // ✅ Firebase load সম্পন্ন — এখন থেকে saveDB() allow
-    _dbLoaded = true;
-    applyDark();
-    // Refresh current active screen if already logged in
-    if(CU){
-      const activeId = document.querySelector('.screen.active')?.id?.replace('sc-','');
-      if(activeId==='home'||activeId==='login'||!activeId){ refreshHome(); showSc('home'); }
-      else if(activeId==='meal') loadMealDate();
-      else if(activeId==='bazar') renderBazar();
-      else if(activeId==='others'){ renderOthers(); renderCookBills(); }
-      else if(activeId==='deposit'){ renderDepMyBalance(); renderDepMyHistory(); if(isManagerOrCtrl()){ renderDepHistory(); showMemberBalance(); } }
-      else if(activeId==='bill') loadBill();
-      else if(activeId==='report') loadReport();
-      else if(activeId==='members') loadMembers();
-      else if(activeId==='profile') loadProfile();
-      else if(activeId==='notice') initNotice();
-    }
-    // Hide loading overlay only after onAuthStateChanged handles routing
-  }, err=>{
-    clearTimeout(offlineTimer);
-    console.error('Firebase read error:', err);
+
+    // ── Global listener (real-time) ──
+    globalRef.on('value', snap=>{
+      const data=snap.val();
+      if(data){
+        GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
+        _supplementGlobalFields(); // missing fields পুরানো top-level থেকে আনি
+      } else {
+        // একেবারে নতুন mess — global initialize
+        migrateDB();
+        const initG={}; GLOBAL_FIELDS.forEach(f=>{ initG[f]=DB[f]; });
+        globalRef.set(initG);
+      }
+      globalReady=true; _checkReady();
+    }, err=>{
+      console.error('Global load error:',err);
+      globalReady=true; _checkReady();
+    });
+
+    // ── Current month listener (real-time) ──
+    currentMonthRef.on('value', snap=>{
+      const data=snap.val();
+      if(data){ MONTH_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; }); }
+      monthReady=true; _checkReady();
+    }, err=>{
+      console.error('Month load error:',err);
+      monthReady=true; _checkReady();
+    });
+
+    // ১০s fallback — blank screen ঠেকাতে
     setTimeout(()=>{
       if(!_dbLoaded){
+        _dbLoaded=true;
         document.getElementById('fb-loading').style.display='none';
-        toast('❌ Firebase সংযোগ ব্যর্থ! ইন্টারনেট চেক করুন।');
+        if(CU){ refreshHome(); showSc('home'); } else { showSc('login'); }
+        toast('⚠️ সংযোগ ধীর। পুনরায় চেষ্টা করুন।');
       }
-    }, 4000);
-  });
+    }, 10000);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -2729,9 +2870,8 @@ function doLogin(){
             CU.type       = DB.users[idx].type        || CU.type;
           } else {
             DB.users.push({...CU});
-            // নতুন সদস্য — Firebase-এ শুধু এই user-টা push (পুরো array replace না)
             const ni = DB.users.length-1;
-            dbRef.child('users/'+ni).set({...CU}).catch(()=>{});
+            globalRef.child('users/'+ni).set({...CU}).catch(()=>{});
           }
         }
         // Auto-fix bad role value in RTDB if needed
@@ -2886,10 +3026,8 @@ function doRegister(){
       if(!DB.users) DB.users=[];
       const newUser = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
       DB.users.push(newUser);
-      // ✅ নতুন user শুধু array-র শেষে push — পুরো array replace না
-      // আগে .set(DB.users) করলে অন্য সদস্যদের data মুছে যেত!
       const newIdx = DB.users.length - 1;
-      dbRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
+      globalRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
 
       // Step 5 — Show success, then sign out cleanly
       ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
@@ -4048,6 +4186,24 @@ function loadBill(){
 // ═══════════════════════════════════════════════
 function loadReport(){
   const mmKey=document.getElementById('rpt-month').value; if(!mmKey) return;
+
+  // Historical month হলে Firebase থেকে ঐ মাসের data এনে temporarily DB-তে রাখি
+  if(mmKey !== currentMonthKey){
+    const rptEl=document.getElementById('rpt-content');
+    if(rptEl) rptEl.innerHTML='<div style="text-align:center;padding:40px;opacity:.6">লোড হচ্ছে...</div>';
+    monthsRef.child(mmKey).once('value').then(snap=>{
+      const hist=snap.val()||{};
+      const saved={}; MONTH_FIELDS.forEach(f=>{ saved[f]=DB[f]; });
+      MONTH_FIELDS.forEach(f=>{ DB[f]=hist[f]||(f==='meals'||f==='managers'||f==='mealRates'||f==='officeMealRates'?{}:[]); });
+      _doLoadReport(mmKey);
+      MONTH_FIELDS.forEach(f=>{ DB[f]=saved[f]; });
+    }).catch(()=>_doLoadReport(mmKey));
+    return;
+  }
+  _doLoadReport(mmKey);
+}
+
+function _doLoadReport(mmKey){
   const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost}=calcMealRate(mmKey);
 
   const [my,mm]=mmKey.split('-').map(Number);
