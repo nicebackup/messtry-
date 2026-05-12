@@ -1923,17 +1923,18 @@ window.addEventListener('offline', ()=>{ noNetPopup(); });
 
 function saveDB(){
   if(!_dbLoaded){ console.warn('saveDB blocked: DB not yet loaded'); return; }
-  invalidateMealIndex(); // meal index cache clear — DB change হলে
-  invalidateMemberCountsCache(); // member counts cache clear
-  invalidateTxBalCache(); // transaction balance cache clear
-  invalidateMealRateCache(); // meal rate cache clear
-  // ── Save এর আগে duplicate সরাও (safety net) ──
-  const _sv=new Set();
-  DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
-  const dbToSave = JSON.parse(JSON.stringify(DB));
-  delete dbToSave.darkMode;
+  invalidateMealIndex();
+  invalidateMemberCountsCache();
+  invalidateTxBalCache();
+  invalidateMealRateCache();
   if(_dbSaveTimeout) clearTimeout(_dbSaveTimeout);
   _dbSaveTimeout = setTimeout(()=>{
+    // ✅ FIX RACE CONDITION: snapshot এখানে নেওয়া হচ্ছে (setTimeout-এর ভেতরে)
+    // আগে বাইরে নেওয়া হত — Firebase থেকে কোনো update এলে সেটা হারিয়ে যেত
+    const _sv=new Set();
+    DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
+    const dbToSave = JSON.parse(JSON.stringify(DB));
+    delete dbToSave.darkMode;
     dbRef.set(dbToSave)
       .then(()=>{ _saveRetryCount=0; })
       .catch(e=>{
@@ -2028,11 +2029,13 @@ function loadDB(){
     if(data){
       DB = data;
       delete DB.darkMode;
-      invalidateMealIndex(); // Firebase থেকে নতুন data এলে index reset
+      // ✅ FIX: migrateDB আগে চালাও — migration DB.meals পরিবর্তন করতে পারে
+      // তারপর cache invalidate করো, তাহলে fresh data দিয়ে rebuild হবে
+      migrateDB();
+      invalidateMealIndex();
       invalidateMemberCountsCache();
       invalidateTxBalCache();
       invalidateMealRateCache();
-      migrateDB();
     } else {
       // First-ever run: push default structure to Firebase
       migrateDB();
@@ -3425,7 +3428,7 @@ function _getMealKeyIndex(){
   }
   return _mealKeyIndex;
 }
-function invalidateMealIndex(){ _mealKeyIndex = null; }
+function invalidateMealIndex(){ _mealKeyIndex = null; _mealKeyIndexVersion = -1; }
 
 function messMonthMeals(uname, mmKey){
   const idx = _getMealKeyIndex();
@@ -5972,8 +5975,32 @@ document.addEventListener('DOMContentLoaded', initSaveId);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW registered:', reg.scope))
+      .then(reg => {
+        console.log('SW registered:', reg.scope);
+        // ✅ প্রতিবার app লোডে update চেক করো
+        reg.update();
+
+        // ✅ নতুন SW install হলে auto-reload
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // নতুন version ready — reload করো
+              toast('🔄 নতুন আপডেট পাওয়া গেছে! লোড হচ্ছে...');
+              setTimeout(() => window.location.reload(true), 1800);
+            }
+          });
+        });
+      })
       .catch(err => console.log('SW error:', err));
+
+    // SW-থেকে message পেলে reload করো (skipWaiting signal)
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data && e.data.type === 'SW_UPDATED') {
+        window.location.reload(true);
+      }
+    });
   });
 }
 
