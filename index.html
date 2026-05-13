@@ -1296,10 +1296,9 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
       <select id="rpt-month" class="form-input" onchange="loadReport()">
         <option value="">-- মাস নির্বাচন করুন --</option>
       </select>
-      <button onclick="loadReport(true)" style="margin-top:8px;width:100%;padding:9px;border-radius:10px;border:1.5px dashed var(--primary);background:transparent;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;">🔄 ডেটা রিফ্রেশ (সরাসরি Firebase)</button>
+      <button onclick="loadReport(true)" style="margin-top:8px;width:100%;padding:9px;border-radius:10px;border:1.5px dashed var(--primary);background:transparent;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;">🔄 নতুন করে লোড করুন</button>
     </div>
     <div class="card"><div class="sec-title">📊 রিপোর্ট</div><div id="rpt-rows"><p class="muted tc">মাস নির্বাচন করুন</p></div></div>
-    <div id="rpt-data-debug" style="font-size:10px;color:var(--text-light);text-align:center;margin:-8px 0 8px;padding:4px"></div>
     <button class="btn btn-primary" onclick="makePDF('report')">🖨️ Print / PDF সেভ করুন</button>
   </div>
 </div>
@@ -3101,7 +3100,7 @@ function doRegister(){
 
       // Step 4 — Mirror into local DB cache AND write directly to messData
       if(!DB.users) DB.users=[];
-      const newUser = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false };
+      const newUser = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), balance: 0, emailVerified: false, activeFrom: messMonthKey() };
       DB.users.push(newUser);
       const newIdx = DB.users.length - 1;
       globalRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
@@ -3677,7 +3676,7 @@ function getNetMemberMeals(uname, mmKey){
 function getCookMeals(mmKey){
   // বাবুর্চির (type='cook') মোট মিল
   let cookMeals=0;
-  DB.users.filter(u=>u.type==='cook').forEach(u=>{ cookMeals+=messMonthMeals(u.u,mmKey); });
+  DB.users.filter(u=>u.type==='cook' && isActiveInMonth(u,mmKey)).forEach(u=>{ cookMeals+=messMonthMeals(u.u,mmKey); });
   return cookMeals;
 }
 function getNetMeals(mmKey){
@@ -3752,21 +3751,34 @@ function calcMealRate(mmKey){
 // Calculate a single member's share of others + cook food cost
 // ── nonCookMembers counts cache — bill calc-এ ২০০ বার filter চলত ──
 let _memberCountsCache = null;
-function _getMemberCounts(){
-  if(_memberCountsCache) return _memberCountsCache;
-  const nonCookMembers = DB.users.filter(x=>x.type!=='cook'&&!isOfficeMealUser(x));
-  const insideCount    = nonCookMembers.filter(x=>x.type==='inside').length;
-  const outsideCount   = nonCookMembers.filter(x=>x.type==='outside').length;
-  _memberCountsCache = {nonCookMembers, insideCount, outsideCount};
-  return _memberCountsCache;
+// ── কোনো user নির্দিষ্ট মাসে active ছিল কিনা ──
+// activeFrom না থাকলে পুরনো member — সবসময় true
+function isActiveInMonth(u, mmKey){
+  if(!u.activeFrom) return true;
+  return u.activeFrom <= mmKey; // "2026-05" > "2026-04" → নতুন member April-এ নেই
+}
+
+function _getMemberCounts(mmKey=null){
+  // mmKey দিলে সেই মাসের active members ফিল্টার করো (cache bypass)
+  if(!mmKey && _memberCountsCache) return _memberCountsCache;
+  const nonCookMembers = DB.users.filter(x=>
+    x.type!=='cook' &&
+    !isOfficeMealUser(x) &&
+    (!mmKey || isActiveInMonth(x, mmKey))
+  );
+  const insideCount  = nonCookMembers.filter(x=>x.type==='inside').length;
+  const outsideCount = nonCookMembers.filter(x=>x.type==='outside').length;
+  const result = {nonCookMembers, insideCount, outsideCount};
+  if(!mmKey) _memberCountsCache = result; // current month → cache
+  return result;
 }
 function invalidateMemberCountsCache(){ _memberCountsCache = null; }
 
 function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
   // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
   if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0, cookFoodShare:0};
-  // ✅ pre-calculated — প্রতি call-এ filter() চলবে না
-  const {nonCookMembers, insideCount, outsideCount} = _getMemberCounts();
+  // ✅ mmKey দিয়ে — historical month-এ শুধু সেই সময়ের active members গণনা
+  const {nonCookMembers, insideCount, outsideCount} = _getMemberCounts(mmKey);
 
   // অন্যান্য খরচ — প্রতি entry-র split rule অনুযায়ী
   let othersShare = 0;
@@ -4336,12 +4348,6 @@ function _doLoadReport(mmKey){
   </div>`;
 
   document.getElementById('rpt-rows').innerHTML = safeHTML(html);
-  // ── Debug: কতটুকু data load হয়েছে দেখাও ──
-  const mealCount = Object.keys(DB.meals||{}).length;
-  const txCount   = (DB.transactions||[]).length;
-  const bazCount  = (DB.bazar||[]).length;
-  const dbgEl = document.getElementById('rpt-data-debug');
-  if(dbgEl) dbgEl.textContent = `📦 Firebase data: ${mealCount} meal entries · ${txCount} transactions · ${bazCount} bazar items`;
 }
 // finalizeMealRate removed — meal rate is now fully automatic (total_expense / total_meals)
 
@@ -4715,7 +4721,8 @@ function deleteMessCycle(){
 function _calcHandoverData(mmKey){
   const {othersAll,cookBillsAll,pm,cookFoodCost}=calcMealRate(mmKey);
   const ofRate=getOfficeMealRate(mmKey);
-  return DB.users.filter(u=>u.type!=='cook').map(u=>{
+  // ✅ শুধু সেই মাসে active ছিল এমন users — নতুন member আগের মাসের carry-forward-এ যাবে না
+  return DB.users.filter(u=>u.type!=='cook' && isActiveInMonth(u, mmKey)).map(u=>{
     const isOff=isOfficeMealUser(u);
     const appliedRate=isOff?(ofRate||pm):pm;
     const myMeals=messMonthMeals(u.u,mmKey);
@@ -5289,7 +5296,8 @@ function _doMakePDF(type){
       : messMonthKey();
     const calc = calcMealRate(mmKey);
     const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost} = calc;
-    const nonCookUsers = DB.users.filter(u=>u.type!=='cook');
+    // ✅ শুধু সেই মাসে active ছিল এমন users — নতুন member আগের মাসে যাবে না
+    const nonCookUsers = DB.users.filter(u=>u.type!=='cook' && isActiveInMonth(u, mmKey));
     // ── deduplicate: একই u (username) দুইবার থাকলে প্রথমটা রাখো ──
     const seenU=new Set();
     const dedupUsers=nonCookUsers.filter(u=>{ if(seenU.has(u.u)) return false; seenU.add(u.u); return true; });
@@ -5418,7 +5426,7 @@ function _doMakePDF(type){
       });
 
       // Cook rows
-      DB.users.filter(u=>u.type==='cook').forEach((u,ri)=>{
+      DB.users.filter(u=>u.type==='cook' && isActiveInMonth(u, mmKey)).forEach((u,ri)=>{
         const myMeals = messMonthMeals(u.u, mmKey);
         html += `<tr style="background:#f0fdf4;opacity:.85">
           <td style="padding:6px 6px;font-weight:600">Cook: ${esc(u.name)}</td>
