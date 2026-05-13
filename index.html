@@ -2020,6 +2020,35 @@ function migrateDB(){
     }
     if(!o.split) o.split='equal';
   });
+  // ── activeFrom migration ──────────────────────────────────────
+  // joined date থেকে সঠিক মেস মাস (11-10 cycle) বের করে activeFrom set করো।
+  // 11 তারিখের আগে joined → আগের মেস মাস। 11+ তারিখে → এই মেস মাস।
+  // ভুল prevBalance entries ও auto-clean করো।
+  if(DB.handoverDone && DB.handoverDone.length > 0 && DB.users && DB.users.length > 0){
+    const _sortedHO = [...DB.handoverDone].sort();
+    let _migNeeded = false;
+    DB.users.forEach(u=>{
+      if(u.activeFrom) return; // already set — skip
+      _migNeeded = true;
+      // joined date থেকে সঠিক মেস মাস key বের করো
+      const _jDate = u.joined ? new Date(u.joined) : null;
+      u.activeFrom = _jDate ? messMonthKey(_jDate) : _sortedHO[0];
+      // ভুল prevBalance entries সাফ করো
+      if(DB.prevBalances){
+        _sortedHO.forEach(ho=>{
+          if(u.activeFrom > ho){ // user এই handoverDone মাসে ছিল না
+            const _nk = nextCycleKey(ho);
+            if(DB.prevBalances[_nk] && DB.prevBalances[_nk][u.u] !== undefined){
+              console.log('activeFrom fix: removing wrong prevBalance['+_nk+']['+u.u+']='+DB.prevBalances[_nk][u.u]);
+              delete DB.prevBalances[_nk][u.u];
+            }
+          }
+        });
+      }
+    });
+    if(_migNeeded) setTimeout(saveGlobal, 600);
+  }
+  // ─────────────────────────────────────────────────────────────
 }
 
 
@@ -3752,10 +3781,13 @@ function calcMealRate(mmKey){
 // ── nonCookMembers counts cache — bill calc-এ ২০০ বার filter চলত ──
 let _memberCountsCache = null;
 // ── কোনো user নির্দিষ্ট মাসে active ছিল কিনা ──
-// activeFrom না থাকলে পুরনো member — সবসময় true
+// activeFrom → সেটা use করো; না থাকলে joined date থেকে মেস মাস বের করো
 function isActiveInMonth(u, mmKey){
-  if(!u.activeFrom) return true;
-  return u.activeFrom <= mmKey; // "2026-05" > "2026-04" → নতুন member April-এ নেই
+  if(u.activeFrom) return u.activeFrom <= mmKey;
+  // activeFrom নেই → joined date থেকে সঠিক মেস মাস বের করো (11-10 cycle)
+  if(u.joined) return messMonthKey(new Date(u.joined)) <= mmKey;
+  // কোনো তথ্যই নেই → founding member safety fallback
+  return true;
 }
 
 function _getMemberCounts(mmKey=null){
