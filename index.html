@@ -4773,22 +4773,58 @@ function doMonthHandover(){
     `"${label}" মাসের নেট ব্যালেন্স সকল সদস্যের পূর্ববর্তী ব্যালেন্স হিসেবে সেট হবে। এটি নিশ্চিত করবেন?`,
     ()=>{
       closeModal();
-      const beforeCount=DB.users.length;
-      const rows=_calcHandoverData(mmKey);
-      // ── nextCycleKey-এ store করো, যেন পরের মাসের report ঠিক থাকে ──
-      const nextKey=nextCycleKey(mmKey);
-      if(!DB.prevBalances) DB.prevBalances={};
-      if(!DB.prevBalances[nextKey]) DB.prevBalances[nextKey]={};
-      rows.forEach(({u,netBal})=>{ DB.prevBalances[nextKey][u.u]=netBal; });
-      // ── safety check ──
-      if(DB.users.length !== beforeCount){
-        toast('❌ ত্রুটি: user list পরিবর্তন হয়ে গেছে! Handover বাতিল।');
+
+      // ── Step 2: rows পেলে prevBalances সেট ও saveGlobal ──
+      // saveDB() না, saveGlobal() — month data ছোঁব না
+      const _applyHandover = (rows) => {
+        const beforeCount = DB.users.length;
+        const nextKey = nextCycleKey(mmKey);
+        if(!DB.prevBalances) DB.prevBalances = {};
+        if(!DB.prevBalances[nextKey]) DB.prevBalances[nextKey] = {};
+        rows.forEach(({u, netBal}) => { DB.prevBalances[nextKey][u.u] = netBal; });
+        if(DB.users.length !== beforeCount){
+          toast('❌ ত্রুটি: user list পরিবর্তন হয়ে গেছে! Handover বাতিল।');
+          return;
+        }
+        if(!DB.handoverDone) DB.handoverDone = [];
+        DB.handoverDone.push(mmKey);
+        saveGlobal();  // শুধু global (prevBalances, handoverDone) — month data নষ্ট হবে না
+        toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
+      };
+
+      // ── Step 1: historical data দিয়ে calculate, তারপর DB restore করো ──
+      const _calcWithHist = (hist) => {
+        const saved = {};
+        MONTH_FIELDS.forEach(f => { saved[f] = DB[f]; });
+        MONTH_FIELDS.forEach(f => { DB[f] = hist[f] || (f==='meals'||f==='managers'||f==='mealRates'||f==='officeMealRates' ? {} : []); });
+        invalidateMealIndex(); invalidateMealRateCache();
+        const rows = _calcHandoverData(mmKey);   // ঐতিহাসিক data দিয়ে সঠিক হিসাব
+        // *** DB restore — saveGlobal-এর আগে অবশ্যই ***
+        MONTH_FIELDS.forEach(f => { DB[f] = saved[f]; });
+        invalidateMealIndex(); invalidateMealRateCache();
+        _applyHandover(rows);
+      };
+
+      // Current month হলে DB-তেই আছে, সরাসরি calculate করো
+      if(mmKey === currentMonthKey){
+        _applyHandover(_calcHandoverData(mmKey));
         return;
       }
-      if(!DB.handoverDone) DB.handoverDone=[];
-      DB.handoverDone.push(mmKey);
-      saveDB();
-      toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
+
+      // Past month — cache চেক করো
+      const cached = _getCached(mmKey);
+      if(cached){ _calcWithHist(cached); return; }
+
+      // Firebase থেকে লোড করো
+      toast('⏳ ডেটা লোড হচ্ছে...');
+      monthsRef.child(mmKey).once('value').then(snap => {
+        const hist = snap.val() || {};
+        _cacheMonth(mmKey, hist);
+        _calcWithHist(hist);
+      }).catch(e => {
+        toast('❌ ডেটা লোড ব্যর্থ! আবার চেষ্টা করুন।');
+        console.error('Handover load error:', e);
+      });
     });
 }
 function resetHandoverLock(){
@@ -4804,7 +4840,7 @@ function resetHandoverLock(){
       // পরের মাসের prevBalances মুছো
       const nextKey=nextCycleKey(mmKey);
       if(DB.prevBalances&&DB.prevBalances[nextKey]) delete DB.prevBalances[nextKey];
-      saveDB();
+      saveGlobal();  // শুধু global — month data ছোঁব না
       toast('✅ লক রিসেট হয়েছে। এখন সঠিক মাস হস্তান্তর করুন।');
     });
 }
