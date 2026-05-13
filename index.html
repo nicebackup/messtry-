@@ -1296,8 +1296,10 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
       <select id="rpt-month" class="form-input" onchange="loadReport()">
         <option value="">-- মাস নির্বাচন করুন --</option>
       </select>
+      <button onclick="loadReport(true)" style="margin-top:8px;width:100%;padding:9px;border-radius:10px;border:1.5px dashed var(--primary);background:transparent;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;">🔄 ডেটা রিফ্রেশ (সরাসরি Firebase)</button>
     </div>
     <div class="card"><div class="sec-title">📊 রিপোর্ট</div><div id="rpt-rows"><p class="muted tc">মাস নির্বাচন করুন</p></div></div>
+    <div id="rpt-data-debug" style="font-size:10px;color:var(--text-light);text-align:center;margin:-8px 0 8px;padding:4px"></div>
     <button class="btn btn-primary" onclick="makePDF('report')">🖨️ Print / PDF সেভ করুন</button>
   </div>
 </div>
@@ -2475,7 +2477,7 @@ function _swapAndRender(hist, renderFn){
 
 // ── Lazy load: placeholder → message, current → DB, past → Firebase (cached) ──
 let _histViewMode = false; // ইতিহাস দেখার সময় edit/delete লুকাতে
-function _withMonthData(mmKey, loadingEl, renderFn){
+function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
   if(!mmKey){
     if(loadingEl) loadingEl.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
     return;
@@ -2485,8 +2487,8 @@ function _withMonthData(mmKey, loadingEl, renderFn){
     renderFn();
     return;
   }
-  // Past month — cache check
-  const cached = _getCached(mmKey);
+  // Past month — cache check (forceRefresh হলে cache bypass করো)
+  const cached = !forceRefresh && _getCached(mmKey);
   if(cached){
     _histViewMode = true;
     _swapAndRender(cached, renderFn);
@@ -3621,19 +3623,17 @@ function dayMeals(uname,dateStr){
 // DB.meals-এর সব key scan করার বদলে user-specific list ব্যবহার হয়
 let _mealKeyIndex = null; // { uname: [dateStr, ...] }
 let _mealKeyIndexVersion = 0; // DB.meals change হলে invalidate
+let _mealKeyIndexEpoch = 0;   // epoch counter — length collision এড়াতে
 function _getMealKeyIndex(){
   const currentKeys = Object.keys(DB.meals||{});
-  const currentVer  = currentKeys.length;
-  if(!_mealKeyIndex || _mealKeyIndexVersion !== currentVer){
+  // ✅ epoch দিয়ে check — দুই মাসে same length হলেও ভুল index দেয় না
+  if(!_mealKeyIndex || _mealKeyIndexVersion !== _mealKeyIndexEpoch){
     _mealKeyIndex = {};
-    _mealKeyIndexVersion = currentVer;
+    _mealKeyIndexVersion = _mealKeyIndexEpoch;
     currentKeys.forEach(k=>{
-      // ✅ FIX: date সবসময় শেষের ১০ char (YYYY-MM-DD)
-      // uname-এ underscore থাকতে পারে (যেমন u_01712345678)
-      // তাই indexOf('_') দিয়ে split ভুল — শেষ থেকে slice করতে হবে
-      if(k.length < 11) return; // minimum: "x_YYYY-MM-DD"
-      const dateStr = k.slice(-10);   // শেষ ১০ char = YYYY-MM-DD
-      const uname   = k.slice(0, k.length - 11); // বাকিটা = uname (শেষ '_' বাদে)
+      if(k.length < 11) return;
+      const dateStr = k.slice(-10);
+      const uname   = k.slice(0, k.length - 11);
       if(!uname) return;
       if(!_mealKeyIndex[uname]) _mealKeyIndex[uname]=[];
       _mealKeyIndex[uname].push(dateStr);
@@ -3641,7 +3641,7 @@ function _getMealKeyIndex(){
   }
   return _mealKeyIndex;
 }
-function invalidateMealIndex(){ _mealKeyIndex = null; _mealKeyIndexVersion = -1; }
+function invalidateMealIndex(){ _mealKeyIndex = null; _mealKeyIndexVersion = -1; _mealKeyIndexEpoch++; }
 
 function messMonthMeals(uname, mmKey){
   const idx = _getMealKeyIndex();
@@ -4274,10 +4274,10 @@ function loadBill(){
 // ═══════════════════════════════════════════════
 // REPORT
 // ═══════════════════════════════════════════════
-function loadReport(){
+function loadReport(forceRefresh=false){
   const mmKey=document.getElementById('rpt-month').value; if(!mmKey) return;
-  const rptEl=document.getElementById('rpt-content');
-  _withMonthData(mmKey, rptEl, ()=>_doLoadReport(mmKey));
+  const rptEl=document.getElementById('rpt-rows'); // ✅ সঠিক element (rpt-content নেই)
+  _withMonthData(mmKey, rptEl, ()=>_doLoadReport(mmKey), forceRefresh);
 }
 
 function _doLoadReport(mmKey){
@@ -4336,6 +4336,12 @@ function _doLoadReport(mmKey){
   </div>`;
 
   document.getElementById('rpt-rows').innerHTML = safeHTML(html);
+  // ── Debug: কতটুকু data load হয়েছে দেখাও ──
+  const mealCount = Object.keys(DB.meals||{}).length;
+  const txCount   = (DB.transactions||[]).length;
+  const bazCount  = (DB.bazar||[]).length;
+  const dbgEl = document.getElementById('rpt-data-debug');
+  if(dbgEl) dbgEl.textContent = `📦 Firebase data: ${mealCount} meal entries · ${txCount} transactions · ${bazCount} bazar items`;
 }
 // finalizeMealRate removed — meal rate is now fully automatic (total_expense / total_meals)
 
@@ -4813,7 +4819,8 @@ function doMonthHandover(){
 
       // Past month — cache চেক করো
       const cached = _getCached(mmKey);
-      if(cached){ _calcWithHist(cached); return; }
+      // ✅ Handover-এ সবসময় fresh Firebase data — stale cache দিয়ে হিসাব নয়
+      if(cached && false){ _calcWithHist(cached); return; } // disabled intentionally
 
       // Firebase থেকে লোড করো
       toast('⏳ ডেটা লোড হচ্ছে...');
