@@ -216,14 +216,7 @@ html.dark-mode{background:#0f0f1a;color:#f1f5f9;}
   border:1px solid rgba(167,139,250,0.15);
   box-shadow:0 4px 20px rgba(0,0,0,0.3);
 }
-/* Loading overlay */
-html.dark-mode #fb-loading{background:#0f0f1a !important;}
-html.dark-mode #fb-loading .mq-load-title{color:#f1f5f9 !important;}
-html.dark-mode #fb-loading .mq-load-sub{color:#94a3b8 !important;}
-html.dark-mode #fb-loading .mq-load-ring-track{border-color:#2d2d44 !important;}
-html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#a78bfa !important;}
-html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#7c3aed,#a78bfa) !important;}
-html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
+/* Splash screen সবসময় dark (#0f0f1a) — dark mode override এর দরকার নেই */
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
 /* ── PRINT ── */
@@ -1752,25 +1745,27 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
 
 
 <!-- ═══════════ FIREBASE LOADING OVERLAY ═══════════ -->
-<div id="fb-loading" style="display:none;position:fixed;inset:0;background:#f4f7f5;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:background .3s;">
-  <div style="position:relative;width:72px;height:72px;">
-    <div class="mq-load-ring-track" style="position:absolute;inset:0;border-radius:50%;border:6px solid #e8f5e9;"></div>
-    <div class="mq-load-ring-spin" style="position:absolute;inset:0;border-radius:50%;border:6px solid transparent;border-top-color:#1a6b3c;animation:mq-spin 0.9s linear infinite;"></div>
-    <div class="mq-load-inner" style="position:absolute;inset:16px;background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">🍽️</div>
+<!-- ═══ SPLASH SCREEN — shown immediately, DB loads in background ═══ -->
+<div id="fb-loading" style="display:flex;position:fixed;inset:0;background:#0f0f1a;z-index:9999;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.65s ease;opacity:1;">
+  <!-- Big logo -->
+  <div style="width:72vw;max-width:320px;margin-bottom:18px;animation:mq-logo-in 0.7s ease both;">
+    <img src="icon-512.png" alt="Midland Quarter" style="width:100%;height:auto;display:block;filter:drop-shadow(0 8px 32px rgba(167,139,250,0.18));">
   </div>
-  <div style="text-align:center;">
-    <div class="mq-load-title" style="font-size:18px;font-weight:700;color:#1a2e22;font-family:'Hind Siliguri',sans-serif;margin-bottom:6px;">লোড হচ্ছে...</div>
-    <div class="mq-load-sub" style="font-size:13px;color:#5a7a65;font-family:'Hind Siliguri',sans-serif;">দয়া করে অপেক্ষা করুন</div>
-  </div>
-  <div style="display:flex;gap:6px;margin-top:4px;">
-    <div class="mq-dot" style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out infinite;"></div>
-    <div class="mq-dot" style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.2s infinite;"></div>
-    <div class="mq-dot" style="width:8px;height:8px;border-radius:50%;background:#1a6b3c;animation:mq-dot 1.2s ease-in-out 0.4s infinite;"></div>
+  <!-- App name -->
+  <div style="font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:600;color:#c4b5fd;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px;animation:mq-logo-in 0.7s 0.15s ease both;">মেস ম্যানেজমেন্ট সিস্টেম</div>
+  <!-- Status text (migration notice etc.) -->
+  <div class="mq-load-sub" style="font-family:'Hind Siliguri',sans-serif;font-size:12px;color:#4a4a72;min-height:16px;animation:mq-logo-in 0.7s 0.25s ease both;"></div>
+  <!-- Loading dots -->
+  <div style="position:absolute;bottom:52px;display:flex;gap:9px;">
+    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out infinite;"></div>
+    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out 0.22s infinite;"></div>
+    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out 0.44s infinite;"></div>
   </div>
 </div>
 <style>
 @keyframes mq-spin { to { transform: rotate(360deg); } }
-@keyframes mq-dot { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+@keyframes mq-dot { 0%,80%,100%{opacity:.15;transform:scale(.75)} 40%{opacity:1;transform:scale(1.1)} }
+@keyframes mq-logo-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 </style>
 
 <!-- ═══════════ CONFIRM MODAL ═══════════ -->
@@ -1882,6 +1877,18 @@ const auth = firebase.auth();
 // FIREBASE PERSIST (replaces localStorage saveDB/loadDB)
 // ═══════════════════════════════════════════════
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
+
+// ── Splash hide helper: minimum 1.2s display + smooth fade ──
+const _splashStart = Date.now();
+function hideSplash(){
+  const el = document.getElementById('fb-loading');
+  if(!el || el.style.display === 'none') return;
+  const wait = Math.max(0, 1200 - (Date.now() - _splashStart));
+  setTimeout(()=>{
+    el.style.opacity = '0';
+    setTimeout(()=>{ el.style.display = 'none'; }, 680);
+  }, wait);
+}
 
 // DB সত্যিকারের ready কিনা — load হয়েছে এবং users array populated
 function _isDBReady(){
@@ -2164,14 +2171,14 @@ function _supplementGlobalFields(){
 
 // Real-time listener — দুটো listener: global + current mess month
 function loadDB(){
-  document.getElementById('fb-loading').style.display='flex';
+  
 
   currentMonthKey = messMonthKey();
   currentMonthRef = monthsRef.child(currentMonthKey);
 
   const offlineTimer = setTimeout(()=>{
     if(!_dbLoaded){
-      document.getElementById('fb-loading').style.display='none';
+      hideSplash();
       noNetPopup();
     }
   }, 7000);
@@ -2240,7 +2247,7 @@ function loadDB(){
     setTimeout(()=>{
       if(!_dbLoaded){
         _dbLoaded=true;
-        document.getElementById('fb-loading').style.display='none';
+        hideSplash();
         if(CU){ refreshHome(); showSc('home'); } else { showSc('login'); }
         toast('⚠️ সংযোগ ধীর। পুনরায় চেষ্টা করুন।');
       }
@@ -2259,7 +2266,7 @@ let _registrationInProgress = false;
 auth.onAuthStateChanged(fbUser=>{
   if(!fbUser){
     // Not logged in
-    document.getElementById('fb-loading').style.display='none';
+    hideSplash();
     CU = null;
     showSc('login');
     return;
@@ -2270,7 +2277,7 @@ auth.onAuthStateChanged(fbUser=>{
     // sendEmailVerification() has completed successfully.
     if(_registrationInProgress) return;
     // Logged in but email not verified
-    document.getElementById('fb-loading').style.display='none';
+    hideSplash();
     auth.signOut();
     CU = null;
     showSc('login');
@@ -2283,14 +2290,14 @@ auth.onAuthStateChanged(fbUser=>{
   firebase.database().ref('users/' + uid).once('value').then(snap=>{
     const userData = snap.val();
     if(!userData){
-      document.getElementById('fb-loading').style.display='none';
+      hideSplash();
       auth.signOut(); CU=null; showSc('login');
       const al = document.getElementById('login-alert');
       if(al){ al.textContent='❌ প্রোফাইল পাওয়া যায়নি। Admin-এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
       return;
     }
     if(userData.blocked){
-      document.getElementById('fb-loading').style.display='none';
+      hideSplash();
       auth.signOut(); CU=null; showSc('login');
       const al = document.getElementById('login-alert');
       if(al){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
@@ -2352,17 +2359,21 @@ auth.onAuthStateChanged(fbUser=>{
           CU.prevBalance= DB.users[syncIdx].prevBalance !== undefined ? DB.users[syncIdx].prevBalance : 0;
           CU.type       = DB.users[syncIdx].type        || CU.type;
         }
-        document.getElementById('fb-loading').style.display='none';
+        hideSplash();
         refreshHome(); showSc('home');
         setTimeout(()=>showNoticePopup(), 800);
       });
     });
   }).catch(err=>{
-    document.getElementById('fb-loading').style.display='none';
+    hideSplash();
     console.error('RTDB profile load error:', err);
     auth.signOut(); CU=null; showSc('login');
   });
 });
+
+// ── Splash চলাকালীনই DB load শুরু করো (parallel) ──
+// Auth observer + loadDB() একসাথে — বাকি 3600+ লাইন JS parse হওয়ার আগেই।
+loadDB();
 
 // ═══════════════════════════════════════════════
 // BST TIME HELPERS (Asia/Dhaka = UTC+6)
@@ -5955,9 +5966,7 @@ document.addEventListener('click', function(e){
     dd.style.display='none';
   }
 });
-// Firebase loadDB handles initialization and real-time sync
-document.getElementById('fb-loading').style.display='flex';
-loadDB();        // Firebase RTDB real-time listener
+// loadDB() — splash চলার সময়ই auth observer-এর পরে call হয়েছে (parallel loading)
 
 // ═══════════════════════════════════════════════
 // OFFICE MEAL — MEPL / MPCL

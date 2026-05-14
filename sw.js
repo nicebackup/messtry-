@@ -6,9 +6,9 @@
 //  ✅ skipWaiting + clients.claim → instant activation
 // ══════════════════════════════════════════════════════
 
-// ⚠️ নতুন কোড deploy করলে এই version বাড়াও (যেমন v4, v5...)
+// ⚠️ নতুন কোড deploy করলে এই version বাড়াও (যেমন v6, v7...)
 // তাহলে পুরনো cache মুছে নতুন version সাথে সাথে load হবে
-const CACHE_VERSION = 'mq-v4';
+const CACHE_VERSION = 'mq-v5';
 
 // যেসব local asset cache করা হবে (app shell)
 const SHELL_ASSETS = [
@@ -17,6 +17,7 @@ const SHELL_ASSETS = [
   './manifest.json',
   './favicon.ico',
   './icon-192.png',
+  './icon-512.png',   // ✅ নতুন — maskable + splash icon
 ];
 
 // ── Install: shell assets pre-cache ──
