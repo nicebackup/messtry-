@@ -4513,9 +4513,28 @@ function toggleManagerView(){
 }
 
 function loadMembers(){
-  const q=(document.getElementById('mem-search')?.value||'').toLowerCase();
+  const q=(document.getElementById('mem-search')?.value||'').trim().toLowerCase();
   const mmKey=messMonthKey();
-  const filtered=DB.users.filter(u=>!q||(u.name.toLowerCase().includes(q)||u.room?.includes(q)||(u.job||'').toLowerCase().includes(q)));
+
+  // ── Search fix: name, job ID, room সবই match করো ──
+  const filtered = DB.users.filter(u=>{
+    if(!q) return true;
+    const name  = (u.name||'').toLowerCase();
+    const job   = (u.job||'').toLowerCase();
+    const room  = (u.room||'').toLowerCase();
+    const uname = (u.u||'').toLowerCase();
+    return name.includes(q) || job.includes(q) || room.includes(q) || uname.includes(q);
+  });
+
+  // ── Job ID অনুযায়ী sort (ছোট → বড়, সংখ্যা হলে numeric, নইলে alphabetic) ──
+  filtered.sort((a,b)=>{
+    const aj=parseInt(a.job)||0, bj=parseInt(b.job)||0;
+    if(aj && bj) return aj-bj;
+    if(aj) return -1;
+    if(bj) return 1;
+    return (a.job||'').localeCompare(b.job||'');
+  });
+
   const html = filtered.map(u=>{
     const m=messMonthMeals(u.u,mmKey);
     const _mDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
@@ -4525,11 +4544,16 @@ function loadMembers(){
     const blockBadge=u.blocked?'<span class="badge badge-blocked">ব্লকড</span>':'';
     const ctrlBadge=isController(u)?'<span class="badge badge-ctrl">Controller</span>':'';
     const mgrBadge=u.role==='manager'?'<span class="badge badge-mgr">Manager</span>':'';
+    // ── ID label — bold ও উজ্জ্বল ──
+    const idLabel = u.job
+      ? `<span style="font-weight:700;color:var(--primary);font-size:12px">ID ${esc(u.job)}</span>`
+      : '';
+    const roomLabel = u.room ? `<span style="color:var(--text-light);font-size:11px">রুম ${esc(u.room)}</span>` : '';
     return`<div class="mem-item" onclick="openMemberDetail('${esc(u.u)}')" style="cursor:pointer">
       <div class="mem-av ${u.blocked?'blocked':''}">${esc(u.name[0])}</div>
       <div style="flex:1">
         <div class="mem-name">${esc(u.name)}${ctrlBadge}${mgrBadge}${typeBadge}${blockBadge}</div>
-        <div class="mem-meta">রুম ${esc(u.room||'-')} · ${esc(u.job||'-')}</div>
+        <div class="mem-meta" style="display:flex;gap:8px;align-items:center;margin-top:2px">${idLabel}${roomLabel}</div>
       </div>
       <div class="mem-right">
         <div class="mem-meals">${m.toFixed(2)} মিল</div>
