@@ -1828,7 +1828,7 @@ function safeHTML(html){
   if(typeof DOMPurify !== 'undefined'){
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em','button','input','a','select','option','label'],
-      ALLOWED_ATTR:['id','style','class','colspan','rowspan','type','value','data-id','data-uname','data-action','disabled','placeholder','readonly','for','selected','checked']
+      ALLOWED_ATTR:['id','style','class','colspan','rowspan','type','value','data-id','data-uname','data-action','data-card-id','disabled','placeholder','readonly','for','selected','checked']
     });
   }
   return html; // fallback if CDN fails
@@ -4549,7 +4549,7 @@ function loadMembers(){
       ? `<span style="font-weight:700;color:var(--primary);font-size:12px">ID ${esc(u.job)}</span>`
       : '';
     const roomLabel = u.room ? `<span style="color:var(--text-light);font-size:11px">রুম ${esc(u.room)}</span>` : '';
-    return`<div class="mem-item" onclick="openMemberDetail('${esc(u.u)}')" style="cursor:pointer">
+    return`<div class="mem-item" data-uname="${esc(u.u)}" style="cursor:pointer">
       <div class="mem-av ${u.blocked?'blocked':''}">${esc(u.name[0])}</div>
       <div style="flex:1">
         <div class="mem-name">${esc(u.name)}${ctrlBadge}${mgrBadge}${typeBadge}${blockBadge}</div>
@@ -4562,6 +4562,11 @@ function loadMembers(){
     </div>`;
   }).join('')||'<p class="muted tc">কোনো সদস্য পাওয়া যায়নি</p>';
   document.getElementById('mem-list').innerHTML = safeHTML(html);
+  // onclick safeHTML এ strip হয় — event delegation দিয়ে click handle করো
+  document.getElementById('mem-list').onclick = function(e){
+    const item = e.target.closest('[data-uname]');
+    if(item) openMemberDetail(item.getAttribute('data-uname'));
+  };
 }
 
 // ═══════════════════════════════════════════════
