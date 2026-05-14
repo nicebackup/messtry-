@@ -1,125 +1,101 @@
 // ══════════════════════════════════════════════════════
-//  Midland Quarter — Service Worker
-//  ✅ Network-First strategy (সবসময় fresh data)
-//  ✅ Auto cache-bust on new version
-//  ✅ Firebase / CDN calls কখনো cache হয় না
+//  Midland Quarter — Service Worker v6
+//  ✅ App shell: Network-First (fresh content)
+//  ✅ Firebase SDK + CDN: Cache-First (3-4s বাঁচে!)
+//  ✅ Firebase RTDB data: Network-Only (সবসময় fresh)
 //  ✅ skipWaiting + clients.claim → instant activation
 // ══════════════════════════════════════════════════════
 
-// ⚠️ নতুন কোড deploy করলে এই version বাড়াও (যেমন v6, v7...)
-// তাহলে পুরনো cache মুছে নতুন version সাথে সাথে load হবে
-const CACHE_VERSION = 'mq-v5';
+const CACHE_VERSION = 'mq-v6';
 
-// যেসব local asset cache করা হবে (app shell)
 const SHELL_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './favicon.ico',
   './icon-192.png',
-  './icon-512.png',   // ✅ নতুন — maskable + splash icon
+  './icon-512.png',
+  './icon-192-maskable.png',
+  './icon-512-maskable.png',
 ];
 
-// ── Install: shell assets pre-cache ──
+// Firebase SDK + CDN — version-fixed URLs, cache করা safe
+const EXTERNAL_ASSETS = [
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js',
+];
+
 self.addEventListener('install', event => {
-  console.log('[SW] Installing version:', CACHE_VERSION);
+  console.log('[SW] Installing:', CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then(cache => {
-      // addAll fails if any asset missing — তাই individual try করি
-      return Promise.allSettled(
-        SHELL_ASSETS.map(url =>
-          cache.add(url).catch(err => console.warn('[SW] Cache miss:', url, err))
-        )
+      const shellP = SHELL_ASSETS.map(url =>
+        cache.add(url).catch(err => console.warn('[SW] Shell miss:', url, err))
       );
+      const extP = EXTERNAL_ASSETS.map(url =>
+        fetch(url, { mode: 'no-cors' })
+          .then(res => cache.put(url, res))
+          .catch(err => console.warn('[SW] Ext miss:', url, err))
+      );
+      return Promise.allSettled([...shellP, ...extP]);
     })
   );
-  // ✅ পুরনো SW কে সরিয়ে নতুনটা সাথে সাথে activate করো
   self.skipWaiting();
 });
 
-// ── Activate: পুরনো cache মুছে ফেলো ──
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating version:', CACHE_VERSION);
+  console.log('[SW] Activating:', CACHE_VERSION);
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys
-          .filter(key => key !== CACHE_VERSION)
-          .map(key => {
-            console.log('[SW] Deleting old cache:', key);
-            return caches.delete(key);
-          })
-      );
-    }).then(() => {
-      // ✅ সব open tab এ নতুন SW নিয়ন্ত্রণ নিক
-      return self.clients.claim();
-    }).then(() => {
-      // ✅ সব client-কে reload করতে বলো
-      return self.clients.matchAll({ type: 'window' }).then(clients => {
-        clients.forEach(client => {
-          client.postMessage({ type: 'SW_UPDATED' });
-        });
-      });
-    })
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' })
+        .then(cs => cs.forEach(c => c.postMessage({ type: 'SW_UPDATED' })))
+      )
   );
 });
 
-// ── Fetch: কোনটা cache করব, কোনটা করব না ──
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  if (event.request.method !== 'GET') return;
 
-  // ════════════════════════════════════════════
-  // ❌ এগুলো NEVER cache করব — সবসময় network
-  // ════════════════════════════════════════════
-  const neverCache = [
-    'firebaseio.com',       // Firebase Realtime Database
-    'firebaseapp.com',      // Firebase Auth
-    'googleapis.com',       // Google APIs / Fonts
-    'gstatic.com',          // Firebase SDK / Google static
-    'cdnjs.cloudflare.com', // CDN scripts (jspdf, html2canvas)
-    'fonts.gstatic.com',    // Google Fonts files
-  ];
+  // 1️⃣ Firebase RTDB + Auth → NETWORK ONLY (real-time data)
+  const networkOnly = ['firebaseio.com', 'firebaseapp.com', 'googleapis.com'];
+  if (networkOnly.some(d => url.hostname.includes(d))) return;
 
-  if (neverCache.some(domain => url.hostname.includes(domain))) {
-    // Network only — no cache
-    return;
-  }
-
-  // Non-GET requests (POST, PUT etc.) — no cache
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // ════════════════════════════════════════════
-  // ✅ App shell: Network-First, fallback to cache
-  //    নেটওয়ার্ক থেকে নিতে পারলে নেবে (fresh)
-  //    না পারলে cache থেকে দেবে (offline support)
-  // ════════════════════════════════════════════
-  event.respondWith(
-    fetch(event.request)
-      .then(networkResponse => {
-        // ✅ Network সফল — cache-এ update করো
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          networkResponse.type !== 'opaque'
-        ) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_VERSION).then(cache => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        // ❌ Network fail (offline) — cache থেকে দাও
-        return caches.match(event.request).then(cached => {
-          if (cached) {
-            return cached;
-          }
-          // Cache-এও নেই — index.html fallback (SPA)
-          return caches.match('./index.html');
+  // 2️⃣ Firebase SDK + CDN → CACHE FIRST (instant on 2nd load)
+  const cacheFirst = ['gstatic.com', 'cdnjs.cloudflare.com', 'fonts.gstatic.com'];
+  if (cacheFirst.some(d => url.hostname.includes(d))) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request, { mode: 'no-cors' }).then(res => {
+          caches.open(CACHE_VERSION).then(c => c.put(event.request, res.clone()));
+          return res;
         });
       })
+    );
+    return;
+  }
+
+  // 3️⃣ App shell → NETWORK FIRST, cache fallback
+  event.respondWith(
+    fetch(event.request)
+      .then(res => {
+        if (res && res.status === 200 && res.type !== 'opaque') {
+          caches.open(CACHE_VERSION).then(c => c.put(event.request, res.clone()));
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(event.request)
+          .then(cached => cached || caches.match('./index.html'))
+      )
   );
 });
