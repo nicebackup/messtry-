@@ -5,13 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Midland Quarter - মেস ম্যানেজমেন্ট</title>
 <link rel="icon" href="favicon.ico">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a6b3c">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MQ Mess">
-  <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MQ Mess">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- ── Performance: DNS + TCP handshake আগেই সেরে রাখো ── -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://midlandquarter-c516b-default-rtdb.firebaseio.com">
+<link rel="dns-prefetch" href="https://firebaseapp.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+
+<!-- ── Splash icon preload — screen-এ তাড়াতাড়ি দেখাবে ── -->
+<link rel="preload" as="image" href="icon-512.png">
+
 <!-- Dark mode flash fix: apply class BEFORE paint -->
 <script>
 try{
@@ -25,19 +37,19 @@ try{
 <style>
 html.dark-mode{background:#0f0f1a;color:#f1f5f9;}
 html{background:#f4f7f5;}
-/* Dark mode loading overlay */
-html.dark-mode #fb-loading{background:#0f0f1a !important;}
-html.dark-mode #fb-loading .mq-load-title{color:#f1f5f9 !important;}
-html.dark-mode #fb-loading .mq-load-sub{color:#94a3b8 !important;}
-html.dark-mode #fb-loading .mq-load-ring-track{border-color:#1e1e3a !important;}
-html.dark-mode #fb-loading .mq-load-ring-spin{border-top-color:#a78bfa !important;}
-html.dark-mode #fb-loading .mq-load-inner{background:linear-gradient(135deg,#7c3aed,#a78bfa) !important;}
-html.dark-mode #fb-loading .mq-dot{background:#a78bfa !important;}
+/* Splash screen সবসময় dark — override এর দরকার নেই */
 </style>
+
+<!-- Font: display=swap তাই block করে না -->
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- PDF/Canvas/Sanitize — defer, app ready হওয়ার পরে load হবে -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" defer></script>
+
+<!-- Firebase SDK: sequential order জরুরি (app → database → auth) -->
+<!-- async দেওয়া যাবে না — order dependency আছে -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -1932,8 +1944,17 @@ function noNetPopup(){
 }
 
 // Network status monitor
-window.addEventListener('online',  ()=>{ const p=document.getElementById('no-net-popup'); if(p) p.remove(); toast('✅ ইন্টারনেট সংযোগ পুনরায় চালু হয়েছে!'); });
-window.addEventListener('offline', ()=>{ noNetPopup(); });
+window.addEventListener('online', ()=>{
+  const p=document.getElementById('no-net-popup');
+  if(p) p.remove();
+  if(_dbLoaded) toast('✅ ইন্টারনেট সংযোগ পুনরায় চালু হয়েছে!');
+});
+window.addEventListener('offline', ()=>{
+  // ২ সেকেন্ড অপেক্ষা করো — page load-এর সময় false trigger এড়াতে
+  setTimeout(()=>{
+    if(!navigator.onLine && _dbLoaded) noNetPopup();
+  }, 2000);
+});
 
 // ── Global save: users, cfg, controllers, notice, siteNote, rules, shortfall, prevBalances, handoverDone ──
 let _globalSaveTimer = null;
@@ -2177,11 +2198,19 @@ function loadDB(){
   currentMonthRef = monthsRef.child(currentMonthKey);
 
   const offlineTimer = setTimeout(()=>{
-    if(!_dbLoaded){
-      hideSplash();
-      noNetPopup();
-    }
-  }, 7000);
+    if(_dbLoaded) return; // ইতিমধ্যে load হয়ে গেছে — popup দেখাব না
+    hideSplash();
+    // navigator.onLine মিথ্যা বলতে পারে — Firebase RTDB-তে ping দিয়ে নিশ্চিত হও
+    const connRef = firebase.database().ref('.info/connected');
+    connRef.once('value').then(snap=>{
+      if(!snap.val() && !_dbLoaded){
+        noNetPopup();
+      }
+      // connected কিন্তু data দেরি করছে — popup দেখাব না, আরো অপেক্ষা করব
+    }).catch(()=>{
+      if(!_dbLoaded) noNetPopup();
+    });
+  }, 12000); // 7s → 12s: slow connection-এও Firebase SDK load + init + auth + data আসার জন্য
 
   // global/users আছে → নতুন structure, সরাসরি listeners শুরু
   // না থাকলে → পুরানো structure check → migration
