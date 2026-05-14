@@ -2048,7 +2048,24 @@ function migrateDB(){
     }
     if(!o.split) o.split='equal';
   });
-  // ── activeFrom migration ──────────────────────────────────────
+  // ── cfg migration: flat format → mess month keyed ──────────────
+  // পুরনো DB.cfg.insider/outsider থাকলে সেটা earliest handoverDone month-এর
+  // config হিসেবে migrate করো — ভবিষ্যতের মাসে আলাদা config নেওয়া যাবে
+  if(DB.cfg && DB.cfg.insider && DB.cfg.insider.def && DB.handoverDone && DB.handoverDone.length > 0){
+    const _sortedHO2 = [...DB.handoverDone].sort();
+    _sortedHO2.forEach(ho=>{
+      if(!DB.cfg[ho]){
+        DB.cfg[ho] = {
+          insider:  { def:{...DB.cfg.insider.def},  byDate:{...DB.cfg.insider.byDate||{}}  },
+          outsider: { def:{...DB.cfg.outsider.def}, byDate:{...DB.cfg.outsider.byDate||{}} }
+        };
+      }
+    });
+    // পুরনো flat keys রেখে দাও as fallback — getCfg এ fallback আছে
+    console.log('cfg migration: flat → month-keyed done for', _sortedHO2);
+    setTimeout(saveGlobal, 800);
+  }
+  // ────────────────────────────────────────────────────────────────
   // joined date থেকে সঠিক মেস মাস (11-10 cycle) বের করে activeFrom set করো।
   // 11 তারিখের আগে joined → আগের মেস মাস। 11+ তারিখে → এই মেস মাস।
   // ভুল prevBalance entries ও auto-clean করো।
@@ -2727,8 +2744,11 @@ function togRulesCfg(grpKey){
     closeRulesCfgPopup();
     if(wasId===id) return;
   }
-  // Populate current values
-  const cfg=DB.cfg[grpKey]||{def:{b:0.75,l:1.5,d:0.75}};
+  // Populate current values — এই মেস মাসের config load করো
+  const mmKey = messMonthKey();
+  const mmCfg = DB.cfg[mmKey] && DB.cfg[mmKey][grpKey];
+  const flatCfg = DB.cfg[grpKey]; // পুরনো format fallback
+  const cfg = mmCfg || flatCfg || {def:{b:0.75,l:1.5,d:0.75}};
   document.getElementById('cfg-bv-'+grpKey).value=cfg.def.b;
   document.getElementById('cfg-lv-'+grpKey).value=cfg.def.l;
   document.getElementById('cfg-dv-'+grpKey).value=cfg.def.d;
@@ -3670,9 +3690,30 @@ function mealTypeValue(slot,type,qty,date,utype){
 // CFG
 // ═══════════════════════════════════════════════
 function getCfg(t,dateStr,utype){
-  const grp=DB.cfg[(utype==='outside'?'outsider':'insider')]||DB.cfg.insider;
-  if(grp&&grp.byDate&&grp.byDate[dateStr]&&grp.byDate[dateStr][t]!==undefined) return grp.byDate[dateStr][t];
-  return (grp&&grp.def&&grp.def[t]!=null)?grp.def[t]:(t==='l'?1.5:0.75);
+  // ── Mess month-wise cfg lookup ──
+  // dateStr এর মেস মাস বের করো → সেই মাসের cfg দেখো → না থাকলে আগের মাস → তারপর global default
+  const mmKey = dateStr ? messMonthKey(new Date(dateStr)) : messMonthKey();
+  const grpKey = utype==='outside' ? 'outsider' : 'insider';
+
+  // 1st: এই মেস মাসের জন্য specific config আছে?
+  const mmCfg = DB.cfg[mmKey] && DB.cfg[mmKey][grpKey];
+  if(mmCfg){
+    // date-specific override আছে?
+    if(mmCfg.byDate && mmCfg.byDate[dateStr] && mmCfg.byDate[dateStr][t]!==undefined)
+      return mmCfg.byDate[dateStr][t];
+    if(mmCfg.def && mmCfg.def[t]!=null) return mmCfg.def[t];
+  }
+
+  // 2nd: পুরনো flat format (migration আগের data) → DB.cfg.insider/outsider
+  const flatGrp = DB.cfg[grpKey];
+  if(flatGrp && !DB.cfg[mmKey]){
+    if(flatGrp.byDate && flatGrp.byDate[dateStr] && flatGrp.byDate[dateStr][t]!==undefined)
+      return flatGrp.byDate[dateStr][t];
+    if(flatGrp.def && flatGrp.def[t]!=null) return flatGrp.def[t];
+  }
+
+  // 3rd: hardcoded default
+  return t==='l' ? 1.5 : 0.75;
 }
 function mTV(t,m,dateStr,utype){
   if(!m||m.t==='off') return 0;
@@ -5006,16 +5047,22 @@ function saveCfg(grpKey){
   const lv=parseFloat(document.getElementById('cfg-lv-'+grpKey).value)||1.5;
   const dv=parseFloat(document.getElementById('cfg-dv-'+grpKey).value)||0.75;
   const grp=grpKey==='outsider'?'outsider':'insider';
-  if(!DB.cfg[grp]) DB.cfg[grp]={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
-  if(!DB.cfg[grp].byDate) DB.cfg[grp].byDate={};
+
+  // ── এই মেস মাসের জন্যই save করো — অন্য মাস অপরিবর্তিত থাকবে ──
+  const mmKey = messMonthKey();
+  if(!DB.cfg[mmKey]) DB.cfg[mmKey]={};
+  if(!DB.cfg[mmKey][grp]) DB.cfg[mmKey][grp]={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
+  if(!DB.cfg[mmKey][grp].byDate) DB.cfg[mmKey][grp].byDate={};
+
   if(dateStr){
-    DB.cfg[grp].byDate[dateStr]={b:bv,l:lv,d:dv};
-    toast('✅ '+dateStr+' ('+(grp==='insider'?'Insider':'Outsider')+') মিল মান সেট!');
+    DB.cfg[mmKey][grp].byDate[dateStr]={b:bv,l:lv,d:dv};
+    toast('✅ '+dateStr+' ('+(grp==='insider'?'Insider':'Outsider')+') মিল মান সেট! ('+mmKey+')');
   } else {
-    DB.cfg[grp].def={b:bv,l:lv,d:dv};
-    toast('✅ '+(grp==='insider'?'Insider':'Outsider')+' ডিফল্ট মিল মান সেভ!');
+    DB.cfg[mmKey][grp].def={b:bv,l:lv,d:dv};
+    toast('✅ '+(grp==='insider'?'Insider':'Outsider')+' ডিফল্ট মিল মান সেভ! ('+mmKey+')');
   }
-  saveDB();
+  invalidateMealRateCache();
+  saveGlobal();
   closeRulesCfgPopup();
 }
 function loadAdmMeal(){
