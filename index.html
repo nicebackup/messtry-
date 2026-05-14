@@ -2049,9 +2049,10 @@ function migrateDB(){
     if(!o.split) o.split='equal';
   });
   // ── cfg migration: flat format → mess month keyed ──────────────
-  // পুরনো DB.cfg.insider/outsider থাকলে সেটা earliest handoverDone month-এর
-  // config হিসেবে migrate করো — ভবিষ্যতের মাসে আলাদা config নেওয়া যাবে
-  if(DB.cfg && DB.cfg.insider && DB.cfg.insider.def && DB.handoverDone && DB.handoverDone.length > 0){
+  // guard flag দিয়ে একবারই চলবে, প্রতিবার load-এ না
+  if(DB.cfg && DB.cfg.insider && DB.cfg.insider.def
+     && !DB.cfg._mmMigrated
+     && DB.handoverDone && DB.handoverDone.length > 0){
     const _sortedHO2 = [...DB.handoverDone].sort();
     _sortedHO2.forEach(ho=>{
       if(!DB.cfg[ho]){
@@ -2061,7 +2062,7 @@ function migrateDB(){
         };
       }
     });
-    // পুরনো flat keys রেখে দাও as fallback — getCfg এ fallback আছে
+    DB.cfg._mmMigrated = true; // একবারের বেশি চলবে না
     console.log('cfg migration: flat → month-keyed done for', _sortedHO2);
     setTimeout(saveGlobal, 800);
   }
@@ -2745,10 +2746,17 @@ function togRulesCfg(grpKey){
     if(wasId===id) return;
   }
   // Populate current values — এই মেস মাসের config load করো
+  // নতুন মাসে config না থাকলে আগের মাস থেকে inherit করো
   const mmKey = messMonthKey();
   const mmCfg = DB.cfg[mmKey] && DB.cfg[mmKey][grpKey];
-  const flatCfg = DB.cfg[grpKey]; // পুরনো format fallback
-  const cfg = mmCfg || flatCfg || {def:{b:0.75,l:1.5,d:0.75}};
+  let cfg = mmCfg;
+  if(!cfg && DB.handoverDone && DB.handoverDone.length > 0){
+    const prevMonths = [...DB.handoverDone].sort().reverse().filter(ho=>ho<mmKey);
+    for(const pm of prevMonths){
+      if(DB.cfg[pm] && DB.cfg[pm][grpKey]){ cfg = DB.cfg[pm][grpKey]; break; }
+    }
+  }
+  cfg = cfg || DB.cfg[grpKey] || {def:{b:0.75,l:1.5,d:0.75}};
   document.getElementById('cfg-bv-'+grpKey).value=cfg.def.b;
   document.getElementById('cfg-lv-'+grpKey).value=cfg.def.l;
   document.getElementById('cfg-dv-'+grpKey).value=cfg.def.d;
@@ -3690,29 +3698,37 @@ function mealTypeValue(slot,type,qty,date,utype){
 // CFG
 // ═══════════════════════════════════════════════
 function getCfg(t,dateStr,utype){
-  // ── Mess month-wise cfg lookup ──
-  // dateStr এর মেস মাস বের করো → সেই মাসের cfg দেখো → না থাকলে আগের মাস → তারপর global default
   const mmKey = dateStr ? messMonthKey(new Date(dateStr)) : messMonthKey();
   const grpKey = utype==='outside' ? 'outsider' : 'insider';
 
-  // 1st: এই মেস মাসের জন্য specific config আছে?
+  // 1st: এই মেস মাসের specific config
   const mmCfg = DB.cfg[mmKey] && DB.cfg[mmKey][grpKey];
   if(mmCfg){
-    // date-specific override আছে?
     if(mmCfg.byDate && mmCfg.byDate[dateStr] && mmCfg.byDate[dateStr][t]!==undefined)
       return mmCfg.byDate[dateStr][t];
     if(mmCfg.def && mmCfg.def[t]!=null) return mmCfg.def[t];
   }
 
-  // 2nd: পুরনো flat format (migration আগের data) → DB.cfg.insider/outsider
-  const flatGrp = DB.cfg[grpKey];
-  if(flatGrp && !DB.cfg[mmKey]){
+  // 2nd: আগের মাসের config inherit করো (নতুন মাসে config set না হলে)
+  // handoverDone list থেকে সবচেয়ে কাছের আগের মাস খোঁজো
+  if(DB.handoverDone && DB.handoverDone.length > 0){
+    const prevMonths = [...DB.handoverDone].sort().reverse()
+      .filter(ho => ho < mmKey);
+    for(const pm of prevMonths){
+      const pmCfg = DB.cfg[pm] && DB.cfg[pm][grpKey];
+      if(pmCfg && pmCfg.def && pmCfg.def[t]!=null) return pmCfg.def[t];
+    }
+  }
+
+  // 3rd: পুরনো flat format fallback (migration-এর আগের data)
+  const flatGrp = !mmCfg && DB.cfg[grpKey];
+  if(flatGrp){
     if(flatGrp.byDate && flatGrp.byDate[dateStr] && flatGrp.byDate[dateStr][t]!==undefined)
       return flatGrp.byDate[dateStr][t];
     if(flatGrp.def && flatGrp.def[t]!=null) return flatGrp.def[t];
   }
 
-  // 3rd: hardcoded default
+  // 4th: hardcoded default
   return t==='l' ? 1.5 : 0.75;
 }
 function mTV(t,m,dateStr,utype){
@@ -5062,8 +5078,11 @@ function saveCfg(grpKey){
     toast('✅ '+(grp==='insider'?'Insider':'Outsider')+' ডিফল্ট মিল মান সেভ! ('+mmKey+')');
   }
   invalidateMealRateCache();
+  invalidateMealIndex();
+  invalidateMemberCountsCache();
   saveGlobal();
   closeRulesCfgPopup();
+  if(typeof refreshHome==='function') refreshHome();
 }
 function loadAdmMeal(){
   const uname=document.getElementById('adm-mem').value, dateStr=document.getElementById('adm-dt').value;
