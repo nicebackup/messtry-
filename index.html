@@ -4516,12 +4516,12 @@ function loadMembers(){
   const q=(document.getElementById('mem-search')?.value||'').trim().toLowerCase();
   const mmKey=messMonthKey();
 
-  // ── Search fix: name, job ID, room সবই match করো ──
+  // ── Search fix: u.job number হতে পারে — String() দিয়ে convert করো ──
   const filtered = DB.users.filter(u=>{
     if(!q) return true;
     const name  = (u.name||'').toLowerCase();
-    const job   = (u.job||'').toLowerCase();
-    const room  = (u.room||'').toLowerCase();
+    const job   = String(u.job||'').toLowerCase();
+    const room  = String(u.room||'').toLowerCase();
     const uname = (u.u||'').toLowerCase();
     return name.includes(q) || job.includes(q) || room.includes(q) || uname.includes(q);
   });
