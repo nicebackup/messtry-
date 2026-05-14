@@ -1,12 +1,4 @@
-// ══════════════════════════════════════════════════════
-//  Midland Quarter — Service Worker v6
-//  ✅ App shell: Network-First (fresh content)
-//  ✅ Firebase SDK + CDN: Cache-First (3-4s বাঁচে!)
-//  ✅ Firebase RTDB data: Network-Only (সবসময় fresh)
-//  ✅ skipWaiting + clients.claim → instant activation
-// ══════════════════════════════════════════════════════
-
-const CACHE_VERSION = 'mq-v6';
+const CACHE_VERSION = 'mq-v7';
 
 const SHELL_ASSETS = [
   './',
@@ -19,7 +11,6 @@ const SHELL_ASSETS = [
   './icon-512-maskable.png',
 ];
 
-// Firebase SDK + CDN — version-fixed URLs, cache করা safe
 const EXTERNAL_ASSETS = [
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
@@ -29,6 +20,7 @@ const EXTERNAL_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js',
 ];
 
+// ── Install: সব asset pre-cache ─────────────────────
 self.addEventListener('install', event => {
   console.log('[SW] Installing:', CACHE_VERSION);
   event.waitUntil(
@@ -47,8 +39,8 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
+// ── Activate: পুরনো cache মুছো ──────────────────────
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating:', CACHE_VERSION);
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
@@ -61,6 +53,7 @@ self.addEventListener('activate', event => {
   );
 });
 
+// ── Fetch: 3-tier strategy ───────────────────────────
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET') return;
@@ -69,7 +62,7 @@ self.addEventListener('fetch', event => {
   const networkOnly = ['firebaseio.com', 'firebaseapp.com', 'googleapis.com'];
   if (networkOnly.some(d => url.hostname.includes(d))) return;
 
-  // 2️⃣ Firebase SDK + CDN → CACHE FIRST (instant on 2nd load)
+  // 2️⃣ Firebase SDK + CDN + Fonts → CACHE FIRST (instant)
   const cacheFirst = ['gstatic.com', 'cdnjs.cloudflare.com', 'fonts.gstatic.com'];
   if (cacheFirst.some(d => url.hostname.includes(d))) {
     event.respondWith(
@@ -84,18 +77,20 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3️⃣ App shell → NETWORK FIRST, cache fallback
+  // 3️⃣ App shell (index.html, icons) → CACHE FIRST + background update
+  // Cache থেকে তাৎক্ষণিক দেখাও, background-এ নতুন version fetch করো
   event.respondWith(
-    fetch(event.request)
-      .then(res => {
+    caches.match(event.request).then(cached => {
+      const networkFetch = fetch(event.request).then(res => {
         if (res && res.status === 200 && res.type !== 'opaque') {
           caches.open(CACHE_VERSION).then(c => c.put(event.request, res.clone()));
         }
         return res;
-      })
-      .catch(() =>
-        caches.match(event.request)
-          .then(cached => cached || caches.match('./index.html'))
-      )
+      }).catch(() => cached);
+
+      // Cache আছে → সাথে সাথে দেখাও (background-এ update হবে)
+      // Cache নেই → network-এর জন্য অপেক্ষা করো
+      return cached || networkFetch;
+    })
   );
 });
