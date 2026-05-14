@@ -1746,26 +1746,28 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
 
 <!-- ═══════════ FIREBASE LOADING OVERLAY ═══════════ -->
 <!-- ═══ SPLASH SCREEN — shown immediately, DB loads in background ═══ -->
-<div id="fb-loading" style="display:flex;position:fixed;inset:0;background:#0f0f1a;z-index:9999;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.65s ease;opacity:1;">
-  <!-- Big logo -->
-  <div style="width:72vw;max-width:320px;margin-bottom:18px;animation:mq-logo-in 0.7s ease both;">
-    <img src="icon-512.png" alt="Midland Quarter" style="width:100%;height:auto;display:block;filter:drop-shadow(0 8px 32px rgba(167,139,250,0.18));">
+<div id="fb-loading" style="display:flex;position:fixed;inset:0;z-index:9999;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.7s ease;opacity:1;background:radial-gradient(ellipse at 50% 45%,#1a1a30 0%,#0f0f1e 45%,#08080f 100%);">
+  <!-- Logo: scale-up from PWA native splash size → full size (seamless transition illusion) -->
+  <div style="width:75vw;max-width:340px;margin-bottom:22px;animation:mq-grow 0.65s cubic-bezier(0.22,1,0.36,1) both;">
+    <img src="logo-transparent.png" alt="Midland Quarter" style="width:100%;height:auto;display:block;filter:drop-shadow(0 0 28px rgba(200,140,20,0.25)) drop-shadow(0 0 8px rgba(120,60,200,0.18));">
   </div>
-  <!-- App name -->
-  <div style="font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:600;color:#c4b5fd;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px;animation:mq-logo-in 0.7s 0.15s ease both;">মেস ম্যানেজমেন্ট সিস্টেম</div>
+  <!-- App name: fade in slightly after logo -->
+  <div style="font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:600;color:#b8a0e8;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:8px;animation:mq-fadein 0.5s 0.35s ease both;">মেস ম্যানেজমেন্ট সিস্টেম</div>
   <!-- Status text (migration notice etc.) -->
-  <div class="mq-load-sub" style="font-family:'Hind Siliguri',sans-serif;font-size:12px;color:#4a4a72;min-height:16px;animation:mq-logo-in 0.7s 0.25s ease both;"></div>
+  <div class="mq-load-sub" style="font-family:'Hind Siliguri',sans-serif;font-size:12px;color:#3a3a5a;min-height:16px;animation:mq-fadein 0.5s 0.5s ease both;"></div>
   <!-- Loading dots -->
   <div style="position:absolute;bottom:52px;display:flex;gap:9px;">
-    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out infinite;"></div>
-    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out 0.22s infinite;"></div>
-    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out 0.44s infinite;"></div>
+    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#6d28d9;animation:mq-dot 1.3s ease-in-out infinite;"></div>
+    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#6d28d9;animation:mq-dot 1.3s ease-in-out 0.22s infinite;"></div>
+    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#6d28d9;animation:mq-dot 1.3s ease-in-out 0.44s infinite;"></div>
   </div>
 </div>
 <style>
-@keyframes mq-spin { to { transform: rotate(360deg); } }
-@keyframes mq-dot { 0%,80%,100%{opacity:.15;transform:scale(.75)} 40%{opacity:1;transform:scale(1.1)} }
-@keyframes mq-logo-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes mq-spin  { to { transform:rotate(360deg); } }
+@keyframes mq-dot   { 0%,80%,100%{opacity:.15;transform:scale(.75)} 40%{opacity:1;transform:scale(1.1)} }
+/* PWA native splash এ logo ছোট থাকে (~22% size) — এখান থেকে full size-এ grow করে seamless দেখায় */
+@keyframes mq-grow  { from{opacity:.8;transform:scale(0.22)} to{opacity:1;transform:scale(1)} }
+@keyframes mq-fadein{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 </style>
 
 <!-- ═══════════ CONFIRM MODAL ═══════════ -->
