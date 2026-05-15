@@ -6478,10 +6478,12 @@ function renderOfficeMealNotesScreen(){
 
 function delOfficeMealNote(id){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
-  DB.officeMealNotes = (DB.officeMealNotes||[]).filter(n=>n.id!==id);
-  saveMonth();
-  renderOfficeMealNotesScreen();
-  toast('🗑️ নোট মুছে ফেলা হয়েছে');
+  showModal('নোট মুছুন','এই নোট মুছে ফেলবেন?',()=>{
+    DB.officeMealNotes = (DB.officeMealNotes||[]).filter(n=>n.id!==id);
+    saveMonth();
+    renderOfficeMealNotesScreen();
+    toast('🗑️ নোট মুছে ফেলা হয়েছে');
+  });
 }
 
 function editOfficeMealNote(id){
@@ -6490,7 +6492,7 @@ function editOfficeMealNote(id){
   if(!n) return;
   const html=`<div style="padding-top:4px">
     <label style="font-size:12px;font-weight:600;color:var(--text-light)">নোট</label>
-    <textarea id="edit-ofms-note" class="form-input" rows="3" style="margin-top:4px;resize:none">${esc(n.text)}</textarea>
+    <textarea id="edit-ofms-note" class="form-input" rows="3" style="margin-top:4px;resize:none"></textarea>
   </div>`;
   showModal('নোট সম্পাদনা', html, ()=>{
     const text = sanitizeInput(document.getElementById('edit-ofms-note').value);
@@ -6501,6 +6503,11 @@ function editOfficeMealNote(id){
     closeModal();
     toast('✅ নোট আপডেট হয়েছে!');
   }, true);
+  // Modal render হওয়ার পরে value set করো
+  setTimeout(()=>{
+    const ta = document.getElementById('edit-ofms-note');
+    if(ta) ta.value = n.text;
+  }, 50);
 }
 
 </script>
