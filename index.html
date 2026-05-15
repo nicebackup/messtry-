@@ -1757,28 +1757,22 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
 </div>
 
 
-<!-- ═══════════ FIREBASE LOADING OVERLAY ═══════════ -->
-<!-- ═══ SPLASH SCREEN — shown immediately, DB loads in background ═══ -->
-<div id="fb-loading" style="display:flex;position:fixed;inset:0;background:#0f0f1a;z-index:9999;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.65s ease;opacity:1;">
-  <!-- Big logo -->
-  <div style="width:72vw;max-width:320px;margin-bottom:18px;animation:mq-logo-in 0.7s ease both;">
-    <img src="icon-512.png" alt="Midland Quarter" style="width:100%;height:auto;display:block;filter:drop-shadow(0 8px 32px rgba(167,139,250,0.18));">
+<!-- ═══ SPLASH SCREEN ═══ -->
+<div id="fb-loading" style="display:flex;position:fixed;inset:0;background:#0f0f1a;z-index:9999;flex-direction:column;align-items:center;justify-content:center;opacity:1;">
+  <div style="width:72vw;max-width:320px;margin-bottom:18px;animation:mq-fadein 0.9s ease both;">
+    <img src="icon-512.png" alt="Midland Quarter" style="width:100%;height:auto;display:block;">
   </div>
-  <!-- App name -->
-  <div style="font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:600;color:#c4b5fd;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px;animation:mq-logo-in 0.7s 0.15s ease both;">মেস ম্যানেজমেন্ট সিস্টেম</div>
-  <!-- Status text (migration notice etc.) -->
-  <div class="mq-load-sub" style="font-family:'Hind Siliguri',sans-serif;font-size:12px;color:#4a4a72;min-height:16px;animation:mq-logo-in 0.7s 0.25s ease both;"></div>
-  <!-- Loading dots -->
+  <div style="font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:600;color:#c4b5fd;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px;animation:mq-fadein 0.9s ease both;">মেস ম্যানেজমেন্ট সিস্টেম</div>
+  <div class="mq-load-sub" style="font-family:'Hind Siliguri',sans-serif;font-size:12px;color:#4a4a72;min-height:16px;"></div>
   <div style="position:absolute;bottom:52px;display:flex;gap:9px;">
-    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out infinite;"></div>
-    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out 0.22s infinite;"></div>
-    <div class="mq-dot" style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.3s ease-in-out 0.44s infinite;"></div>
+    <div style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.4s ease-in-out infinite;"></div>
+    <div style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.4s ease-in-out 0.28s infinite;"></div>
+    <div style="width:9px;height:9px;border-radius:50%;background:#7c3aed;animation:mq-dot 1.4s ease-in-out 0.56s infinite;"></div>
   </div>
 </div>
 <style>
-@keyframes mq-spin { to { transform: rotate(360deg); } }
+@keyframes mq-fadein { from{opacity:0} to{opacity:1} }
 @keyframes mq-dot { 0%,80%,100%{opacity:.15;transform:scale(.75)} 40%{opacity:1;transform:scale(1.1)} }
-@keyframes mq-logo-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 </style>
 
 <!-- ═══════════ CONFIRM MODAL ═══════════ -->
@@ -1911,9 +1905,9 @@ function hideSplash(){
   const minWait = _isRefresh ? 0 : _wasAuthed ? 200 : 1200;
   const wait = Math.max(0, minWait - (Date.now() - _splashStart));
   setTimeout(()=>{
-    el.style.transition = 'opacity 0.35s ease';
+    el.style.transition = 'opacity 0.5s cubic-bezier(0.4,0,0.2,1)';
     el.style.opacity = '0';
-    setTimeout(()=>{ el.style.display = 'none'; }, 370);
+    setTimeout(()=>{ el.style.display = 'none'; }, 520);
   }, wait);
 }
 
