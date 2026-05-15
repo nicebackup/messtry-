@@ -35,8 +35,8 @@ try{
 }catch(e){}
 </script>
 <style>
-html.dark-mode{background:#0f0f1a;color:#f1f5f9;}
-html{background:#f4f7f5;}
+html{background:#0f0f1a;}
+html.light-mode{background:#f4f7f5;}
 /* Splash screen সবসময় dark — override এর দরকার নেই */
 </style>
 
@@ -1884,27 +1884,19 @@ const auth = firebase.auth();
 // ═══════════════════════════════════════════════
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
-// ── Splash skip logic ──────────────────────────────────────────
-const _isRefresh  = sessionStorage.getItem('mq_session') === '1';
-const _wasAuthed  = localStorage.getItem('mq_authed') === '1';
+// ── Splash logic — simple ──
+const _wasAuthed = localStorage.getItem('mq_authed') === '1';
+const _isRefresh = sessionStorage.getItem('mq_session') === '1';
 sessionStorage.setItem('mq_session','1');
-
-// Refresh হলে dots লুকাও — logo/text দেখা যাবে (blank না)
-if(_isRefresh){
-  document.addEventListener('DOMContentLoaded', ()=>{
-    document.querySelectorAll('#fb-loading .mq-dot, #fb-loading [style*="mq-dot"]')
-      .forEach(d=>d.style.opacity='0');
-  });
-}
 
 const _splashStart = Date.now();
 function hideSplash(){
   const el = document.getElementById('fb-loading');
   if(!el || el.style.display === 'none') return;
-  const minWait = _isRefresh ? 0 : _wasAuthed ? 200 : 1200;
+  const minWait = (_isRefresh || _wasAuthed) ? 0 : 1200;
   const wait = Math.max(0, minWait - (Date.now() - _splashStart));
   setTimeout(()=>{
-    el.style.transition = 'opacity 0.5s cubic-bezier(0.4,0,0.2,1)';
+    el.style.transition = 'opacity 0.5s ease';
     el.style.opacity = '0';
     setTimeout(()=>{ el.style.display = 'none'; }, 520);
   }, wait);
