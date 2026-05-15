@@ -1891,13 +1891,25 @@ const auth = firebase.auth();
 // ═══════════════════════════════════════════════
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
-// ── Returning user? splash প্রায় skip করো ──
-const _wasAuthed = localStorage.getItem('mq_authed') === '1';
+// ── Splash skip logic ──────────────────────────────────────────
+// sessionStorage: একই tab-এ refresh → splash skip
+// localStorage:   আগে login করা → splash 200ms
+// নতুন open:      normal 1200ms
+const _isRefresh  = sessionStorage.getItem('mq_session') === '1';
+const _wasAuthed  = localStorage.getItem('mq_authed') === '1';
+sessionStorage.setItem('mq_session','1'); // refresh flag set
+
+// Refresh হলে splash এখনই hide করো
+if(_isRefresh){
+  const _el = document.getElementById('fb-loading');
+  if(_el){ _el.style.opacity='0'; _el.style.transition='none'; setTimeout(()=>{ _el.style.display='none'; },50); }
+}
+
 const _splashStart = Date.now();
 function hideSplash(){
   const el = document.getElementById('fb-loading');
   if(!el || el.style.display === 'none') return;
-  // Returning user → 200ms, নতুন user → 1200ms
+  if(_isRefresh){ el.style.display='none'; return; } // already hidden
   const minWait = _wasAuthed ? 200 : 1200;
   const wait = Math.max(0, minWait - (Date.now() - _splashStart));
   setTimeout(()=>{
