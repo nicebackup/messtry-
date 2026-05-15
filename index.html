@@ -1892,29 +1892,28 @@ const auth = firebase.auth();
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
 // ── Splash skip logic ──────────────────────────────────────────
-// sessionStorage: একই tab-এ refresh → splash skip
-// localStorage:   আগে login করা → splash 200ms
-// নতুন open:      normal 1200ms
 const _isRefresh  = sessionStorage.getItem('mq_session') === '1';
 const _wasAuthed  = localStorage.getItem('mq_authed') === '1';
-sessionStorage.setItem('mq_session','1'); // refresh flag set
+sessionStorage.setItem('mq_session','1');
 
-// Refresh হলে splash এখনই hide করো
+// Refresh হলে logo/dots লুকাও কিন্তু dark bg রাখো — সাদা blank এড়াতে
 if(_isRefresh){
-  const _el = document.getElementById('fb-loading');
-  if(_el){ _el.style.opacity='0'; _el.style.transition='none'; setTimeout(()=>{ _el.style.display='none'; },50); }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const _el = document.getElementById('fb-loading');
+    if(_el) Array.from(_el.children).forEach(c=>{ c.style.opacity='0'; c.style.transition='none'; });
+  });
 }
 
 const _splashStart = Date.now();
 function hideSplash(){
   const el = document.getElementById('fb-loading');
   if(!el || el.style.display === 'none') return;
-  if(_isRefresh){ el.style.display='none'; return; } // already hidden
-  const minWait = _wasAuthed ? 200 : 1200;
+  const minWait = _isRefresh ? 0 : _wasAuthed ? 200 : 1200;
   const wait = Math.max(0, minWait - (Date.now() - _splashStart));
   setTimeout(()=>{
+    el.style.transition = 'opacity 0.35s ease';
     el.style.opacity = '0';
-    setTimeout(()=>{ el.style.display = 'none'; }, 680);
+    setTimeout(()=>{ el.style.display = 'none'; }, 370);
   }, wait);
 }
 
