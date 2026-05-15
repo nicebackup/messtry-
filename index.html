@@ -1820,7 +1820,7 @@ const LS_USER = 'mq7u';
 function safeHTML(html){
   if(typeof DOMPurify !== 'undefined'){
     return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em','button','input','a','select','option','label'],
+      ALLOWED_TAGS:['div','span','b','br','small','table','thead','tbody','tfoot','tr','th','td','p','strong','em','button','input','textarea','a','select','option','label'],
       ALLOWED_ATTR:['id','style','class','colspan','rowspan','type','value','data-id','data-uname','data-action','data-card-id','disabled','placeholder','readonly','for','selected','checked']
     });
   }
