@@ -43,10 +43,11 @@ html{background:#f4f7f5;}
 <!-- Font: display=swap তাই block করে না -->
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- PDF/Canvas/Sanitize — defer, app ready হওয়ার পরে load হবে -->
+<!-- PDF/Canvas — defer, app ready হওয়ার পরে load হবে -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" defer></script>
+<!-- DOMPurify: defer দেওয়া যাবে না — safeHTML() সব জায়গায় call হয় -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 
 <!-- Firebase SDK: sequential order জরুরি (app → database → auth) -->
 <!-- async দেওয়া যাবে না — order dependency আছে -->
@@ -3290,7 +3291,7 @@ function homeShiftDate(delta){
   refreshHome();
 }
 
-function showWhoEatsDate(slot){
+function showWhoEatsDate_unused(slot){
   const viewDate = homeViewDate || tod();
   showWhoEatsOnDate(slot, viewDate);
 }
