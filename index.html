@@ -5257,135 +5257,116 @@ function removeController(){
 // ═══════════════════════════════════════════════
 function downloadDayPDF(){
   const dt = homeViewDate || tod();
-  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const mmonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const dtObj = new Date(dt+'T00:00:00');
-  const dayName = days[dtObj.getDay()];
   const dd=String(dtObj.getDate()).padStart(2,'0');
   const mm=String(dtObj.getMonth()+1).padStart(2,'0');
-  const yyyy=dtObj.getFullYear();
-  const dateLabel = `${dd}-${mm}-${yyyy}`;
-  const messName = 'Midland Quarter';
-  const siteNote = DB.siteNote || 'Mess Management';
-  // English mess month label
-  const _mmObj = (()=>{ const {y,m}=getMessMonth(dtObj); const nm=(m+1)%12,ny=m===11?y+1:y; return mmonths[m]+' 11 – '+mmonths[nm]+' 10, '+y; })();
-  const mmLabel = _mmObj;
+  const yy=String(dtObj.getFullYear()).slice(2);
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dayName=days[dtObj.getDay()];
 
-  // Build totals
-  let totBQ=0,totLQ=0,totDQ=0;
-  let totBM=0,totLM=0,totDM=0;
-  DB.users.filter(u=>!u.blocked).forEach(u=>{
-    const meal=DB.meals[u.u+'_'+dt]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-    if(meal.b&&meal.b.t!=='off'){ totBQ+=(meal.b.q||1); totBM+=mTV('b',meal.b,dt,u.type); }
-    if(meal.l&&meal.l.t!=='off'){ totLQ+=(meal.l.q||1); totLM+=mTV('l',meal.l,dt,u.type); }
-    if(meal.d&&meal.d.t!=='off'){ totDQ+=(meal.d.q||1); totDM+=mTV('d',meal.d,dt,u.type); }
+  // ── Totals ──
+  let totBQ=0,totLQ=0,totDQ=0,totBM=0,totLM=0,totDM=0;
+  const activeUsers = DB.users.filter(u=>!u.blocked && isActiveInMonth(u, messMonthKey()));
+  activeUsers.forEach(u=>{
+    const meal=DB.meals[u.u+'_'+dt]||{};
+    const bm=meal.b||{t:'off',q:1}, lm=meal.l||{t:'off',q:1}, dm=meal.d||{t:'off',q:1};
+    if(bm.t!=='off'){ totBQ+=(bm.q||1); totBM+=mTV('b',bm,dt,u.type); }
+    if(lm.t!=='off'){ totLQ+=(lm.q||1); totLM+=mTV('l',lm,dt,u.type); }
+    if(dm.t!=='off'){ totDQ+=(dm.q||1); totDM+=mTV('d',dm,dt,u.type); }
   });
   const grandTotal=(totBM+totLM+totDM).toFixed(2);
 
-  // Build rows
+  // ── Sort by job ID ──
+  const sorted = [...activeUsers].sort((a,b)=>{
+    const aj=parseInt(a.job)||0, bj=parseInt(b.job)||0;
+    if(aj&&bj) return aj-bj;
+    return (a.job||'').localeCompare(b.job||'');
+  });
+
+  // ── Rows: compact ──
   let rows='';
-  DB.users.filter(u=>!u.blocked).forEach((u,ri)=>{
-    const meal=DB.meals[u.u+'_'+dt]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
+  sorted.forEach((u,ri)=>{
+    const meal=DB.meals[u.u+'_'+dt]||{};
     const bm=meal.b||{t:'off',q:1}, lm=meal.l||{t:'off',q:1}, dm=meal.d||{t:'off',q:1};
-    const bL=bm.t==='off'?'off':(bm.q>1?bm.t+bm.q:bm.t);
-    const lL=lm.t==='off'?'off':(lm.q>1?lm.t+lm.q:lm.t);
-    const dL=dm.t==='off'?'off':(dm.q>1?dm.t+dm.q:dm.t);
     const bv=mTV('b',bm,dt,u.type), lv=mTV('l',lm,dt,u.type), dv=mTV('d',dm,dt,u.type);
-    const rowTotal=(bv+lv+dv).toFixed(2);
-    const bg=ri%2===0?'#f4f7f5':'#ffffff';
-    const cellStyle=(type,val,mv)=>{
-      if(type==='off') return `<td style="padding:8px 6px;text-align:center;color:#bbb;font-size:12px;">—</td>`;
-      const c=type==='P'?'#2e7d32':'#1565c0';
-      return `<td style="padding:8px 6px;text-align:center;font-weight:700;color:${c};font-size:13px;">${val}<br><span style="font-size:10px;font-weight:400;color:#666;">${mv.toFixed(2)}</span></td>`;
+    const rowTot=(bv+lv+dv).toFixed(2);
+    const bg=ri%2===0?'#f7f9f7':'#ffffff';
+
+    const cell=(m,v)=>{
+      if(m.t==='off') return `<td style="text-align:center;color:#bbb;padding:2px 4px;">—</td>`;
+      const q=m.q&&m.q>1?m.q:1;
+      const label=m.t+(q>1?'×'+q:'');
+      const c=m.t==='P'?'#1a6b3c':'#1565c0';
+      return `<td style="text-align:center;font-weight:700;color:${c};padding:2px 4px;">${label}</td>`;
     };
-    rows+=`<tr style="background:${bg};border-top:1px solid #e0ece6;">
-      <td style="padding:8px 10px;font-weight:600;font-size:13px;">${u.name}<br><span style="font-size:12px;color:#1a6b3c;font-weight:700;">${u.job||u.u}</span></td>
-      ${cellStyle(bm.t,bL,bv)}
-      ${cellStyle(lm.t,lL,lv)}
-      ${cellStyle(dm.t,dL,dv)}
-      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#1a6b3c;font-size:14px;">${rowTotal}</td>
+
+    const isOff=(bm.t==='off'&&lm.t==='off'&&dm.t==='off');
+    const totColor=isOff?'#bbb':'#1a2e22';
+    const totWeight=isOff?'400':'700';
+
+    rows+=`<tr style="background:${bg};border-top:1px solid #e8f0eb;">
+      <td style="padding:2px 4px;font-size:10px;color:#555;white-space:nowrap;">${String(u.job||u.u).substring(0,8)}</td>
+      <td style="padding:2px 4px;font-size:10px;font-weight:600;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(u.name||'').substring(0,16)}</td>
+      ${cell(bm,bv)}${cell(lm,lv)}${cell(dm,dv)}
+      <td style="text-align:right;padding:2px 6px;font-weight:${totWeight};color:${totColor};font-size:10px;">${isOff?'—':rowTot}</td>
     </tr>`;
   });
 
-  const html=`<div style="font-family:'Hind Siliguri',sans-serif;background:#fff;padding:20px;width:760px;color:#1a2e22;">
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#0f4526,#1a6b3c,#28a15e);color:#fff;border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:22px;font-weight:700;font-family:'Hind Siliguri',sans-serif;letter-spacing:.5px;">${messName}</div>
-        <div style="font-size:12px;opacity:.8;margin-top:3px;">${siteNote}</div>
-        <div style="font-size:11px;opacity:.7;margin-top:2px;">Mess Month: ${mmLabel}</div>
-      </div>
+  const html=`<div style="font-family:Arial,sans-serif;background:#fff;padding:10px 14px;width:720px;color:#1a2e22;font-size:10px;">
+
+    <!-- Compact Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1a6b3c;padding-bottom:6px;margin-bottom:8px;">
+      <div style="font-size:14px;font-weight:700;color:#1a6b3c;">Daily Meal Sheet</div>
       <div style="text-align:right;">
-        <div style="font-size:14px;font-weight:700;background:rgba(255,255,255,.2);border-radius:8px;padding:6px 14px;margin-bottom:6px;">📋 Daily Meal Report</div>
-        <div style="font-size:15px;font-weight:700;">${dateLabel}</div>
-        <div style="font-size:13px;opacity:.85;">${dayName}</div>
+        <span style="font-size:13px;font-weight:700;">${dd}-${mm}-20${yy}</span>
+        <span style="font-size:10px;color:#666;margin-left:6px;">${dayName}</span>
       </div>
     </div>
-    <!-- Summary Row -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-      <div style="background:#fff3e0;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #e65100;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">🌅 Morning</div>
-        <div style="font-size:22px;font-weight:700;color:#e65100;">${totBQ}</div>
-        <div style="font-size:11px;color:#999;margin-top:2px;">${totBM.toFixed(2)} Meals</div>
+
+    <!-- Compact Summary -->
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <div style="flex:1;background:#fff8f0;border:1px solid #f0a05a;border-radius:5px;padding:4px 6px;text-align:center;">
+        <div style="font-size:9px;color:#888;">Morning</div>
+        <div style="font-size:13px;font-weight:700;color:#c45000;">${totBQ} <span style="font-size:9px;font-weight:400;">(${totBM.toFixed(2)})</span></div>
       </div>
-      <div style="background:#e8f5e9;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #2e7d32;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">☀️ Lunch</div>
-        <div style="font-size:22px;font-weight:700;color:#2e7d32;">${totLQ}</div>
-        <div style="font-size:11px;color:#999;margin-top:2px;">${totLM.toFixed(2)} Meals</div>
+      <div style="flex:1;background:#f0fff4;border:1px solid #5abf7a;border-radius:5px;padding:4px 6px;text-align:center;">
+        <div style="font-size:9px;color:#888;">Lunch</div>
+        <div style="font-size:13px;font-weight:700;color:#1a6b3c;">${totLQ} <span style="font-size:9px;font-weight:400;">(${totLM.toFixed(2)})</span></div>
       </div>
-      <div style="background:#e3f2fd;border-radius:10px;padding:12px 10px;text-align:center;border-left:4px solid #1565c0;">
-        <div style="font-size:11px;color:#777;margin-bottom:4px;">🌙 Night</div>
-        <div style="font-size:22px;font-weight:700;color:#1565c0;">${totDQ}</div>
-        <div style="font-size:11px;color:#999;margin-top:2px;">${totDM.toFixed(2)} Meals</div>
+      <div style="flex:1;background:#f0f4ff;border:1px solid #5a7abf;border-radius:5px;padding:4px 6px;text-align:center;">
+        <div style="font-size:9px;color:#888;">Night</div>
+        <div style="font-size:13px;font-weight:700;color:#1565c0;">${totDQ} <span style="font-size:9px;font-weight:400;">(${totDM.toFixed(2)})</span></div>
       </div>
-      <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:10px;padding:12px 10px;text-align:center;">
-        <div style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px;">Total Meals</div>
-        <div style="font-size:22px;font-weight:700;color:#fff;">${grandTotal}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">Grand Total</div>
+      <div style="flex:1;background:#1a6b3c;border-radius:5px;padding:4px 6px;text-align:center;">
+        <div style="font-size:9px;color:rgba(255,255,255,.8);">Total</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;">${grandTotal}</div>
       </div>
     </div>
-    <!-- Legend -->
-    <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
-      <span style="background:#e8f5e9;color:#2e7d32;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">P = Plant</span>
-      <span style="background:#e3f2fd;color:#1565c0;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">Q = Quarter</span>
-      <span style="background:#ffebee;color:#c62828;border-radius:6px;padding:3px 12px;font-weight:700;font-size:12px;">off = Off</span>
-      <span style="font-size:11px;color:#888;">Count × Value = Total Meals</span>
-    </div>
+
     <!-- Table -->
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:10px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:10px;">
       <thead>
         <tr style="background:#1a6b3c;color:#fff;">
-          <th style="padding:10px 10px;text-align:left;font-size:13px;">Member Name</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">🌅 Morning</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">☀️ Lunch</th>
-          <th style="padding:10px 6px;text-align:center;font-size:13px;">🌙 Night</th>
-          <th style="padding:10px 10px;text-align:right;font-size:13px;">Total Meals</th>
+          <th style="padding:4px 4px;text-align:left;width:55px;">ID</th>
+          <th style="padding:4px 4px;text-align:left;width:120px;">Name</th>
+          <th style="padding:4px 4px;text-align:center;width:60px;">Morning</th>
+          <th style="padding:4px 4px;text-align:center;width:60px;">Lunch</th>
+          <th style="padding:4px 4px;text-align:center;width:60px;">Night</th>
+          <th style="padding:4px 6px;text-align:right;width:60px;">Total</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
-        <tr style="background:#0f4526;color:#fff;font-weight:700;">
-          <td style="padding:10px 10px;font-size:13px;">Total (Count)</td>
-          <td style="padding:10px 6px;text-align:center;font-size:14px;">${totBQ}</td>
-          <td style="padding:10px 6px;text-align:center;font-size:14px;">${totLQ}</td>
-          <td style="padding:10px 6px;text-align:center;font-size:14px;">${totDQ}</td>
-          <td style="padding:10px 10px;text-align:right;font-size:15px;color:#fcd34d;">${grandTotal}</td>
-        </tr>
-        <tr style="background:#1a6b3c;color:rgba(255,255,255,.8);">
-          <td style="padding:8px 10px;font-size:11px;">Total (Meals)</td>
-          <td style="padding:8px 6px;text-align:center;font-size:12px;">${totBM.toFixed(2)}</td>
-          <td style="padding:8px 6px;text-align:center;font-size:12px;">${totLM.toFixed(2)}</td>
-          <td style="padding:8px 6px;text-align:center;font-size:12px;">${totDM.toFixed(2)}</td>
-          <td style="padding:8px 10px;text-align:right;font-size:12px;">${grandTotal}</td>
+        <tr style="background:#0f4526;color:#fff;font-weight:700;font-size:10px;">
+          <td colspan="2" style="padding:4px 4px;">Grand Total</td>
+          <td style="padding:4px 4px;text-align:center;">${totBQ} (${totBM.toFixed(2)})</td>
+          <td style="padding:4px 4px;text-align:center;">${totLQ} (${totLM.toFixed(2)})</td>
+          <td style="padding:4px 4px;text-align:center;">${totDQ} (${totDM.toFixed(2)})</td>
+          <td style="padding:4px 6px;text-align:right;color:#fcd34d;">${grandTotal}</td>
         </tr>
       </tfoot>
     </table>
-    <!-- Footer -->
-    <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e0ece6;padding-top:12px;">
-      <div style="font-size:10px;color:#aaa;">Generated: ${fmtDate(tod())} ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>
-      <div style="font-size:10px;color:#aaa;">${messName} | Powered by Firebase</div>
-    </div>
+    <div style="margin-top:6px;font-size:8px;color:#aaa;text-align:right;">P=Plant · Q=Quarter · off=— · Generated: ${dd}.${mm}.20${yy}</div>
   </div>`;
 
   const wrap=document.createElement('div');
@@ -5393,7 +5374,7 @@ function downloadDayPDF(){
   wrap.innerHTML=html;
   document.body.appendChild(wrap);
   toast('⏳ PDF তৈরি হচ্ছে...');
-  html2canvas(wrap.firstChild,{scale:2,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
+  html2canvas(wrap.firstChild,{scale:2.5,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
     document.body.removeChild(wrap);
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -5402,10 +5383,11 @@ function downloadDayPDF(){
     let yPos=0;
     while(yPos<imgH){
       if(yPos>0) doc.addPage();
-      doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,-yPos*canvas.width/imgW/2,imgW,imgH);
+      doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,-yPos*canvas.width/imgW/2.5,imgW,imgH);
       yPos+=pageH;
     }
-    doc.save('MQ_Daily_'+fmtDate(dt)+'.pdf');
+    // File name: DD.MM.YY_mealsheet
+    doc.save(`${dd}.${mm}.${yy}_mealsheet.pdf`);
     toast('✅ PDF তৈরি হয়েছে!');
   }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
 }
