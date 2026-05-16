@@ -2285,9 +2285,8 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
-        _supplementGlobalFields(); // missing fields পুরানো top-level থেকে আনি
+        _supplementGlobalFields();
       } else {
-        // একেবারে নতুন mess — global initialize
         migrateDB();
         const initG={}; GLOBAL_FIELDS.forEach(f=>{ initG[f]=DB[f]; });
         globalRef.set(initG);
@@ -2302,11 +2301,22 @@ function loadDB(){
     currentMonthRef.on('value', snap=>{
       const data=snap.val();
       if(data){ MONTH_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; }); }
-      _clearHistCache(); // current month বদলালে cache পুরনো হয়ে যায়
+      _clearHistCache();
       monthReady=true; _checkReady();
     }, err=>{
       console.error('Month load error:',err);
       monthReady=true; _checkReady();
+    });
+
+    // ── Page hide/show: connection manage ──
+    // Page বন্ধ/minimize → Firebase connection release করো
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden){
+        firebase.database().goOffline(); // connection release
+      } else {
+        firebase.database().goOnline(); // reconnect
+        _refreshActiveScreen(); // latest data নেওয়া নিশ্চিত করো
+      }
     });
 
     // ১০s fallback — blank screen ঠেকাতে
