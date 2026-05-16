@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'mq-v10';
+const CACHE_VERSION = 'mq-v11';
 
 const SHELL_ASSETS = [
   './',
