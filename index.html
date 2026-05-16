@@ -5256,6 +5256,17 @@ function removeController(){
 // DAY PDF DOWNLOAD (CSV এর পরিবর্তে)
 // ═══════════════════════════════════════════════
 function downloadDayPDF(){
+  // Debug: library check
+  if(typeof html2canvas === 'undefined'){
+    toast('❌ html2canvas লোড হয়নি! পেজ রিফ্রেশ করুন।');
+    console.error('html2canvas not loaded');
+    return;
+  }
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    toast('❌ jsPDF লোড হয়নি! পেজ রিফ্রেশ করুন।');
+    console.error('jsPDF not loaded');
+    return;
+  }
   const dt = homeViewDate || tod();
   const dtObj = new Date(dt+'T00:00:00');
   const dd=String(dtObj.getDate()).padStart(2,'0');
