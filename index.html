@@ -5293,7 +5293,7 @@ function downloadDayPDF(){
   const sorted = [...activeUsers].sort((a,b)=>{
     const aj=parseInt(a.job)||0, bj=parseInt(b.job)||0;
     if(aj&&bj) return aj-bj;
-    return (a.job||'').localeCompare(b.job||'');
+    return String(a.job||'').localeCompare(String(b.job||''));
   });
 
   // ── Rows: compact ──
