@@ -5268,6 +5268,7 @@ function downloadDayPDF(){
     return;
   }
   toast('⏳ শুরু হচ্ছে...');
+  try{
   const dt = homeViewDate || tod();
   const dtObj = new Date(dt+'T00:00:00');
   const dd=String(dtObj.getDate()).padStart(2,'0');
@@ -5402,6 +5403,7 @@ function downloadDayPDF(){
     doc.save(`${dd}.${mm}.${yy}_mealsheet.pdf`);
     toast('✅ PDF তৈরি হয়েছে!');
   }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
+  } catch(err){ toast('❌ Error: '+err.message); console.error('downloadDayPDF error:',err); }
 }
 
 // ═══════════════════════════════════════════════
