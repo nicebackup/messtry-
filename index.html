@@ -5267,6 +5267,7 @@ function downloadDayPDF(){
     console.error('jsPDF not loaded');
     return;
   }
+  toast('⏳ শুরু হচ্ছে...');
   const dt = homeViewDate || tod();
   const dtObj = new Date(dt+'T00:00:00');
   const dd=String(dtObj.getDate()).padStart(2,'0');
