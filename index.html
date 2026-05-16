@@ -2552,22 +2552,22 @@ function fillMessCycleSelect(sel, months=12){
   }
 }
 
-// ── ইতিহাস screen: placeholder সহ, কোনো মাস pre-select নয় ──
+// ── ইতিহাস screen: শুধু handoverDone মাস দেখাও + current মাস ──
 function fillHistorySelect(sel, months=12){
   if(!sel) return;
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
-  const now = getBSTDate();
+  const currentKey = messMonthKey();
+  // handoverDone + current month — sort newest first
+  const validMonths = [...new Set([...(DB.handoverDone||[]), currentKey])].sort().reverse();
   sel.innerHTML='<option value="">-- মাস সিলেক্ট করুন --</option>';
-  for(let i=0;i<months;i++){
-    const d = new Date(now.getFullYear(), now.getMonth()-i, 15);
-    const key = messMonthKey(d);
-    const {y,m} = getMessMonth(d);
+  validMonths.forEach(key=>{
+    const {y,m} = getMessMonth(new Date(key+'-15'));
     const nm=(m+1)%12;
     const opt=document.createElement('option');
     opt.value=key;
     opt.textContent=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
     sel.appendChild(opt);
-  }
+  });
 }
 
 // ── Session-level historical data cache — Firebase reads কমাতে ──
@@ -4841,27 +4841,26 @@ function initAdmin(){
   renderManagerInfo();
   renderControllerList();
   initSiteNoteCard();
-  // Populate cycle delete dropdown
+  // Populate cycle delete dropdown — শুধু handoverDone মাস দেখাও
   const cycSel=document.getElementById('del-cycle-sel');
   if(cycSel){
-    cycSel.innerHTML='<option value="">-- চক্র নির্বাচন --</option>';
-    const now=getBSTDate();
     const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
-    for(let i=0;i<12;i++){
-      const d=new Date(now.getFullYear(),now.getMonth()-i,15);
-      const key=messMonthKey(d);
-      const {y,m}=getMessMonth(d);
-      const nm=(m+1)%12, ny=m===11?y+1:y;
+    const currentKey = messMonthKey();
+    // শুধু handoverDone মাস — current মাস বাদ (current মাস delete করা নিরাপদ না)
+    const deletable = [...(DB.handoverDone||[])].sort().reverse();
+    cycSel.innerHTML='<option value="">-- চক্র নির্বাচন --</option>';
+    deletable.forEach(key=>{
+      const {y,m}=getMessMonth(new Date(key+'-15'));
+      const nm=(m+1)%12;
       cycSel.innerHTML+=`<option value="${key}">${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}</option>`;
+    });
+    if(!deletable.length){
+      cycSel.innerHTML='<option value="">হস্তান্তর করা কোনো মাস নেই</option>';
     }
     cycSel.onchange=function(){
       const prev=document.getElementById('del-cycle-preview');
       if(!this.value){ prev.style.display='none'; return; }
-      const key=this.value;
-      const mealCount=Object.keys(DB.meals).filter(k=>{ const parts=k.split('_'); const dt=parts[parts.length-1]; return dateInMessMonth(dt,key); }).length;
-      const bazarCount=DB.bazar.filter(b=>dateInMessMonth(b.date,key)).length;
-      const othersCount=DB.others.filter(o=>dateInMessMonth(o.date,key)).length;
-      prev.innerHTML=`📊 এই চক্রে: ${mealCount}টি মিল এন্ট্রি, ${bazarCount}টি বাজার, ${othersCount}টি অন্যান্য খরচ মুছে যাবে।`;
+      prev.innerHTML=`⚠️ এই চক্রের সব meal, বাজার ও অন্যান্য ডেটা Firebase থেকে স্থায়ীভাবে মুছে যাবে।`;
       prev.style.display='block';
     };
   }
@@ -4875,21 +4874,35 @@ function deleteMessCycle(){
   const {y,m}=getMessMonth(new Date(key+'-15'));
   const nm=(m+1)%12, ny=m===11?y+1:y;
   const label=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
-  showModal('⚠️ চক্র ডিলিট',`"${label}" চক্রের সব মিল, বাজার ও অন্যান্য ডেটা মুছে ফেলবেন?\n\nসদস্য তালিকা ও ব্যালেন্স অপরিবর্তিত থাকবে।`,()=>{
-    // Delete meals in this cycle
-    Object.keys(DB.meals).forEach(k=>{
-      const parts=k.split('_'); const dt=parts[parts.length-1];
-      if(dateInMessMonth(dt,key)) delete DB.meals[k];
-    });
-    // Delete bazar entries
-    DB.bazar=DB.bazar.filter(b=>!dateInMessMonth(b.date,key));
-    // Delete others entries
-    DB.others=DB.others.filter(o=>!dateInMessMonth(o.date,key));
-    // Delete cook bills
-    if(DB.cookBills) DB.cookBills=DB.cookBills.filter(c=>!dateInMessMonth(c.date,key));
-    // Remove stored meal rate for this cycle
-    if(DB.mealRates&&DB.mealRates[key]) delete DB.mealRates[key];
-    saveDB();
+  const isCurrent = key === messMonthKey();
+
+  showModal('⚠️ চক্র ডিলিট',`"${label}" চক্রের সব ডেটা মুছে ফেলবেন?\n\nসদস্য তালিকা ও ব্যালেন্স অপরিবর্তিত থাকবে।`,()=>{
+    if(isCurrent){
+      // Current month: DB fields clear করো + save
+      DB.meals={}; DB.bazar=[]; DB.others=[]; DB.cookBills=[];
+      DB.transactions=[]; DB.mealRates={}; DB.officeMealRates={};
+      DB.officeMealNotes=[]; DB.managers=[];
+      saveMonth();
+    } else {
+      // পুরনো মাস: Firebase-এর month node সরাসরি delete করো
+      const monthNode = firebase.database().ref('messData/months/'+key);
+      monthNode.remove().then(()=>{
+        // prevBalances এ এই মাসের entry সরাও (গত মাস থেকে যে carry এসেছিল)
+        // nextKey এর prevBalance ছোঁয়া যাবে না — ওটা পরের মাসের opening balance
+        if(DB.prevBalances && DB.prevBalances[key]){
+          delete DB.prevBalances[key];
+          saveGlobal();
+        }
+        // handoverDone থেকে এই মাস সরাও
+        if(DB.handoverDone){
+          DB.handoverDone = DB.handoverDone.filter(h=>h!==key);
+          saveGlobal();
+        }
+        toast(`✅ "${label}" চক্রের ডেটা মুছে ফেলা হয়েছে!`);
+        initAdmin();
+      }).catch(e=>{ toast('❌ মুছতে সমস্যা হয়েছে!'); console.error(e); });
+      return;
+    }
     toast(`✅ "${label}" চক্রের ডেটা মুছে ফেলা হয়েছে!`);
     initAdmin();
   });
