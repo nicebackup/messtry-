@@ -54,6 +54,8 @@ html.light-mode{background:#f4f7f5;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- ── Modular shared layer (core.js must load before inline script block) ── -->
+<script src="js/shared/core.js"></script>
 <style>
 :root {
   --primary:#1a6b3c;--primary-light:#28a15e;--primary-dark:#0f4526;
@@ -3309,7 +3311,7 @@ function togglePassVis(inputId, eyeId){
 // HOME
 // ═══════════════════════════════════════════════
 // Home page browsing date (separate from real today)
-let homeViewDate = null; // null = always show today
+// Declared in js/shared/core.js as var homeViewDate (global scope)
 
 function homeShiftDate(delta){
   const realToday = tod();
@@ -3625,13 +3627,7 @@ function shiftDate(delta){
   loadMealDate();
 }
 function toISODate(d){ return d.toISOString().split('T')[0]; }
-function fmtDate(isoStr){
-  // Converts "YYYY-MM-DD" → "DD-MM-YYYY" e.g. "16-04-2026"
-  if(!isoStr) return '';
-  const parts=isoStr.split('-');
-  if(parts.length!==3) return isoStr;
-  return parts[2]+'-'+parts[1]+'-'+parts[0];
-}
+// fmtDate() moved to js/shared/core.js
 function loadMealDate(){
   mealDate=document.getElementById('meal-date').value; if(!mealDate) return;
   document.getElementById('meal-sub').textContent=fmtDate(mealDate);
@@ -3792,7 +3788,7 @@ function _getMealKeyIndex(){
   }
   return _mealKeyIndex;
 }
-function invalidateMealIndex(){ _mealKeyIndex = null; _mealKeyIndexVersion = -1; _mealKeyIndexEpoch++; }
+// invalidateMealIndex() → stub in js/shared/core.js; real override in meal.js
 
 function messMonthMeals(uname, mmKey){
   const idx = _getMealKeyIndex();
@@ -3844,7 +3840,7 @@ function getNetMeals(mmKey){
 }
 // ── calcMealRate result cache — একই মাসে বারবার call হলে recalc নয় ──
 let _mealRateCache = {};
-function invalidateMealRateCache(){ _mealRateCache = {}; }
+// invalidateMealRateCache() → stub in js/shared/core.js; real override in meal.js
 
 function calcMealRate(mmKey){
   if(_mealRateCache[mmKey]) return _mealRateCache[mmKey];
@@ -3904,14 +3900,7 @@ function calcMealRate(mmKey){
 // ── nonCookMembers counts cache — bill calc-এ ২০০ বার filter চলত ──
 let _memberCountsCache = null;
 // ── কোনো user নির্দিষ্ট মাসে active ছিল কিনা ──
-// activeFrom → সেটা use করো; না থাকলে joined date থেকে মেস মাস বের করো
-function isActiveInMonth(u, mmKey){
-  if(u.activeFrom) return u.activeFrom <= mmKey;
-  // activeFrom নেই → joined date থেকে সঠিক মেস মাস বের করো (11-10 cycle)
-  if(u.joined) return messMonthKey(new Date(u.joined)) <= mmKey;
-  // কোনো তথ্যই নেই → founding member safety fallback
-  return true;
-}
+// isActiveInMonth() moved to js/shared/core.js
 
 function _getMemberCounts(mmKey=null){
   // mmKey দিলে সেই মাসের active members ফিল্টার করো (cache bypass)
@@ -3927,7 +3916,7 @@ function _getMemberCounts(mmKey=null){
   if(!mmKey) _memberCountsCache = result; // current month → cache
   return result;
 }
-function invalidateMemberCountsCache(){ _memberCountsCache = null; }
+// invalidateMemberCountsCache() → stub in js/shared/core.js; real override in meal.js
 
 function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
   // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
@@ -4227,7 +4216,7 @@ function _getTxBalCache(mmKey){
   _txBalCacheKey = mmKey;
   return cache;
 }
-function invalidateTxBalCache(){ _txBalCache = null; _txBalCacheKey = ''; }
+// invalidateTxBalCache() → stub in js/shared/core.js; real override in deposit.js
 
 function depMemSearch(){
   const q=(document.getElementById('dep-mem-search').value||'').trim();
@@ -6128,21 +6117,7 @@ document.addEventListener('click', function(e){
 // ═══════════════════════════════════════════════
 const OFFICE_MEAL_USERS = ['Office MEPL','Office MPCL','mepl','mpcl'];
 
-function isOfficeMealUser(u){
-  if(!u) return false;
-  if(u._office) return true;
-  const nm=(u.name||'').toLowerCase();
-  const un=(u.u||'').toLowerCase();
-  return nm.includes('mepl')||nm.includes('mpcl')||un.includes('mepl')||un.includes('mpcl')||un==='off_mepl'||un==='off_mpcl';
-}
-
-function getOfficeMealUsers(){
-  return DB.users.filter(u=>isOfficeMealUser(u));
-}
-
-function getOfficeMealRate(mmKey){
-  return DB.officeMealRates[mmKey]||0;
-}
+// isOfficeMealUser(), getOfficeMealUsers(), getOfficeMealRate() → moved to js/shared/core.js
 
 function loadOfficeMealInfo(){
   const mmKey=document.getElementById('ofm-month').value;
