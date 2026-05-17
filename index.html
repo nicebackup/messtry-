@@ -3788,7 +3788,8 @@ function _getMealKeyIndex(){
   }
   return _mealKeyIndex;
 }
-// invalidateMealIndex() → stub in js/shared/core.js; real override in meal.js
+// Real override of core.js stub — runs after cache vars above are declared
+function invalidateMealIndex(){ _mealKeyIndex = null; _mealKeyIndexVersion = -1; _mealKeyIndexEpoch++; }
 
 function messMonthMeals(uname, mmKey){
   const idx = _getMealKeyIndex();
@@ -3840,7 +3841,8 @@ function getNetMeals(mmKey){
 }
 // ── calcMealRate result cache — একই মাসে বারবার call হলে recalc নয় ──
 let _mealRateCache = {};
-// invalidateMealRateCache() → stub in js/shared/core.js; real override in meal.js
+// Real override of core.js stub — runs after _mealRateCache above is declared
+function invalidateMealRateCache(){ _mealRateCache = {}; }
 
 function calcMealRate(mmKey){
   if(_mealRateCache[mmKey]) return _mealRateCache[mmKey];
@@ -3916,7 +3918,8 @@ function _getMemberCounts(mmKey=null){
   if(!mmKey) _memberCountsCache = result; // current month → cache
   return result;
 }
-// invalidateMemberCountsCache() → stub in js/shared/core.js; real override in meal.js
+// Real override of core.js stub — runs after _memberCountsCache above is declared
+function invalidateMemberCountsCache(){ _memberCountsCache = null; }
 
 function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
   // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
@@ -3958,7 +3961,7 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0
 // ═══════════════════════════════════════════════
 function initBazar(){
   const sel=document.getElementById('bz-month-sel');
-  if(!sel.options.length) fillHistorySelect(sel);
+  fillHistorySelect(sel);
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
   const mgr=isManagerOrCtrl();
   document.getElementById('bazar-form-wrap').style.display=mgr?'block':'none';
@@ -4043,7 +4046,7 @@ function initOthers(){
   document.getElementById('others-readonly-notice').style.display='none';
   document.getElementById('others-header-sub').textContent=mgr2?'Others Expense':'ইতিহাস দেখুন';
   const sel=document.getElementById('oth-month-sel');
-  if(!sel.options.length) fillHistorySelect(sel);
+  fillHistorySelect(sel);
   renderOthers();
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
@@ -4216,7 +4219,8 @@ function _getTxBalCache(mmKey){
   _txBalCacheKey = mmKey;
   return cache;
 }
-// invalidateTxBalCache() → stub in js/shared/core.js; real override in deposit.js
+// Real override of core.js stub — runs after _txBalCache above is declared
+function invalidateTxBalCache(){ _txBalCache = null; _txBalCacheKey = ''; }
 
 function depMemSearch(){
   const q=(document.getElementById('dep-mem-search').value||'').trim();
@@ -4328,9 +4332,9 @@ function saveDeposit(){
 }
 function renderDepHistory(){
   const histEl=document.getElementById('dep-history');
-  // মাস selector populate করো (প্রথমবার)
+  // মাস selector populate করো
   const selEl=document.getElementById('dep-hist-month');
-  if(selEl&&!selEl.options.length) fillHistorySelect(selEl,12);
+  if(selEl) fillHistorySelect(selEl,12);
   const mmKey=selEl&&selEl.value;
   _withMonthData(mmKey, histEl, ()=>{
     const txs=DB.transactions.filter(tx=>dateInMessMonth(tx.date,mmKey)).slice().reverse();
@@ -6430,7 +6434,7 @@ function renderOfficeMealNotesScreen(){
   if(!el) return;
   // Month selector populate করো
   const sel = document.getElementById('ofms-note-month-sel');
-  if(sel && !sel.options.length) fillHistorySelect(sel);
+  if(sel) fillHistorySelect(sel);
   const mmKey = sel ? sel.value : messMonthKey();
   if(!mmKey){ el.innerHTML='<p class="muted tc">মাস সিলেক্ট করুন</p>'; return; }
 
