@@ -2112,6 +2112,7 @@ function initMeal(){
   const tmr = nextDay(tod());
   mealDate = tmr;
   document.getElementById('meal-date').value=mealDate;
+  applyMessCycleBounds('meal-date');
   loadMealDate();
 }
 function shiftDate(delta){
@@ -2453,10 +2454,33 @@ function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0
 // ═══════════════════════════════════════════════
 // BAZAR
 // ═══════════════════════════════════════════════
+// ── Mess cycle date bounds for input[type="date"] min/max ──
+function getMessCycleBounds(mmKey){
+  const k = mmKey || messMonthKey();
+  const [y,m] = k.split('-').map(Number);
+  const nm = m===12?1:m+1, ny = m===12?y+1:y;
+  const minDate = y+'-'+String(m).padStart(2,'0')+'-11';
+  const maxDate = ny+'-'+String(nm).padStart(2,'0')+'-10';
+  return {minDate, maxDate};
+}
+function applyMessCycleBounds(inputId, mmKey){
+  const el = document.getElementById(inputId);
+  if(!el) return;
+  const {minDate, maxDate} = getMessCycleBounds(mmKey);
+  el.min = minDate;
+  el.max = maxDate;
+  // Clamp value if outside bounds
+  if(el.value && (el.value < minDate || el.value > maxDate)){
+    el.value = '';
+  }
+}
+
 function initBazar(){
   const sel=document.getElementById('bz-month-sel');
   fillHistorySelect(sel);
+  if(sel && !sel.value) sel.value = currentMonthKey;
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
+  applyMessCycleBounds('bz-date', sel ? sel.value : null);
   const mgr=isManagerOrCtrl();
   document.getElementById('bazar-form-wrap').style.display=mgr?'block':'none';
   document.getElementById('bazar-readonly-notice').style.display='none';
@@ -2486,6 +2510,7 @@ function renderBazar(){
   const m=document.getElementById('bz-month-sel').value;
   const list=document.getElementById('bz-list');
   const totalEl=document.getElementById('bz-total');
+  applyMessCycleBounds('bz-date', m);
   _withMonthData(m, list, ()=>{
     const items=DB.bazar.filter(b=>dateInMessMonth(b.date,m)).sort((a,b)=>b.date.localeCompare(a.date));
     if(!items.length){ list.innerHTML='<p class="muted tc">কোনো এন্ট্রি নেই</p>'; if(totalEl) totalEl.textContent='৳ ০'; return; }
@@ -2496,7 +2521,7 @@ function renderBazar(){
       const btns=canEdit?`
         <button data-action="edit-bazar" data-id="${b.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
         <button data-action="del-bazar" data-id="${b.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>`:'';
-      return`<div class="bazar-item"><div><div class="bz-name">${esc(b.desc)}</div><div class="bz-meta">${esc(b.date)} · ${esc(b.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt">৳ ${b.amount.toLocaleString()}</div>${btns}</div></div>`;
+      return`<div class="bazar-item"><div><div class="bz-name">${esc(b.desc)}</div><div class="bz-meta">${fmtDate(b.date)} · ${esc(b.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt">৳ ${b.amount.toLocaleString()}</div>${btns}</div></div>`;
     }).join(''));
     if(totalEl) totalEl.textContent='৳ '+total.toLocaleString();
     list.onclick = function(e){
@@ -2536,11 +2561,13 @@ function editBazar(id){
 function initOthers(){
   const mgr2=isManagerOrCtrl();
   if(!document.getElementById('oth-date').value) document.getElementById('oth-date').value=tod();
+  applyMessCycleBounds('oth-date');
   document.getElementById('others-form-wrap').style.display=mgr2?'block':'none';
   document.getElementById('others-readonly-notice').style.display='none';
   document.getElementById('others-header-sub').textContent=mgr2?'Others Expense':'ইতিহাস দেখুন';
   const sel=document.getElementById('oth-month-sel');
   fillHistorySelect(sel);
+  if(sel && !sel.value) sel.value = currentMonthKey;
   renderOthers();
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
@@ -2568,6 +2595,7 @@ function renderOthers(){
   const m=sel&&sel.value;
   const list=document.getElementById('oth-list');
   const totalEl=document.getElementById('oth-total');
+  applyMessCycleBounds('oth-date', m);
   _withMonthData(m, list, ()=>{
     const items=DB.others.filter(o=>dateInMessMonth(o.date,m)).sort((a,b)=>b.date.localeCompare(a.date));
     if(!items.length){ list.innerHTML='<p class="muted tc">কোনো এন্ট্রি নেই</p>'; if(totalEl) totalEl.textContent='৳ ০'; return; }
@@ -2579,7 +2607,7 @@ function renderOthers(){
       const btns=canEdit?`
         <button data-action="edit-other" data-id="${o.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
         <button data-action="del-other" data-id="${o.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>`:'';
-      return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(o.desc)}${splitLabel(o.split||'equal')}</div><div class="bz-meta">${esc(o.date)} · ${esc(o.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt" style="color:var(--info)">৳ ${o.amount.toLocaleString()}</div>${btns}</div></div>`;
+      return`<div class="bazar-item"><div style="flex:1"><div class="bz-name">${esc(o.desc)}${splitLabel(o.split||'equal')}</div><div class="bz-meta">${fmtDate(o.date)} · ${esc(o.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt" style="color:var(--info)">৳ ${o.amount.toLocaleString()}</div>${btns}</div></div>`;
     }).join(''));
     if(totalEl) totalEl.textContent='৳ '+total.toLocaleString();
     list.onclick = function(e){
@@ -2638,6 +2666,7 @@ function initDeposit(){
   document.getElementById('dep-mgr-section').style.display=mgr?'block':'none';
   if(mgr){
     if(!document.getElementById('dep-date').value) document.getElementById('dep-date').value=tod();
+    applyMessCycleBounds('dep-date');
     clearDepMem();
     document.getElementById('dep-mem-search').value='';
     document.getElementById('dep-mem-dropdown').style.display='none';
@@ -2691,7 +2720,7 @@ function renderDepMyHistory(){
   } else {
     txs.forEach(tx=>{
       const bal=balMap[tx.id];
-      html+=`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'\u{1F4E5}':'\u{1F4E4}'}</div><div class="tx-info" style="flex:1"><div class="tx-name">${tx.type==='deposit'?'\u099C\u09AE\u09BE':'\u0989\u09A4\u09CD\u09A4\u09CB\u09B2\u09A8'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' \u00B7 '+esc(tx.note):''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'\u2212'}\u09F3${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div><div style="font-size:10px;color:${bal>=0?'var(--success)':'var(--danger)'};font-weight:600">\u09AC\u09CD\u09AF\u09BE\u09B2\u09C7\u09A8\u09CD\u09B8: \u09F3${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div></div>`;
+      html+=`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'\u{1F4E5}':'\u{1F4E4}'}</div><div class="tx-info" style="flex:1"><div class="tx-name">${tx.type==='deposit'?'\u099C\u09AE\u09BE':'\u0989\u09A4\u09CD\u09A4\u09CB\u09B2\u09A8'}</div><div class="tx-meta">${fmtDate(tx.date)}${tx.note?' \u00B7 '+esc(tx.note):''}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'\u2212'}\u09F3${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div><div style="font-size:10px;color:${bal>=0?'var(--success)':'var(--danger)'};font-weight:600">\u09AC\u09CD\u09AF\u09BE\u09B2\u09C7\u09A8\u09CD\u09B8: \u09F3${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div></div>`;
     });
   }
   el.innerHTML=safeHTML(html)||'<p class="muted tc">\u0995\u09CB\u09A8\u09CB \u09B2\u09C7\u09A8\u09A6\u09C7\u09A8 \u09A8\u09C7\u0987</p>';
@@ -2829,6 +2858,7 @@ function renderDepHistory(){
   // মাস selector populate করো
   const selEl=document.getElementById('dep-hist-month');
   if(selEl) fillHistorySelect(selEl,12);
+  if(selEl && !selEl.value) selEl.value = currentMonthKey;
   const mmKey=selEl&&selEl.value;
   _withMonthData(mmKey, histEl, ()=>{
     const txs=DB.transactions.filter(tx=>dateInMessMonth(tx.date,mmKey)).slice().reverse();
@@ -2837,7 +2867,7 @@ function renderDepHistory(){
     const html=txs.map(tx=>{
       const u=DB.users.find(x=>x.u===tx.uname);
       const editBtn=canEdit?`<button data-action="edit-tx" data-id="${tx.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;">✏️</button>`:'';
-      return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}${editBtn}</div></div>`;
+      return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${fmtDate(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}${editBtn}</div></div>`;
     }).join('');
     histEl.innerHTML = safeHTML(html)||'<p class="muted tc">কোনো লেনদেন নেই</p>';
     histEl.onclick = function(e){
@@ -2855,7 +2885,7 @@ function editTransaction(id){
   const typeLabel=tx.type==='deposit'?'জমা':'উত্তোলন';
   const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
     <div style="background:var(--bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text-light)">
-      <b>${esc(u.name)}</b> — ${typeLabel} (${esc(tx.date)})
+      <b>${esc(u.name)}</b> — ${typeLabel} (${fmtDate(tx.date)})
     </div>
     <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
     <input id="edit-tx-amt" type="number" class="form-input" value="${tx.amount}" style="margin-top:4px" min="1"></div>
@@ -3155,7 +3185,7 @@ function memdetTab(tab){
     const txs=DB.transactions.filter(t=>t.uname===u.u).slice().reverse();
     let html=`<div class="sec-title">💵 লেনদেনের ইতিহাস</div>`;
     if(!txs.length){ html+='<p class="muted tc">কোনো লেনদেন নেই</p>'; }
-    else{ html+=txs.map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div>`).join(''); }
+    else{ html+=txs.map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${fmtDate(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div>`).join(''); }
     document.getElementById('memdet-txn-card').innerHTML = safeHTML(html);
   }
 }
@@ -3220,7 +3250,7 @@ function loadProfile(){
   const txs=DB.transactions.filter(t=>t.uname===cu.u).slice().reverse();
   document.getElementById('pf-tx-list').innerHTML = safeHTML(
     txs.length
-      ? txs.slice(0,15).map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${esc(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div>`).join('')
+      ? txs.slice(0,15).map(tx=>`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${tx.type==='deposit'?'জমা':'উত্তোলন'}</div><div class="tx-meta">${fmtDate(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div></div>`).join('')
       : '<p class="muted tc">কোনো লেনদেন নেই</p>'
   );
 }
@@ -3325,6 +3355,7 @@ function initAdmin(){
     }
   }
   document.getElementById('adm-dt').value=tod();
+  applyMessCycleBounds('adm-dt');
   renderManagerInfo();
   renderControllerList();
   initSiteNoteCard();
@@ -4698,7 +4729,7 @@ function renderOfficeMealNotes(){
   notes.forEach(n=>{
     html+=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <span style="color:var(--text-light)">${esc(n.date)} — ${esc(n.by)}</span>
+        <span style="color:var(--text-light)">${fmtDate(n.date)} — ${esc(n.by)}</span>
         ${isManagerOrCtrl()?`<button onclick="deleteOfficeMealNote(${n.id})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px">🗑️</button>`:''}
       </div>
       <div style="color:var(--text);line-height:1.5">${esc(n.text)}</div>
@@ -4929,6 +4960,7 @@ function renderOfficeMealNotesScreen(){
   // Month selector populate করো
   const sel = document.getElementById('ofms-note-month-sel');
   if(sel) fillHistorySelect(sel);
+  if(sel && !sel.value) sel.value = currentMonthKey;
   const mmKey = sel ? sel.value : messMonthKey();
   if(!mmKey){ el.innerHTML='<p class="muted tc">মাস সিলেক্ট করুন</p>'; return; }
 
@@ -4949,7 +4981,7 @@ function renderOfficeMealNotesScreen(){
   notes.forEach(n=>{
     h += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="color:var(--text-light);font-size:11px">${esc(n.date)} · ${esc(n.by)}</span>
+        <span style="color:var(--text-light);font-size:11px">${fmtDate(n.date)} · ${esc(n.by)}</span>
         ${canDel?`
           <div style="display:flex;gap:6px">
             <button data-action="edit-note" data-id="${n.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
