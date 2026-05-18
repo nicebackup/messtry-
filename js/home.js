@@ -231,6 +231,13 @@ function _collectWeData(){
     if(m[_weSlot].t==='P') _wePlanters.push({u, qty});
     if(m[_weSlot].t==='Q') _weQtr.push({u, qty});
   });
+  const _sortById=(a,b)=>{
+    const na=parseFloat(a.u.job||a.u.u), nb=parseFloat(b.u.job||b.u.u);
+    if(!isNaN(na)&&!isNaN(nb)) return na-nb;
+    return String(a.u.job||a.u.u).localeCompare(String(b.u.job||b.u.u));
+  };
+  _wePlanters.sort(_sortById);
+  _weQtr.sort(_sortById);
 }
 
 function _renderWeHeader(){
@@ -327,4 +334,3 @@ function exportWhoEatsPDF(){
 
 function exportWhoEatsCSV(){ /* replaced by PDF */ }
 function closeWhoEats(){ goHome(); }
-                       
