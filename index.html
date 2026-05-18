@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="bn-BD">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1044,7 +1044,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
       <div class="sec-title">📅 তারিখ নির্বাচন</div>
       <div class="date-nav">
         <button class="date-nav-btn" onclick="shiftDate(-1)">‹</button>
-        <input type="date" id="meal-date" class="form-input" style="flex:1" onchange="loadMealDate()">
+        <span class="date-display-wrap" style="flex:1"><input type="date" id="meal-date" class="form-input" style="width:100%" onchange="loadMealDate();updateDateLabel('meal-date')"><span class="date-display-label" id="meal-date-lbl">-- তারিখ --</span></span>
         <button class="date-nav-btn" onclick="shiftDate(1)">›</button>
       </div>
     </div>
@@ -1117,7 +1117,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
         <div class="sec-title">➕ বাজার যোগ করুন</div>
         <div class="form-group"><label class="form-label">বিবরণ</label><textarea id="bz-desc" class="form-input" placeholder="মাছ, সবজি, তেল..." rows="2" style="resize:none"></textarea></div>
         <div class="form-group"><label class="form-label">পরিমাণ ৳</label><input type="number" id="bz-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1" step="0.01"></div>
-        <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="bz-date" class="form-input"></div>
+        <div class="form-group"><label class="form-label">তারিখ</label><span class="date-display-wrap"><input type="date" id="bz-date" class="form-input" style="width:100%" onchange="updateDateLabel('bz-date')"><span class="date-display-label" id="bz-date-lbl">-- তারিখ --</span></span></div>
         <button class="btn btn-accent" onclick="addBazar()">➕ যোগ করুন</button>
       </div>
     </div>
@@ -1157,7 +1157,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
           </div>
           <div class="form-group"><label class="form-label">বিবরণ</label><textarea id="oth-desc" class="form-input" placeholder="গ্যাস বিল, বিদ্যুৎ বিল, মেরামত..." rows="2" style="resize:none"></textarea></div>
           <div class="form-group"><label class="form-label">পরিমাণ ৳</label><input type="number" id="oth-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1" step="0.01"></div>
-          <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="oth-date" class="form-input"></div>
+          <div class="form-group"><label class="form-label">তারিখ</label><span class="date-display-wrap"><input type="date" id="oth-date" class="form-input" style="width:100%" onchange="updateDateLabel('oth-date')"><span class="date-display-label" id="oth-date-lbl">-- তারিখ --</span></span></div>
           <button class="btn btn-primary" onclick="addOther()">➕ যোগ করুন</button>
         </div>
       </div>
@@ -1228,7 +1228,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
           <input type="hidden" id="dep-type" value="deposit">
         </div>
         <div class="form-group"><label class="form-label">পরিমাণ &#2547;</label><input type="number" id="dep-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1"></div>
-        <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="dep-date" class="form-input"></div>
+        <div class="form-group"><label class="form-label">তারিখ</label><span class="date-display-wrap"><input type="date" id="dep-date" class="form-input" style="width:100%" onchange="updateDateLabel('dep-date')"><span class="date-display-label" id="dep-date-lbl">-- তারিখ --</span></span></div>
         <div class="form-group"><label class="form-label">নোট (ঐচ্ছিক)</label><input type="text" id="dep-note" class="form-input" placeholder="মাসিক জমা, ফেরত..."></div>
         <button class="btn btn-primary" onclick="saveDeposit()">&#9989; সম্পন্ন করুন</button>
       </div>
@@ -1472,7 +1472,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
     <div class="card" id="card-adm-meal" style="display:none">
       <div class="sec-title">🔓 মিল এডিট</div>
       <div class="form-group"><label class="form-label">সদস্য</label><select id="adm-mem" class="form-input" onchange="loadAdmMeal()"><option value="">-- নির্বাচন --</option></select></div>
-      <div class="form-group"><label class="form-label">তারিখ</label><input type="date" id="adm-dt" class="form-input" onchange="loadAdmMeal()"></div>
+      <div class="form-group"><label class="form-label">তারিখ</label><span class="date-display-wrap"><input type="date" id="adm-dt" class="form-input" style="width:100%" onchange="loadAdmMeal();updateDateLabel('adm-dt')"><span class="date-display-label" id="adm-dt-lbl">-- তারিখ --</span></span></div>
       <div id="adm-pqo" style="display:none">
         <div style="margin-bottom:12px"><b style="display:block;margin-bottom:6px">☀️ সকাল</b><div class="pqo-row"><input type="number" id="adm-qty-b" class="qty-input" value="1" min="1"><button class="pqo-btn" id="adm-b-P" onclick="setAdmPQO('b','P')">P</button><button class="pqo-btn" id="adm-b-Q" onclick="setAdmPQO('b','Q')">Q</button><button class="pqo-btn" id="adm-b-off" onclick="setAdmPQO('b','off')">off</button></div></div>
         <div style="margin-bottom:12px"><b style="display:block;margin-bottom:6px">🌞 দুপুর</b><div class="pqo-row"><input type="number" id="adm-qty-l" class="qty-input" value="1" min="1"><button class="pqo-btn" id="adm-l-P" onclick="setAdmPQO('l','P')">P</button><button class="pqo-btn" id="adm-l-Q" onclick="setAdmPQO('l','Q')">Q</button><button class="pqo-btn" id="adm-l-off" onclick="setAdmPQO('l','off')">off</button></div></div>
@@ -2113,12 +2113,14 @@ function initMeal(){
   mealDate = tmr;
   document.getElementById('meal-date').value=mealDate;
   applyMessCycleBounds('meal-date');
+  updateDateLabel('meal-date');
   loadMealDate();
 }
 function shiftDate(delta){
   const d=new Date(mealDate); d.setDate(d.getDate()+delta);
   mealDate=toISODate(d);
   document.getElementById('meal-date').value=mealDate;
+  updateDateLabel('meal-date');
   loadMealDate();
 }
 function toISODate(d){ return d.toISOString().split('T')[0]; }
@@ -2473,12 +2475,34 @@ function applyMessCycleBounds(inputId, mmKey){
   if(el.value && (el.value < minDate || el.value > maxDate)){
     el.value = '';
   }
+  updateDateLabel(inputId);
+}
+
+// ── Custom date label: shows DD-MM-YYYY over native date input ──
+function updateDateLabel(inputId){
+  const inp = document.getElementById(inputId);
+  const lbl = document.getElementById(inputId+'-lbl');
+  if(!inp || !lbl) return;
+  if(inp.value){
+    lbl.textContent = fmtDate(inp.value);
+    lbl.style.display = 'block';
+  } else {
+    lbl.textContent = '-- তারিখ --';
+    lbl.style.display = 'block';
+  }
+}
+function initDateLabels(){
+  ['meal-date','dep-date','bz-date','oth-date','adm-dt'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.value) updateDateLabel(id);
+  });
 }
 
 function initBazar(){
   const sel=document.getElementById('bz-month-sel');
+  const _prevBz = sel ? sel.value : '';
   fillHistorySelect(sel);
-  if(sel && !sel.value) sel.value = currentMonthKey;
+  if(sel) sel.value = _prevBz || currentMonthKey;
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
   applyMessCycleBounds('bz-date', sel ? sel.value : null);
   const mgr=isManagerOrCtrl();
@@ -2566,8 +2590,9 @@ function initOthers(){
   document.getElementById('others-readonly-notice').style.display='none';
   document.getElementById('others-header-sub').textContent=mgr2?'Others Expense':'ইতিহাস দেখুন';
   const sel=document.getElementById('oth-month-sel');
+  const _prevOth = sel ? sel.value : '';
   fillHistorySelect(sel);
-  if(sel && !sel.value) sel.value = currentMonthKey;
+  if(sel) sel.value = _prevOth || currentMonthKey;
   renderOthers();
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
@@ -2667,6 +2692,7 @@ function initDeposit(){
   if(mgr){
     if(!document.getElementById('dep-date').value) document.getElementById('dep-date').value=tod();
     applyMessCycleBounds('dep-date');
+    updateDateLabel('dep-date');
     clearDepMem();
     document.getElementById('dep-mem-search').value='';
     document.getElementById('dep-mem-dropdown').style.display='none';
@@ -2855,9 +2881,11 @@ function saveDeposit(){
 }
 function renderDepHistory(){
   const histEl=document.getElementById('dep-history');
-  // মাস selector populate করো
+  // মাস selector — পূর্বের selection সংরক্ষণ করো, repopulate-এ হারাবে না
   const selEl=document.getElementById('dep-hist-month');
-  if(selEl) fillHistorySelect(selEl,12);
+  const _prevVal = selEl ? selEl.value : '';
+  if(selEl) fillMessCycleSelect(selEl,12);
+  if(selEl && selEl.value !== _prevVal && _prevVal) selEl.value = _prevVal;
   if(selEl && !selEl.value) selEl.value = currentMonthKey;
   const mmKey=selEl&&selEl.value;
   _withMonthData(mmKey, histEl, ()=>{
@@ -2867,7 +2895,7 @@ function renderDepHistory(){
     const html=txs.map(tx=>{
       const u=DB.users.find(x=>x.u===tx.uname);
       const editBtn=canEdit?`<button data-action="edit-tx" data-id="${tx.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;">✏️</button>`:'';
-      return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}</div><div class="tx-meta">${fmtDate(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}${editBtn}</div></div>`;
+      return`<div class="tx-item"><div class="tx-icon">${tx.type==='deposit'?'📥':'📤'}</div><div class="tx-info"><div class="tx-name">${esc(u?.name||tx.uname)}${u?.job?` <span style="font-size:11px;color:var(--text-light)">(${esc(u.job)})</span>`:''}</div><div class="tx-meta">${fmtDate(tx.date)}${tx.note?' · '+esc(tx.note):''}</div></div><div class="${tx.type==='deposit'?'tx-amt-pos':'tx-amt-neg'}" style="display:flex;align-items:center;gap:6px">${tx.type==='deposit'?'+':'−'}৳${tx.amount.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}${editBtn}</div></div>`;
     }).join('');
     histEl.innerHTML = safeHTML(html)||'<p class="muted tc">কোনো লেনদেন নেই</p>';
     histEl.onclick = function(e){
@@ -4214,7 +4242,21 @@ function _doMakePDF(type){
       th,td{padding:5px 6px;border:1px solid #d0e4d8}
       th{background:#1a6b3c!important;color:#fff!important}
       tr:nth-child(even) td{background:#f0f7f3}
-    </style>` + html;
+    
+/* ── Custom date display: force DD-MM-YYYY via wrapper ── */
+.date-display-wrap{position:relative;display:flex;align-items:center;}
+.date-display-wrap input[type="date"]{position:relative;color:transparent;width:100%;}
+.date-display-wrap input[type="date"]:focus{color:var(--text);}
+.date-display-label{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-size:15px;color:var(--text);pointer-events:none;
+  font-family:inherit;letter-spacing:.3px;
+}
+.date-display-wrap input[type="date"]:focus + .date-display-label,
+.date-display-wrap input[type="date"]:active + .date-display-label{
+  display:none;
+}
+</style>` + html;
     overlay.style.display = 'block';
     overlay.scrollTop = 0;
     document.body.style.overflow = 'hidden';
@@ -4959,7 +5001,9 @@ function renderOfficeMealNotesScreen(){
   if(!el) return;
   // Month selector populate করো
   const sel = document.getElementById('ofms-note-month-sel');
-  if(sel) fillHistorySelect(sel);
+  const _prevValNotes = sel ? sel.value : '';
+  if(sel) fillMessCycleSelect(sel, 12);
+  if(sel && sel.value !== _prevValNotes && _prevValNotes) sel.value = _prevValNotes;
   if(sel && !sel.value) sel.value = currentMonthKey;
   const mmKey = sel ? sel.value : messMonthKey();
   if(!mmKey){ el.innerHTML='<p class="muted tc">মাস সিলেক্ট করুন</p>'; return; }
