@@ -25,8 +25,6 @@ let DB = {
 let CU = null;
 let admBuf = {};
 let mealDate = '';
-let currentDetailUser = '';
-let currentDetailMemTab = 'meals';
 
 const LS_USER = 'mq7u';
 
