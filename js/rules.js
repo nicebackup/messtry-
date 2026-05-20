@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════
 // js/rules.js
-// Rules screen, Shortfall entry, Notice popup,
+// Rules screen, Shortfall entry,
 // Meal config (saveCfg — moved from ADMIN block)
 //
 // Load order: AFTER ui.js
@@ -128,14 +128,10 @@ function clearRules(){
     DB.rules.text=''; saveDB(); initRules(); toast('✅ নিয়মাবলী মুছে ফেলা হয়েছে!');
   });
 }
-function showNoticePopup(){
-  if(!DB.notice||!DB.notice.text||!DB.notice.popupEnabled) return;
-  document.getElementById('notice-popup-body').textContent=DB.notice.text;
-  document.getElementById('notice-popup-modal').classList.add('show');
-}
-function closeNoticePopup(){
-  document.getElementById('notice-popup-modal').classList.remove('show');
-}
+// ═══════════════════════════════════════════════
+// showNoticePopup(), closeNoticePopup()
+// Moved to js/notice.js | Extracted: 2026-05-20
+// ═══════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════
 // MEAL CONFIG SAVE — saveCfg()
