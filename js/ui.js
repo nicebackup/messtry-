@@ -268,7 +268,7 @@ function applyDark(force){
 }
 function setTheme(mode){
   const isDark = mode==='night';
-  DB.darkMode = isDark;
+  // Note: darkMode not in GLOBAL_FIELDS — persisted only in localStorage via persistDark()
   applyDark(isDark);
   persistDark(isDark);
   updateThemeBtns();
@@ -285,11 +285,6 @@ function updateThemeBtns(){
     dayBtn.style.background='var(--primary)'; dayBtn.style.color='#fff';
     nightBtn.style.background='transparent'; nightBtn.style.color='var(--text-light)';
   }
-}
-function toggleDark(){
-  const isDark = !document.documentElement.classList.contains('dark-mode');
-  persistDark(isDark);
-  applyDark(isDark);
 }
 
 

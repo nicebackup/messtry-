@@ -144,11 +144,6 @@ function isController(u){ u=u||CU; return u&&(u.role==='controller'||(DB.control
 function isManager(u){ u=u||CU; return u&&(u.role==='manager'||u.role==='controller'||isController(u)); }
 function isManagerOrCtrl(u){ return isManager(u)||isController(u); }
 
-// Async RTDB role check (use when real-time accuracy needed)
-function checkRoleFromRTDB(uid){
-  if(!uid) return Promise.resolve('member');
-  return firebase.database().ref('roles/'+uid).once('value').then(snap=>{ const d=snap.val(); return d?.role||'member'; });
-}
 
 function roleLabel(r,u){
   if(u&&isController(u)) return '⭐ Controller';
@@ -432,7 +427,7 @@ function doRegister(){
       const user = cred.user;
       const uid  = user.uid;
 
-  // Step 2 — Send verification email IMMEDIATELY while the session
+      // Step 2 — Send verification email IMMEDIATELY while the session
       // is fresh and the auth token is 100 % valid.
       // (RTDB writes come AFTER so nothing can race us here.)
       if(!user){ throw new Error('auth/no-current-user'); }

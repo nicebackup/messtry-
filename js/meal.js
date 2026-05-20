@@ -129,11 +129,6 @@ function saveMeal(){
     function(){ DB.meals[CU.u+'_'+mealDate]={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}}; saveDB(); toast('✅ '+mealDate+' মিল সেভ!'); refreshHome(); }
   );
 }
-function fmtMealLine(t,q,v){
-  if(t==='off') return 'off (বন্ধ)';
-  const label=q>1?t+q:t;
-  return `${label} = ${v.toFixed(2)} meals`;
-}
 function mealTypeValue(slot,type,qty,date,utype){
   if(type==='off') return 0;
   if(type==='P') return qty*getCfg(slot,date,utype);
@@ -183,12 +178,6 @@ function mTV(t,m,dateStr,utype){
   if(m.t==='P') return (m.q||1)*getCfg(t,dateStr,utype);
   if(m.t==='Q') return (m.q||1)*getCfg(t,dateStr,utype);
   return 0;
-}
-function dayMeals(uname,dateStr){
-  const meal=DB.meals[uname+'_'+dateStr]; if(!meal) return 0;
-  const u=DB.users.find(x=>x.u===uname);
-  const utype=u?u.type:'inside';
-  return ['b','l','d'].reduce((s,t)=>s+mTV(t,meal[t],dateStr,utype),0);
 }
 
 // ── Meal key index: per-user এর key list একবার build করে cache করি

@@ -36,12 +36,6 @@ function updateDateLabel(inputId){
     lbl.style.display = 'block';
   }
 }
-function initDateLabels(){
-  ['meal-date','dep-date','bz-date','oth-date','adm-dt'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el && el.value) updateDateLabel(id);
-  });
-}
 
 function initBazar(){
   const sel=document.getElementById('bz-month-sel');

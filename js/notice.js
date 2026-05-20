@@ -7,8 +7,8 @@
 //
 // Depends on (all global):
 //   config.js  → DB, CU
-//   utils.js   → isOnline(), noNetPopup(), toast()
-//   db.js      → saveDB()
+//   db.js      → saveDB(), isOnline(), noNetPopup()
+//   inline block → toast()
 //   ui.js      → showModal()
 //   auth.js    → isManagerOrCtrl()
 //

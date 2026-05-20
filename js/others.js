@@ -19,7 +19,6 @@ function initOthers(){
   if(sel) sel.value = _prevOth || currentMonthKey;
   renderOthers();
 }
-function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
 function addOther(){
   if(!isOnline()){ noNetPopup(); return; }
   const descEl=document.getElementById('oth-desc');
@@ -98,8 +97,3 @@ function editOther(id){
     saveDB(); renderOthers(); closeModal(); toast('✅ আপডেট হয়েছে!');
   }, true);
 }
-// বাবুর্চি বিল entry সরানো হয়েছে — ওরা বাজারের সাথেই খায়, আলাদা বিল নেই
-function addCookBill(){ toast('বাবুর্চির আলাদা বিল নেই।'); }
-function renderCookBills(){ /* deprecated */ }
-function delCookBill(id){ /* deprecated */ }
-function editCookBill(id){ /* deprecated */ }

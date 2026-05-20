@@ -11,13 +11,14 @@
 //   config.js  → DB, CU, admBuf, MONTH_FIELDS, monthsRef, currentMonthKey
 //   utils.js   → esc(), safeHTML(), messMonthKey(), messMonthLabel(),
 //                getMessMonth(), getBSTDate(), nextCycleKey(), tod(),
-//                mk(), fmtDate(), fmtTk(), isOnline(), sanitizeInput(),
-//                validName(), validMobile()
-//   core.js    → calcMealRate(), calcMemberOtherShares(), getOfficeMealRate(),
-//                getOfficeMealUsers(), messMonthMeals(), getShortfallMeals(),
-//                getPreBal(), isActiveInMonth(), isOfficeMealUser(),
-//                dateInMessMonth(), invalidateMealRateCache(),
-//                invalidateMealIndex(), homeViewDate
+//                mk(), sanitizeInput(), validName(), validMobile()
+//   db.js      → isOnline(), noNetPopup()
+//   core.js    → getOfficeMealRate(), getOfficeMealUsers(),
+//                isActiveInMonth(), isOfficeMealUser(),
+//                dateInMessMonth(), homeViewDate
+//   meal.js    → calcMealRate(), calcMemberOtherShares(), messMonthMeals(),
+//                getShortfallMeals(), getPreBal(), invalidateMealRateCache(),
+//                invalidateMealIndex(), mTV()
 //   db.js      → saveDB(), saveGlobal(), saveMonth(), noNetPopup(),
 //                _withMonthData(), _getCached(), _cacheMonth()
 //   meal.js    → mTV(), hlPQO(), applyMessCycleBounds()
@@ -115,7 +116,7 @@ function deleteMessCycle(){
       // Current month: DB fields clear করো + save
       DB.meals={}; DB.bazar=[]; DB.others=[]; DB.cookBills=[];
       DB.transactions=[]; DB.mealRates={}; DB.officeMealRates={};
-      DB.officeMealNotes=[]; DB.managers=[];
+      DB.officeMealNotes=[]; DB.managers={};
       saveMonth();
     } else {
       // পুরনো মাস: Firebase-এর month node সরাসরি delete করো
@@ -647,40 +648,6 @@ function toASCII(str){
   const ascii=str.replace(/[^\x00-\x7F]/g,'');
   return ascii.trim()||('['+str.substring(0,6)+']');
 }
-function pdfName(u){ return (u.job||u.u||'?').substring(0,12); }
-function pdfLabel(u){ return toASCII(u.name).substring(0,14)||(u.job||u.u); }
-function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
-  const rh=8;
-  const totalW=colWidths.reduce((a,b)=>a+b,0);
-  let y=startY;
-  // Header
-  doc.setFillColor(26,107,60); doc.rect(margin,y,totalW,rh,'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
-  let x=margin;
-  headers.forEach((h,i)=>{ doc.text(h,x+1.5,y+5.5); x+=colWidths[i]; });
-  y+=rh;
-  // Rows
-  doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-  rows.forEach((row,ri)=>{
-    if(y>274){ doc.addPage(); y=20; }
-    doc.setFillColor(ri%2===0?244:255,ri%2===0?248:255,ri%2===0?244:255);
-    doc.rect(margin,y,totalW,rh,'F');
-    // Cell borders
-    let cx=margin;
-    colWidths.forEach(w=>{ doc.setDrawColor(200,218,208); doc.rect(cx,y,w,rh,'S'); cx+=w; });
-    cx=margin;
-    row.forEach((cell,i)=>{
-      doc.text(String(cell).substring(0,Math.floor(colWidths[i]/1.8)),cx+1.5,y+5.5);
-      cx+=colWidths[i];
-    });
-    y+=rh;
-  });
-  // Outer border
-  doc.setDrawColor(15,69,38); doc.setLineWidth(0.4);
-  doc.rect(margin,startY,totalW,(rows.length+1)*rh,'S');
-  doc.setLineWidth(0.2);
-  return y+4;
-}
 
 function makePDF(type){
   // _withMonthData ব্যবহার করো — cache থাকলে Firebase read হবে না
@@ -875,7 +842,7 @@ function _doMakePDF(type){
         </tr></thead><tbody>`;
       DB.users.forEach((u,ri)=>{
         const m=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-        const bv=mTV('b',m.b,today),lv=mTV('l',m.l,today),dv=mTV('d',m.d,today);
+        const bv=mTV('b',m.b,today,u.type),lv=mTV('l',m.l,today,u.type),dv=mTV('d',m.d,today,u.type);
         const bL=m.b.t==='off'?'-':(m.b.q>1?m.b.t+m.b.q:m.b.t);
         const lL=m.l.t==='off'?'-':(m.l.q>1?m.l.t+m.l.q:m.l.t);
         const dL=m.d.t==='off'?'-':(m.d.q>1?m.d.t+m.d.q:m.d.t);

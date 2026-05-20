@@ -31,7 +31,6 @@ function validName(s){ return s && s.trim().length>=2 && s.trim().length<=60; }
 function validMobile(s){ return /^01[3-9]\d{8}$/.test(s); }
 function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length<=120; }
 function validPass(s){ return s && s.length>=6 && s.length<=100; }
-function validUsername(s){ return s && /^[a-zA-Z0-9_\-\.]{3,30}$/.test(s); }
 function validAmount(v){ return !isNaN(v) && v > 0 && v < 10000000; }
 function sanitizeInput(s){
   return String(s||'').trim().slice(0,200)

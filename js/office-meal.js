@@ -1,8 +1,9 @@
 // ═══════════════════════════════════════════════
 // OFFICE MEAL — MEPL / MPCL
+// Load order: AFTER meal.js (depends on getCfg, mealTypeValue, messMonthMeals)
+//             AFTER bazar.js (depends on fillMessCycleSelect, applyMessCycleBounds)
+// Dead removed: OFFICE_MEAL_USERS const, initOfficeMealCard, getOfficeMealBill
 // ═══════════════════════════════════════════════
-const OFFICE_MEAL_USERS = ['Office MEPL','Office MPCL','mepl','mpcl'];
-
 // isOfficeMealUser(), getOfficeMealUsers(), getOfficeMealRate() → moved to js/shared/core.js
 
 function loadOfficeMealInfo(){
@@ -93,19 +94,6 @@ function renderOfficeMealNotes(){
     </div>`;
   });
   el.innerHTML=safeHTML(html);
-}
-
-function initOfficeMealCard(){
-  const el=document.getElementById('ofm-month');
-  if(el){ fillMessCycleSelect(el); }
-  loadOfficeMealInfo();
-}
-
-// Override getOfficeMealTotalBill — used in report
-function getOfficeMealBill(mmKey){
-  const rate=getOfficeMealRate(mmKey);
-  if(!rate) return 0;
-  return getOfficeMealUsers().reduce((s,u)=>s+messMonthMeals(u.u,mmKey)*rate, 0);
 }
 
 
@@ -283,7 +271,7 @@ function saveOfficeMeal(key){
   const bQ=parseInt(document.getElementById('ofms-qty-'+key+'-b')?.value)||1;
   const lQ=parseInt(document.getElementById('ofms-qty-'+key+'-l')?.value)||1;
   const dQ=parseInt(document.getElementById('ofms-qty-'+key+'-d')?.value)||1;
-  const bv=mealTypeValue('b',bT,bQ,date), lv=mealTypeValue('l',lT,lQ,date), dv=mealTypeValue('d',dT,dQ,date);
+  const bv=mealTypeValue('b',bT,bQ,date,'inside'), lv=mealTypeValue('l',lT,lQ,date,'inside'), dv=mealTypeValue('d',dT,dQ,date,'inside');
   const bLabel=bT==='off'?'off':(bQ>1?bT+bQ:bT);
   const lLabel=lT==='off'?'off':(lQ>1?lT+lQ:lT);
   const dLabel=dT==='off'?'off':(dQ>1?dT+dQ:dT);

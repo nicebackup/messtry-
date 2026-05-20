@@ -6,11 +6,12 @@
 // Load order: AFTER ui.js
 // Depends on (all global, loaded before this file):
 //   config.js  → DB
-//   utils.js   → esc(), safeHTML(), messMonthKey(), isOnline(), noNetPopup(), toast()
-//   db.js      → saveDB(), saveGlobal()
-//   core.js    → messMonthMeals(), getNetMemberMeals(), getShortfallMeals(),
-//               isOfficeMealUser(), invalidateMealRateCache(),
-//               invalidateMealIndex(), invalidateMemberCountsCache()
+//   utils.js   → esc(), safeHTML(), messMonthKey(), toast()
+//   db.js      → saveDB(), saveGlobal(), isOnline(), noNetPopup()
+//   meal.js    → messMonthMeals(), getNetMemberMeals(), getShortfallMeals(),
+//               invalidateMealRateCache(), invalidateMealIndex(),
+//               invalidateMemberCountsCache()
+//   core.js    → isOfficeMealUser()
 //   ui.js      → togRulesCfg(), closeRulesCfgPopup(), showModal()
 //   home.js    → refreshHome() (called via typeof guard — async safe)
 //

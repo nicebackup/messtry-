@@ -40,10 +40,6 @@ function homeShiftDate(delta){
   refreshHome();
 }
 
-function showWhoEatsDate_unused(slot){
-  const viewDate = homeViewDate || tod();
-  showWhoEatsOnDate(slot, viewDate);
-}
 
 function refreshHome(){
   if(!CU) return;
@@ -204,7 +200,6 @@ function showWhoEatsOnDate(slot, dateStr){
   sec('whoeats');
 }
 function showWhoEats(slot){ showWhoEatsDate(slot); }
-function switchWeTab(slot){ showWhoEatsDate(slot); }
 
 function setWeView(v){
   _weView = v;
@@ -279,7 +274,6 @@ function _renderWeGrid(){
   }).join('');
 }
 
-function renderWeScreen(){ /* legacy no-op */ }
 
 // ── PDF Export (Plant only, 3-column grid, A4) ──
 function exportWhoEatsPDF(){
@@ -332,5 +326,4 @@ function exportWhoEatsPDF(){
   toast('PDF ডাউনলোড হচ্ছে!');
 }
 
-function exportWhoEatsCSV(){ /* replaced by PDF */ }
 function closeWhoEats(){ goHome(); }
