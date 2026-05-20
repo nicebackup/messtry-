@@ -23,8 +23,8 @@
 function loadReport(forceRefresh=false){
   const mmKey=document.getElementById('rpt-month').value; if(!mmKey) return;
   const rptEl=document.getElementById('rpt-rows'); // ✅ সঠিক element (rpt-content নেই)
-  // current month-এ _withMonthData forceRefresh ignore করে, তাই আগেই cache clear করো
-  if(forceRefresh){ invalidateMealRateCache(); invalidateMemberCountsCache(); }
+  // current month-এ _withMonthData forceRefresh ignore করে, তাই আগেই সব cache clear করো
+  if(forceRefresh){ invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache(); }
   _withMonthData(mmKey, rptEl, ()=>_doLoadReport(mmKey), forceRefresh);
 }
 
