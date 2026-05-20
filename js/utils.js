@@ -190,9 +190,15 @@ function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
     if(loadingEl) loadingEl.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
     return;
   }
-  if(mmKey === currentMonthKey && !forceRefresh){
+  if(mmKey === currentMonthKey){
     _histViewMode = false;
-    renderFn();
+    if(!forceRefresh){ renderFn(); return; }
+    // forceRefresh: DB-তেই current data আছে — snapshot নিয়ে _swapAndRender চালাও
+    // (past month এর মত লোড হচ্ছে দেখাও, তারপর render)
+    if(loadingEl) loadingEl.innerHTML='<p class="muted tc" style="padding:24px 0">⏳ লোড হচ্ছে...</p>';
+    const snap = {};
+    MONTH_FIELDS.forEach(f=>{ snap[f]=DB[f]; });
+    setTimeout(()=>{ _swapAndRender(snap, renderFn); }, 50);
     return;
   }
   // Past month — cache check (forceRefresh হলে cache bypass করো)
