@@ -190,7 +190,7 @@ function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
     if(loadingEl) loadingEl.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
     return;
   }
-  if(mmKey === currentMonthKey){
+  if(mmKey === currentMonthKey && !forceRefresh){
     _histViewMode = false;
     renderFn();
     return;
@@ -207,8 +207,9 @@ function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
   if(loadingEl) loadingEl.innerHTML='<p class="muted tc" style="padding:24px 0">⏳ লোড হচ্ছে...</p>';
   monthsRef.child(mmKey).once('value').then(snap=>{
     const hist = snap.val()||{};
-    _cacheMonth(mmKey, hist);
-    _histViewMode = true;
+    const isCurrent = (mmKey === currentMonthKey);
+    if(!isCurrent) _cacheMonth(mmKey, hist); // current month cache করবো না
+    _histViewMode = !isCurrent;
     _swapAndRender(hist, renderFn);
     _histViewMode = false;
   }).catch(e=>{
@@ -217,4 +218,3 @@ function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
   });
 }
 
-  
