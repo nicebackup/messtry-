@@ -389,7 +389,7 @@ function loadEditMem(){
   document.getElementById('edit-mem-mob').value=u.mob||'';
   document.getElementById('edit-mem-job').value=u.job||'';
   document.getElementById('edit-mem-type').value=u.type||'inside';
-  document.getElementById('edit-mem-joined').value=u.joined||'';
+  document.getElementById('edit-mem-joined').textContent=u.joined||'—';
 }
 function saveEditMem(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -400,15 +400,14 @@ function saveEditMem(){
   const newMob=sanitizeInput(document.getElementById('edit-mem-mob').value);
   const newJob=sanitizeInput(document.getElementById('edit-mem-job').value).slice(0,30);
   const newType=document.getElementById('edit-mem-type').value;
-  const newJoined=document.getElementById('edit-mem-joined').value;
   if(newName && !validName(newName)){ toast('❌ নাম সঠিক নয়!'); return; }
   if(newMob && !validMobile(newMob)){ toast('❌ মোবাইল নম্বর সঠিক নয়!'); return; }
   if(newName) u.name=newName;
   u.room=newRoom;
   if(newMob) u.mob=newMob;
   u.job=newJob;
+  // joined ও activeFrom edit করা নিষিদ্ধ — registration-এ set হয়, পরে অপরিবর্তনীয়
   if(['inside','outside','cook'].includes(newType)) u.type=newType;
-  if(newJoined) u.joined=newJoined;
 
   saveDB();
 
