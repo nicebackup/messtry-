@@ -144,6 +144,11 @@ function isController(u){ u=u||CU; return u&&(u.role==='controller'||(DB.control
 function isManager(u){ u=u||CU; return u&&(u.role==='manager'||u.role==='controller'||isController(u)); }
 function isManagerOrCtrl(u){ return isManager(u)||isController(u); }
 
+// Async RTDB role check (use when real-time accuracy needed)
+function checkRoleFromRTDB(uid){
+  if(!uid) return Promise.resolve('member');
+  return firebase.database().ref('roles/'+uid).once('value').then(snap=>{ const d=snap.val(); return d?.role||'member'; });
+}
 
 function roleLabel(r,u){
   if(u&&isController(u)) return '⭐ Controller';
@@ -272,9 +277,11 @@ function doLogin(){
         CU = { uid, u: userData.u||uid, name: userData.name, mob: userData.mobile||userData.mob||'', email: fbUser.email, job: userData.jobId||userData.job||'', room: userData.room||'', role, type: userData.type||'inside', joined: userData.createdAt||userData.joined||tod(), emailVerified: true };
         // Sync into DB.users so meal/bazar/role checks work
         if(DB.users){
-          const idx=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
+          // 🔴 DB.users sync: _waitUntilReady-এর পরে করো
+        //    DB load হওয়ার আগে idx খুঁজলে -1 পাবে → ভুল push হবে
+        //    তাই এখানে শুধু role sync — user sync নিচে _waitUntilReady-এ
+        const idx=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
           if(idx>=0){
-            // ✅ FIX: শুধু auth fields copy করো — profile ও balance messData থেকে নাও
             DB.users[idx].uid           = uid;
             DB.users[idx].role          = role;
             DB.users[idx].emailVerified = true;
@@ -284,17 +291,15 @@ function doLogin(){
             CU.job        = DB.users[idx].job         || CU.job;
             CU.prevBalance= DB.users[idx].prevBalance !== undefined ? DB.users[idx].prevBalance : 0;
             CU.type       = DB.users[idx].type        || CU.type;
-          } else {
-            DB.users.push({...CU});
-            const ni = DB.users.length-1;
-            globalRef.child('users/'+ni).set({...CU}).catch(()=>{});
           }
+          // ⚠️ idx === -1 হলে এখানে push করবো না
+          // _waitUntilReady-এ DB পুরো লোড হওয়ার পর আবার চেক করবো
         }
         // Auto-fix bad role value in RTDB if needed
         if(roleData?.role !== role){ firebase.database().ref('roles/'+uid).set({role}).catch(()=>{}); firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{}); }
         if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
         _waitUntilReady(()=>{
-          // ✅ DB load হওয়ার পর CU আবার sync
+          // ✅ DB পুরো load হওয়ার পর CU sync
           const si=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
           if(si>=0){
             DB.users[si].uid=uid; DB.users[si].role=role;
@@ -302,6 +307,13 @@ function doLogin(){
             CU.name = DB.users[si].name || CU.name;
             CU.room = DB.users[si].room || CU.room;
             CU.job  = DB.users[si].job  || CU.job;
+          } else {
+            // DB load হওয়ার পরেও user নেই → সত্যিকারের নতুন entry
+            // এখন push করা safe কারণ DB.users সম্পূর্ণ লোড হয়েছে
+            DB.users.push({...CU});
+            const ni = DB.users.length-1;
+            globalRef.child('users/'+ni).set({...CU}).catch(()=>{});
+            console.log('[auth] New user added to DB.users after full load:', CU.u);
           }
           refreshHome(); showSc('home');
           setTimeout(()=>showNoticePopup(), 600);

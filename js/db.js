@@ -102,12 +102,24 @@ window.addEventListener('offline', ()=>{
 
 // ── Global save: users, cfg, controllers, notice, siteNote, rules, shortfall, prevBalances, handoverDone ──
 let _globalSaveTimer = null;
+// ── সর্বনিম্ন কতজন user থাকতে হবে — এর কম হলে save BLOCK ──
+let _minUserCount = 0; // loadDB-এ set হবে
+
 function saveGlobal(){
   if(!_dbLoaded) return;
   if(_globalSaveTimer) clearTimeout(_globalSaveTimer);
   _globalSaveTimer = setTimeout(()=>{
     const _sv=new Set();
     DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
+
+    // 🔴 CRITICAL GUARD: user list আগের চেয়ে কমে গেলে save block করো
+    if(_minUserCount > 0 && DB.users.length < _minUserCount){
+      console.error('[saveGlobal BLOCKED] DB.users='+DB.users.length+' কিন্তু expected ≥'+_minUserCount+'. Race condition detected — save cancelled.');
+      return;
+    }
+    // সফল save হলে min count আপডেট করো
+    if(DB.users.length > 0) _minUserCount = DB.users.length;
+
     const data={};
     GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
     globalRef.set(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
@@ -410,6 +422,11 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
+        // 🔴 Firebase থেকে আসা user count-ই সর্বোচ্চ সত্য
+        // এর চেয়ে কম দিয়ে কখনো save করা যাবে না
+        if(Array.isArray(data.users) && data.users.length > _minUserCount){
+          _minUserCount = data.users.length;
+        }
         _supplementGlobalFields();
       } else {
         migrateDB();
