@@ -1310,9 +1310,10 @@ try{
 <script src="js/deposit.js"></script>
 <script src="js/helpers.js"></script>
 <script>
-// ── Bootstrap: start Firebase DB listeners in parallel with auth observer ──
-// loadDB() must fire at parse time — same as auth.onAuthStateChanged in auth.js
-loadDB();
+// ── Bootstrap ──
+// loadDB() is now called from auth.js AFTER Firebase Auth confirms the user.
+// This ensures Firebase Security Rules (auth != null) work correctly.
+// Do NOT call loadDB() here.
 
 // ── Init Save ID on page load ──
 document.addEventListener('DOMContentLoaded', initSaveId);
