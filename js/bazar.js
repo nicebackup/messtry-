@@ -36,19 +36,26 @@ function updateDateLabel(inputId){
     lbl.style.display = 'block';
   }
 }
+function initDateLabels(){
+  ['meal-date','dep-date','bz-date','oth-date','adm-dt'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.value) updateDateLabel(id);
+  });
+}
 
 function initBazar(){
   const sel=document.getElementById('bz-month-sel');
   const _prevBz = sel ? sel.value : '';
   fillHistorySelect(sel);
-  if(sel) sel.value = _prevBz || currentMonthKey;
+  // ইতিহাস auto-load বন্ধ — user মাস select করলে দেখাবে (report-এর মতো)
+  if(sel) sel.value = _prevBz || '';
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
   applyMessCycleBounds('bz-date', sel ? sel.value : null);
   const mgr=isManagerOrCtrl();
   document.getElementById('bazar-form-wrap').style.display=mgr?'block':'none';
   document.getElementById('bazar-readonly-notice').style.display='none';
   document.getElementById('bazar-header-sub').textContent=mgr?'Bazar Entry':'ইতিহাস দেখুন';
-  renderBazar();
+  renderBazar(); // খালি selection → placeholder দেখাবে
 }
 function addBazar(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -72,6 +79,12 @@ function addBazar(){
 function renderBazar(){
   const m=document.getElementById('bz-month-sel').value;
   const list=document.getElementById('bz-list');
+  if(!m){
+    if(list) list.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
+    const totalEl=document.getElementById('bz-total');
+    if(totalEl) totalEl.textContent='';
+    return;
+  }
   const totalEl=document.getElementById('bz-total');
   applyMessCycleBounds('bz-date', m);
   _withMonthData(m, list, ()=>{

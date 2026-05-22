@@ -19,6 +19,7 @@ function initOthers(){
   if(sel) sel.value = _prevOth || currentMonthKey;
   renderOthers();
 }
+function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
 function addOther(){
   if(!isOnline()){ noNetPopup(); return; }
   const descEl=document.getElementById('oth-desc');
@@ -43,6 +44,11 @@ function renderOthers(){
   const m=sel&&sel.value;
   const list=document.getElementById('oth-list');
   const totalEl=document.getElementById('oth-total');
+  if(!m){
+    if(list) list.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
+    if(totalEl) totalEl.textContent='';
+    return;
+  }
   applyMessCycleBounds('oth-date', m);
   _withMonthData(m, list, ()=>{
     const items=DB.others.filter(o=>dateInMessMonth(o.date,m)).sort((a,b)=>b.date.localeCompare(a.date));
@@ -97,3 +103,8 @@ function editOther(id){
     saveDB(); renderOthers(); closeModal(); toast('✅ আপডেট হয়েছে!');
   }, true);
 }
+// বাবুর্চি বিল entry সরানো হয়েছে — ওরা বাজারের সাথেই খায়, আলাদা বিল নেই
+function addCookBill(){ toast('বাবুর্চির আলাদা বিল নেই।'); }
+function renderCookBills(){ /* deprecated */ }
+function delCookBill(id){ /* deprecated */ }
+function editCookBill(id){ /* deprecated */ }
