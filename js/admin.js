@@ -11,14 +11,13 @@
 //   config.js  → DB, CU, admBuf, MONTH_FIELDS, monthsRef, currentMonthKey
 //   utils.js   → esc(), safeHTML(), messMonthKey(), messMonthLabel(),
 //                getMessMonth(), getBSTDate(), nextCycleKey(), tod(),
-//                mk(), sanitizeInput(), validName(), validMobile()
-//   db.js      → isOnline(), noNetPopup()
-//   core.js    → getOfficeMealRate(), getOfficeMealUsers(),
-//                isActiveInMonth(), isOfficeMealUser(),
-//                dateInMessMonth(), homeViewDate
-//   meal.js    → calcMealRate(), calcMemberOtherShares(), messMonthMeals(),
-//                getShortfallMeals(), getPreBal(), invalidateMealRateCache(),
-//                invalidateMealIndex(), mTV()
+//                mk(), fmtDate(), fmtTk(), isOnline(), sanitizeInput(),
+//                validName(), validMobile()
+//   core.js    → calcMealRate(), calcMemberOtherShares(), getOfficeMealRate(),
+//                getOfficeMealUsers(), messMonthMeals(), getShortfallMeals(),
+//                getPreBal(), isActiveInMonth(), isOfficeMealUser(),
+//                dateInMessMonth(), invalidateMealRateCache(),
+//                invalidateMealIndex(), homeViewDate
 //   db.js      → saveDB(), saveGlobal(), saveMonth(), noNetPopup(),
 //                _withMonthData(), _getCached(), _cacheMonth()
 //   meal.js    → mTV(), hlPQO(), applyMessCycleBounds()
@@ -116,7 +115,7 @@ function deleteMessCycle(){
       // Current month: DB fields clear করো + save
       DB.meals={}; DB.bazar=[]; DB.others=[]; DB.cookBills=[];
       DB.transactions=[]; DB.mealRates={}; DB.officeMealRates={};
-      DB.officeMealNotes=[]; DB.managers={};
+      DB.officeMealNotes=[]; DB.managers=[];
       saveMonth();
     } else {
       // পুরনো মাস: Firebase-এর month node সরাসরি delete করো
@@ -340,7 +339,7 @@ function setManager(){
   if(!DB.managers[month].includes(uname)) DB.managers[month].push(uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u && u.role==='member'){ u.role='manager'; syncRole(uname,'manager'); }
-  saveDB(); renderManagerInfo();
+  saveDB(); saveUsers(); renderManagerInfo();
   const sel=document.getElementById('mgr-remove');
   sel.innerHTML='<option value="">-- ম্যানেজার নির্বাচন --</option>';
   (DB.managers[month]||[]).forEach(u=>{ const usr=DB.users.find(x=>x.u===u); if(usr) sel.innerHTML+=`<option value="${esc(u)}">${esc(usr.name)}</option>`; });
@@ -353,7 +352,7 @@ function removeManager(){
   if(DB.managers[month]) DB.managers[month]=DB.managers[month].filter(u=>u!==uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u && u.role==='manager'){ u.role='member'; syncRole(uname,'member'); }
-  saveDB(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
+  saveDB(); saveUsers(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
 // saveCfg() — moved to js/rules.js (rules screen function, misplaced in ADMIN)
 // Extracted: 2026-05-19 | Original lines: 2509–2536
@@ -389,7 +388,7 @@ function loadEditMem(){
   document.getElementById('edit-mem-mob').value=u.mob||'';
   document.getElementById('edit-mem-job').value=u.job||'';
   document.getElementById('edit-mem-type').value=u.type||'inside';
-  document.getElementById('edit-mem-joined').textContent=u.joined||'—';
+  document.getElementById('edit-mem-joined').value=u.joined||'';
 }
 function saveEditMem(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -400,14 +399,15 @@ function saveEditMem(){
   const newMob=sanitizeInput(document.getElementById('edit-mem-mob').value);
   const newJob=sanitizeInput(document.getElementById('edit-mem-job').value).slice(0,30);
   const newType=document.getElementById('edit-mem-type').value;
+  const newJoined=document.getElementById('edit-mem-joined').value;
   if(newName && !validName(newName)){ toast('❌ নাম সঠিক নয়!'); return; }
   if(newMob && !validMobile(newMob)){ toast('❌ মোবাইল নম্বর সঠিক নয়!'); return; }
   if(newName) u.name=newName;
   u.room=newRoom;
   if(newMob) u.mob=newMob;
   u.job=newJob;
-  // joined ও activeFrom edit করা নিষিদ্ধ — registration-এ set হয়, পরে অপরিবর্তনীয়
   if(['inside','outside','cook'].includes(newType)) u.type=newType;
+  if(newJoined) u.joined=newJoined;
 
   saveDB();
 
@@ -647,6 +647,40 @@ function toASCII(str){
   const ascii=str.replace(/[^\x00-\x7F]/g,'');
   return ascii.trim()||('['+str.substring(0,6)+']');
 }
+function pdfName(u){ return (u.job||u.u||'?').substring(0,12); }
+function pdfLabel(u){ return toASCII(u.name).substring(0,14)||(u.job||u.u); }
+function pdfDrawTable(doc, headers, rows, startY, colWidths, margin){
+  const rh=8;
+  const totalW=colWidths.reduce((a,b)=>a+b,0);
+  let y=startY;
+  // Header
+  doc.setFillColor(26,107,60); doc.rect(margin,y,totalW,rh,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  let x=margin;
+  headers.forEach((h,i)=>{ doc.text(h,x+1.5,y+5.5); x+=colWidths[i]; });
+  y+=rh;
+  // Rows
+  doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  rows.forEach((row,ri)=>{
+    if(y>274){ doc.addPage(); y=20; }
+    doc.setFillColor(ri%2===0?244:255,ri%2===0?248:255,ri%2===0?244:255);
+    doc.rect(margin,y,totalW,rh,'F');
+    // Cell borders
+    let cx=margin;
+    colWidths.forEach(w=>{ doc.setDrawColor(200,218,208); doc.rect(cx,y,w,rh,'S'); cx+=w; });
+    cx=margin;
+    row.forEach((cell,i)=>{
+      doc.text(String(cell).substring(0,Math.floor(colWidths[i]/1.8)),cx+1.5,y+5.5);
+      cx+=colWidths[i];
+    });
+    y+=rh;
+  });
+  // Outer border
+  doc.setDrawColor(15,69,38); doc.setLineWidth(0.4);
+  doc.rect(margin,startY,totalW,(rows.length+1)*rh,'S');
+  doc.setLineWidth(0.2);
+  return y+4;
+}
 
 function makePDF(type){
   // _withMonthData ব্যবহার করো — cache থাকলে Firebase read হবে না
@@ -841,7 +875,7 @@ function _doMakePDF(type){
         </tr></thead><tbody>`;
       DB.users.forEach((u,ri)=>{
         const m=DB.meals[u.u+'_'+today]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-        const bv=mTV('b',m.b,today,u.type),lv=mTV('l',m.l,today,u.type),dv=mTV('d',m.d,today,u.type);
+        const bv=mTV('b',m.b,today),lv=mTV('l',m.l,today),dv=mTV('d',m.d,today);
         const bL=m.b.t==='off'?'-':(m.b.q>1?m.b.t+m.b.q:m.b.t);
         const lL=m.l.t==='off'?'-':(m.l.q>1?m.l.t+m.l.q:m.l.t);
         const dL=m.d.t==='off'?'-':(m.d.q>1?m.d.t+m.d.q:m.d.t);

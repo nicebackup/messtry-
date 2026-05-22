@@ -6,9 +6,7 @@
 // loadDB() is called from app.js bootstrap — NOT here
 // ═══════════════════════════════════════════════
 
-let _dbLoaded = false;   // Guard: Firebase load না হওয়া পর্যন্ত save block
-let _loadStarted = false; // Guard: loadDB() একবারের বেশি চলবে না
-let _minUserCount = 0;    // Firebase থেকে আসা সর্বোচ্চ user count — এর কম দিয়ে save করা নিষিদ্ধ
+let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
 // ── Splash logic — simple ──
 const _wasAuthed = localStorage.getItem('mq_authed') === '1';
@@ -104,23 +102,39 @@ window.addEventListener('offline', ()=>{
 
 // ── Global save: users, cfg, controllers, notice, siteNote, rules, shortfall, prevBalances, handoverDone ──
 let _globalSaveTimer = null;
+// ── users count guard ──
+let _minUserCount = 0;
+let _userSaveTimer = null;
+
 function saveGlobal(){
   if(!_dbLoaded) return;
   if(_globalSaveTimer) clearTimeout(_globalSaveTimer);
   _globalSaveTimer = setTimeout(()=>{
-    const _sv=new Set();
-    DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
+    // ⚠️ users এখানে SAVE হয় না — শুধু saveUsers() দিয়ে save হবে
+    // globalRef.update() ব্যবহার করায় Firebase-এর users array কখনো overwrite হবে না
+    const data={};
+    GLOBAL_FIELDS.forEach(f=>{ if(f!=='users' && DB[f]!==undefined) data[f]=DB[f]; });
+    globalRef.update(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
+  }, 400);
+}
 
-    // 🔴 CRITICAL: Firebase থেকে আসা user count-এর চেয়ে কম দিয়ে save করা নিষিদ্ধ
-    if(_minUserCount > 0 && DB.users.length < _minUserCount){
-      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected '+_minUserCount+' — race condition, save cancelled.');
+// ── users আলাদাভাবে save — guard সহ ──
+function saveUsers(){
+  if(!_dbLoaded) return;
+  if(_userSaveTimer) clearTimeout(_userSaveTimer);
+  _userSaveTimer = setTimeout(()=>{
+    // Deduplicate
+    const seen=new Set();
+    const deduped=DB.users.filter(u=>{ if(!u.u||seen.has(u.u)) return false; seen.add(u.u); return true; });
+    // Guard: Firebase-এর চেয়ে কম হলে block
+    if(_minUserCount>0 && deduped.length<_minUserCount){
+      console.error('[saveUsers BLOCKED] '+deduped.length+' < '+_minUserCount);
       return;
     }
-    if(DB.users.length > 0) _minUserCount = Math.max(_minUserCount, DB.users.length);
-
-    const data={};
-    GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
-    globalRef.set(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
+    _minUserCount=Math.max(_minUserCount, deduped.length);
+    DB.users=deduped;
+    globalRef.child('users').set(deduped)
+      .catch(e=>{ console.error('Users save error:',e); toast('⚠️ সদস্য তথ্য সেভে সমস্যা!'); });
   }, 400);
 }
 
@@ -364,8 +378,7 @@ function _supplementGlobalFields(){
 
 // Real-time listener — দুটো listener: global + current mess month
 function loadDB(){
-  if(_loadStarted){ console.log('[loadDB] already started — skipped'); return; }
-  _loadStarted = true;
+  
 
   currentMonthKey = messMonthKey();
   currentMonthRef = monthsRef.child(currentMonthKey);
@@ -421,9 +434,9 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
-        // Firebase-এ যতজন আছে সেটাই সত্য — এর কম দিয়ে কখনো save করবো না
-        if(Array.isArray(data.users) && data.users.length > _minUserCount){
-          _minUserCount = data.users.length;
+        // Firebase-এ যতজন আছে সেটাই সত্য
+        if(Array.isArray(data.users) && data.users.length>_minUserCount){
+          _minUserCount=data.users.length;
         }
         _supplementGlobalFields();
       } else {
