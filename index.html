@@ -1311,9 +1311,11 @@ try{
 <script src="js/helpers.js"></script>
 <script>
 // ── Bootstrap ──
-// loadDB() is now called from auth.js AFTER Firebase Auth confirms the user.
-// This ensures Firebase Security Rules (auth != null) work correctly.
-// Do NOT call loadDB() here.
+// Firebase Auth ready হওয়ার পরে loadDB() call হবে
+// onAuthStateChanged → logged in → loadDB() → DB listeners start
+firebase.auth().onAuthStateChanged(function(user){
+  if(user){ loadDB(); }
+});
 
 // ── Init Save ID on page load ──
 document.addEventListener('DOMContentLoaded', initSaveId);
