@@ -30,15 +30,12 @@ let _registrationInProgress = false;
 
 auth.onAuthStateChanged(fbUser=>{
   if(!fbUser){
-    // Not logged in — auth ছাড়া DB load করার দরকার নেই
+    // Not logged in
     hideSplash();
     CU = null;
     showSc('login');
     return;
   }
-
-  // ✅ AUTH SUCCESS — এখন DB load করা safe (auth != null rules কাজ করবে)
-  loadDB();
   if(!fbUser.emailVerified){
     // If registration is actively in progress, do NOT sign out —
     // the doRegister() function controls sign-out itself after
@@ -293,9 +290,14 @@ function doLogin(){
             CU.prevBalance= DB.users[idx].prevBalance !== undefined ? DB.users[idx].prevBalance : 0;
             CU.type       = DB.users[idx].type        || CU.type;
           } else {
-            DB.users.push({...CU});
-            const ni = DB.users.length-1;
-            globalRef.child('users/'+ni).set({...CU}).catch(()=>{});
+            // Duplicate check
+            if(!DB.users.find(x=>x.u===CU.u)){
+              DB.users.push({...CU});
+              const ni = DB.users.length-1;
+              globalRef.child('users/'+ni).set({...CU}).catch(()=>{});
+            } else {
+              console.warn('[auth] User already exists in DB.users:', CU.u);
+            }
           }
         }
         // Auto-fix bad role value in RTDB if needed
@@ -449,9 +451,14 @@ function doRegister(){
       // Step 4 — Mirror into local DB cache AND write directly to messData
       if(!DB.users) DB.users=[];
       const newUser = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), emailVerified: false, activeFrom: messMonthKey() };
-      DB.users.push(newUser);
-      const newIdx = DB.users.length - 1;
-      globalRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
+      // Duplicate check — একই user দুবার যেন না ঢোকে
+      if(!DB.users.find(x=>x.u===newUser.u)){
+        DB.users.push(newUser);
+        const newIdx = DB.users.length - 1;
+        globalRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
+      } else {
+        console.warn('[auth] User already in DB.users, skipping push:', newUser.u);
+      }
 
       // Step 5 — Show success, then sign out cleanly
       ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';

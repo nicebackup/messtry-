@@ -238,6 +238,7 @@ function sec(s){
     initRules(); showSc('rules'); return;
   }
   if(s==='whoeats'){ showSc('whoeats'); return; }
+  if(s==='mealhistory'){ showSc('mealhistory'); return; }
 }
 
 
@@ -268,7 +269,7 @@ function applyDark(force){
 }
 function setTheme(mode){
   const isDark = mode==='night';
-  // Note: darkMode not in GLOBAL_FIELDS — persisted only in localStorage via persistDark()
+  DB.darkMode = isDark;
   applyDark(isDark);
   persistDark(isDark);
   updateThemeBtns();
@@ -285,6 +286,11 @@ function updateThemeBtns(){
     dayBtn.style.background='var(--primary)'; dayBtn.style.color='#fff';
     nightBtn.style.background='transparent'; nightBtn.style.color='var(--text-light)';
   }
+}
+function toggleDark(){
+  const isDark = !document.documentElement.classList.contains('dark-mode');
+  persistDark(isDark);
+  applyDark(isDark);
 }
 
 

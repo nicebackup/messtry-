@@ -6,9 +6,7 @@
 // loadDB() is called from app.js bootstrap — NOT here
 // ═══════════════════════════════════════════════
 
-let _dbLoaded = false;   // Guard: Firebase load না হওয়া পর্যন্ত save block
-let _loadStarted = false; // Guard: loadDB() একবারের বেশি চলবে না
-let _minUserCount = 0;    // Firebase থেকে আসা সর্বোচ্চ user count — এর কম দিয়ে save করা নিষিদ্ধ
+let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
 // ── Splash logic — simple ──
 const _wasAuthed = localStorage.getItem('mq_authed') === '1';
@@ -104,20 +102,21 @@ window.addEventListener('offline', ()=>{
 
 // ── Global save: users, cfg, controllers, notice, siteNote, rules, shortfall, prevBalances, handoverDone ──
 let _globalSaveTimer = null;
+let _minUserCount = 0; // Firebase থেকে আসা সর্বোচ্চ user count
+
 function saveGlobal(){
   if(!_dbLoaded) return;
   if(_globalSaveTimer) clearTimeout(_globalSaveTimer);
   _globalSaveTimer = setTimeout(()=>{
+    // Dedup
     const _sv=new Set();
     DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
-
-    // 🔴 CRITICAL: Firebase থেকে আসা user count-এর চেয়ে কম দিয়ে save করা নিষিদ্ধ
-    if(_minUserCount > 0 && DB.users.length < _minUserCount){
-      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected '+_minUserCount+' — race condition, save cancelled.');
+    // Guard: Firebase-এর চেয়ে কম user দিয়ে save করবো না
+    if(_minUserCount>0 && DB.users.length<_minUserCount){
+      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount);
       return;
     }
-    if(DB.users.length > 0) _minUserCount = Math.max(_minUserCount, DB.users.length);
-
+    if(DB.users.length>0) _minUserCount=Math.max(_minUserCount, DB.users.length);
     const data={};
     GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
     globalRef.set(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
@@ -364,8 +363,7 @@ function _supplementGlobalFields(){
 
 // Real-time listener — দুটো listener: global + current mess month
 function loadDB(){
-  if(_loadStarted){ console.log('[loadDB] already started — skipped'); return; }
-  _loadStarted = true;
+  
 
   currentMonthKey = messMonthKey();
   currentMonthRef = monthsRef.child(currentMonthKey);
@@ -421,9 +419,9 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
-        // Firebase-এ যতজন আছে সেটাই সত্য — এর কম দিয়ে কখনো save করবো না
-        if(Array.isArray(data.users) && data.users.length > _minUserCount){
-          _minUserCount = data.users.length;
+        // Firebase-এর user count track করো
+        if(Array.isArray(data.users) && data.users.length>_minUserCount){
+          _minUserCount=data.users.length;
         }
         _supplementGlobalFields();
       } else {

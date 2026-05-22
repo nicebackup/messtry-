@@ -40,6 +40,10 @@ function homeShiftDate(delta){
   refreshHome();
 }
 
+function showWhoEatsDate_unused(slot){
+  const viewDate = homeViewDate || tod();
+  showWhoEatsOnDate(slot, viewDate);
+}
 
 function refreshHome(){
   if(!CU) return;
@@ -110,64 +114,75 @@ function refreshHome(){
 // ═══════════════════════════════════════════════
 function showMyMealHistory(){
   if(!CU) return;
-  const mmKey=messMonthKey();
-  const {pm}=calcMealRate(mmKey);
-  const modal=document.getElementById('meal-hist-modal');
-  const body=document.getElementById('meal-hist-body');
+  const mmKey = messMonthKey();
+  const {pm} = calcMealRate(mmKey);
+  const body = document.getElementById('meal-hist-body');
+  const lbl  = document.getElementById('meal-hist-cycle-label');
 
-  // Collect all dates in this mess month for this user
-  const dates=[];
-  Object.keys(DB.meals).forEach(k=>{
-    if(!k.startsWith(CU.u+'_')) return;
-    const dateStr=k.slice(CU.u.length+1);
-    if(dateInMessMonth(dateStr,mmKey)) dates.push(dateStr);
-  });
-  dates.sort();
+  // Cycle label
+  if(lbl) lbl.textContent = messMonthLabel();
 
-  const monthLabel=messMonthLabel();
-  let html=`<div style="font-size:12px;color:var(--text-light);margin-bottom:10px">${monthLabel}</div>`;
-
-  if(!dates.length){
-    html+='<p class="muted tc" style="padding:20px 0">এই মাসে কোনো মিল নেই</p>';
-  } else {
-    let grand=0;
-    html+=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="background:var(--primary);color:#fff">
-        <th style="padding:8px 6px;text-align:left;font-weight:600">তারিখ</th>
-        <th style="text-align:center;padding:8px 4px">সকাল</th>
-        <th style="text-align:center;padding:8px 4px">দুপুর</th>
-        <th style="text-align:center;padding:8px 4px">রাত</th>
-        <th style="text-align:right;padding:8px 6px">মোট</th>
-      </tr></thead><tbody>`;
-    dates.forEach((d,ri)=>{
-      const meal=DB.meals[CU.u+'_'+d]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
-      const bv=mTV('b',meal.b,d,CU&&CU.type), lv=mTV('l',meal.l,d,CU&&CU.type), dv=mTV('d',meal.d,d,CU&&CU.type);
-      grand+=bv+lv+dv;
-      const fmtCell=(mv,slot_m)=>{
-        if(!slot_m||slot_m.t==='off') return `<td style="text-align:center;color:var(--text-light);padding:7px 4px;font-size:11px">—</td>`;
-        const lbl=slot_m.t+((slot_m.q||1)>1?(slot_m.q||1):'');
-        const c=slot_m.t==='P'?'var(--success)':'var(--info)';
-        return `<td style="text-align:center;padding:7px 4px"><span style="color:${c};font-weight:700;font-size:12px">${lbl}</span></td>`;
-      };
-      const bg=ri%2===0?'var(--bg)':'transparent';
-      html+=`<tr style="background:${bg};border-top:1px solid var(--border)">
-        <td style="padding:7px 6px;font-size:12px;color:var(--text-light)">${d.slice(8)+'/'+d.slice(5,7)}</td>
-        ${fmtCell(bv,meal.b)}${fmtCell(lv,meal.l)}${fmtCell(dv,meal.d)}
-        <td style="text-align:right;padding:7px 6px;font-weight:700;color:var(--primary)">${(bv+lv+dv).toFixed(2)}</td>
-      </tr>`;
-    });
-    html+=`</tbody><tfoot><tr style="background:var(--primary);color:#fff;font-weight:700">
-      <td colspan="4" style="padding:8px 6px">সর্বমোট</td>
-      <td style="text-align:right;padding:8px 6px">${grand.toFixed(2)}</td>
-    </tr></tfoot></table></div>`;
-    // Bill estimate
-    html+=`<div style="margin-top:14px;padding:12px;background:var(--success-light);border-radius:10px;border:1px solid #c8e6c9">
-      <div style="font-size:12px;color:var(--text-light)">আনুমানিক মিল বিল (রেট ৳${pm.toFixed(2)})</div>
-      <div style="font-size:20px;font-weight:700;color:var(--success);margin-top:4px">৳ ${(grand*pm).toFixed(2)}</div>
-    </div>`;
+  // Cycle-এর সব দিন generate করো (11 থেকে পরের মাসের 10 পর্যন্ত)
+  const {y, m} = getMessMonth();
+  const allDates = [];
+  const start = new Date(y, m, 11);  // cycle start
+  const end   = new Date(y, m+1, 10); // cycle end
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const iso = d.toISOString().slice(0,10);
+    allDates.push(iso);
   }
+
+  let grand = 0;
+  // ── Ultra compact table ──
+  let rows = '';
+  allDates.forEach((d, ri) => {
+    const meal = DB.meals[CU.u + '_' + d];
+    // entry না থাকলে সব dash
+    const fmtCell = (slot) => {
+      if(!meal) return `<td class="mh-dash">—</td>`;
+      const s = meal[slot];
+      if(!s || s.t === 'off' || s.t === 'off') return `<td class="mh-dash">—</td>`;
+      const lbl = s.t + ((s.q||1) > 1 ? (s.q||1) : '');
+      const cls = s.t === 'P' ? 'mh-p' : 'mh-q';
+      return `<td class="${cls}">${lbl}</td>`;
+    };
+    const bv = meal ? mTV('b', meal.b, d, CU.type) : 0;
+    const lv = meal ? mTV('l', meal.l, d, CU.type) : 0;
+    const dv = meal ? mTV('d', meal.d, d, CU.type) : 0;
+    const tot = bv + lv + dv;
+    grand += tot;
+    const dayLabel = d.slice(8) + '/' + d.slice(5,7);
+    const stripe = ri%2===0 ? ' class="mh-even"' : '';
+    rows += `<tr${stripe}>
+      <td class="mh-date">${dayLabel}</td>
+      ${fmtCell('b')}${fmtCell('l')}${fmtCell('d')}
+      <td class="mh-tot">${tot > 0 ? tot.toFixed(2) : '0'}</td>
+    </tr>`;
+  });
+
+  const html = `
+    <table class="mh-table">
+      <thead><tr>
+        <th class="mh-th mh-th-date">তারিখ</th>
+        <th class="mh-th">সকাল</th>
+        <th class="mh-th">দুপুর</th>
+        <th class="mh-th">রাত</th>
+        <th class="mh-th mh-th-tot">মোট</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="mh-foot">
+        <td colspan="4" class="mh-foot-lbl">সর্বমোট</td>
+        <td class="mh-foot-tot">${grand.toFixed(2)}</td>
+      </tr></tfoot>
+    </table>
+    <div class="mh-bill-row">
+      <span>আনুমানিক বিল</span>
+      <span class="mh-bill-amt">৳ ${(grand * pm).toFixed(2)}</span>
+      <span class="mh-rate">রেট ৳${pm.toFixed(2)}</span>
+    </div>`;
+
   body.innerHTML = safeHTML(html);
-  modal.classList.add('show');
+  sec('mealhistory');
 }
 
 // ═══════════════════════════════════════════════
@@ -200,6 +215,7 @@ function showWhoEatsOnDate(slot, dateStr){
   sec('whoeats');
 }
 function showWhoEats(slot){ showWhoEatsDate(slot); }
+function switchWeTab(slot){ showWhoEatsDate(slot); }
 
 function setWeView(v){
   _weView = v;
@@ -274,6 +290,7 @@ function _renderWeGrid(){
   }).join('');
 }
 
+function renderWeScreen(){ /* legacy no-op */ }
 
 // ── PDF Export (Plant only, 3-column grid, A4) ──
 function exportWhoEatsPDF(){
@@ -326,4 +343,5 @@ function exportWhoEatsPDF(){
   toast('PDF ডাউনলোড হচ্ছে!');
 }
 
+function exportWhoEatsCSV(){ /* replaced by PDF */ }
 function closeWhoEats(){ goHome(); }
