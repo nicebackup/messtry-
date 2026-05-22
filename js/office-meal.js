@@ -340,15 +340,17 @@ function renderOfficeMealNotesScreen(){
 
   let h = '';
   notes.forEach(n=>{
-    h += `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;line-height:1.5;color:var(--text);word-break:break-word">${esc(n.text)}</div>
-        <div style="font-size:11px;color:var(--text-light);margin-top:3px">${fmtDate(n.date)} · ${esc(n.by)}</div>
-      </div>
-      ${canDel?`<div style="display:flex;gap:6px;flex-shrink:0">
-        <button data-action="edit-note" data-id="${n.id}" style="background:none;border:1px solid var(--border);color:var(--text-light);border-radius:7px;padding:4px 8px;font-size:13px;cursor:pointer">✏️</button>
+    const btns = canDel ? `
+      <div style="display:flex;align-items:center;gap:6px">
+        <button data-action="edit-note" data-id="${n.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer">✏️</button>
         <button data-action="del-note" data-id="${n.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px">🗑️</button>
-      </div>`:''}
+      </div>` : '';
+    h += `<div class="bazar-item">
+      <div>
+        <div class="bz-name">${esc(n.text)}</div>
+        <div class="bz-meta">${fmtDate(n.date)} · ${esc(n.by)}</div>
+      </div>
+      ${btns}
     </div>`;
   });
   el.innerHTML = safeHTML(h);
