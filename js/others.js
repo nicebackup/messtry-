@@ -16,7 +16,7 @@ function initOthers(){
   const sel=document.getElementById('oth-month-sel');
   const _prevOth = sel ? sel.value : '';
   fillHistorySelect(sel);
-  if(sel) sel.value = _prevOth || currentMonthKey;
+  if(sel) sel.value = _prevOth || ''; // auto-select বন্ধ — user select করবে
   renderOthers();
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }

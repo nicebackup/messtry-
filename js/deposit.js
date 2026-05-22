@@ -202,8 +202,9 @@ function renderDepHistory(){
   const selEl=document.getElementById('dep-hist-month');
   const _prevVal = selEl ? selEl.value : '';
   if(selEl) fillMessCycleSelect(selEl,12);
-  if(selEl && selEl.value !== _prevVal && _prevVal) selEl.value = _prevVal;
-  // ইতিহাস auto-load বন্ধ — user মাস select করলে দেখাবে
+  // auto-select বন্ধ — আগের selection থাকলে রাখো, নাহলে খালি
+  if(selEl && _prevVal) selEl.value = _prevVal;
+  else if(selEl) selEl.value = '';
   const mmKey=selEl&&selEl.value;
   if(!mmKey){
     if(histEl) histEl.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
