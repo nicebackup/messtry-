@@ -201,7 +201,7 @@ function renderDepHistory(){
   // মাস selector — পূর্বের selection সংরক্ষণ করো, repopulate-এ হারাবে না
   const selEl=document.getElementById('dep-hist-month');
   const _prevVal = selEl ? selEl.value : '';
-  if(selEl) fillMessCycleSelect(selEl,12);
+  if(selEl) fillMessCycleSelect(selEl, 12, true); // addBlank → auto-select বন্ধ
   // auto-select বন্ধ — আগের selection থাকলে রাখো, নাহলে খালি
   if(selEl && _prevVal) selEl.value = _prevVal;
   else if(selEl) selEl.value = '';

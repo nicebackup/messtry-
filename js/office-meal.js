@@ -314,17 +314,15 @@ function saveOfficeMealNoteScreen(){
 function renderOfficeMealNotesScreen(){
   const el = document.getElementById('ofms-notes-history');
   if(!el) return;
-  // Month selector populate করো
   const sel = document.getElementById('ofms-note-month-sel');
   const _prevValNotes = sel ? sel.value : '';
-  if(sel) fillMessCycleSelect(sel, 12);
-  // auto-select বন্ধ — আগের selection থাকলে রাখো, নাহলে খালি
+  // addBlank=true → auto-select হবে না, placeholder দেখাবে
+  if(sel) fillMessCycleSelect(sel, 12, true);
   if(sel && _prevValNotes) sel.value = _prevValNotes;
-  else if(sel) sel.value = '';
   const mmKey = sel ? sel.value : '';
   if(!mmKey){
-    el.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
-    return;
+    el.innerHTML='<p class="muted tc" style="padding:20px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
+    el.onclick=null; return;
   }
 
   const isCurrent = mmKey === messMonthKey();
@@ -335,22 +333,22 @@ function renderOfficeMealNotesScreen(){
     .sort((a,b) => b.id - a.id);
 
   if(!notes.length){
-    el.innerHTML = '<p class="muted tc">এই মাসে কোনো নোট নেই</p>';
+    el.innerHTML = '<p class="muted tc" style="padding:20px 0">এই মাসে কোনো নোট নেই</p>';
     el.onclick = null;
     return;
   }
 
   let h = '';
   notes.forEach(n=>{
-    h += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="color:var(--text-light);font-size:11px">${fmtDate(n.date)} · ${esc(n.by)}</span>
-        ${canDel?`
-          <div style="display:flex;gap:6px">
-            <button data-action="edit-note" data-id="${n.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button>
-            <button data-action="del-note" data-id="${n.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button>
-          </div>`:''}
-      <div style="line-height:1.5">${esc(n.text)}</div>
+    h += `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;line-height:1.5;color:var(--text);word-break:break-word">${esc(n.text)}</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:3px">${fmtDate(n.date)} · ${esc(n.by)}</div>
+      </div>
+      ${canDel?`<div style="display:flex;gap:6px;flex-shrink:0">
+        <button data-action="edit-note" data-id="${n.id}" style="background:none;border:1px solid var(--border);color:var(--text-light);border-radius:7px;padding:4px 8px;font-size:13px;cursor:pointer">✏️</button>
+        <button data-action="del-note" data-id="${n.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px">🗑️</button>
+      </div>`:''}
     </div>`;
   });
   el.innerHTML = safeHTML(h);

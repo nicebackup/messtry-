@@ -31,6 +31,7 @@ function validName(s){ return s && s.trim().length>=2 && s.trim().length<=60; }
 function validMobile(s){ return /^01[3-9]\d{8}$/.test(s); }
 function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length<=120; }
 function validPass(s){ return s && s.length>=6 && s.length<=100; }
+function validUsername(s){ return s && /^[a-zA-Z0-9_\-\.]{3,30}$/.test(s); }
 function validAmount(v){ return !isNaN(v) && v > 0 && v < 10000000; }
 function sanitizeInput(s){
   return String(s||'').trim().slice(0,200)
@@ -126,12 +127,18 @@ function buildMessMonthOptions(){
   fillHistorySelect(sel, 24);
 }
 // যেকোনো <select> এ মেস চক্র options ভরো
-function fillMessCycleSelect(sel, months=12){
+function fillMessCycleSelect(sel, months=12, addBlank=false){
   if(!sel) return;
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const now = getBSTDate();
   const currentKey = messMonthKey();
   sel.innerHTML='';
+  // blank placeholder option — history screen-এ দরকার
+  if(addBlank){
+    const blank=document.createElement('option');
+    blank.value=''; blank.textContent='-- মাস সিলেক্ট করুন --';
+    sel.appendChild(blank);
+  }
   for(let i=0;i<months;i++){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 15);
     const key = messMonthKey(d);
@@ -140,7 +147,8 @@ function fillMessCycleSelect(sel, months=12){
     const opt=document.createElement('option');
     opt.value=key;
     opt.textContent=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
-    if(key===currentKey) opt.selected=true;
+    // addBlank=true হলে auto-select করবো না
+    if(key===currentKey && !addBlank) opt.selected=true;
     sel.appendChild(opt);
   }
 }
