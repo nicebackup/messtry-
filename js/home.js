@@ -114,10 +114,15 @@ function refreshHome(){
 // ═══════════════════════════════════════════════
 function showMyMealHistory(){
   if(!CU) return;
-  const mmKey = messMonthKey();
-  const {pm} = calcMealRate(mmKey);
+  sec('mealhistory'); // আগে screen switch করো
   const body = document.getElementById('meal-hist-body');
   const lbl  = document.getElementById('meal-hist-cycle-label');
+  if(!body){ console.error('meal-hist-body not found'); return; }
+  body.innerHTML = '<p style="padding:20px;color:var(--text-light)">লোড হচ্ছে...</p>';
+  try {
+  const mmKey = messMonthKey();
+  const rateObj = calcMealRate ? calcMealRate(mmKey) : {pm:0};
+  const pm = (rateObj && rateObj.pm) ? rateObj.pm : 0;
 
   // Cycle label
   if(lbl) lbl.textContent = messMonthLabel();
@@ -182,7 +187,10 @@ function showMyMealHistory(){
     </div>`;
 
   body.innerHTML = safeHTML(html);
-  sec('mealhistory');
+  } catch(err) {
+    console.error('[showMyMealHistory]', err);
+    if(body) body.innerHTML = '<p style="padding:20px;color:var(--danger)">⚠️ লোড সমস্যা: '+err.message+'</p>';
+  }
 }
 
 // ═══════════════════════════════════════════════
