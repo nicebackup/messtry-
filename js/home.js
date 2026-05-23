@@ -114,7 +114,10 @@ function refreshHome(){
 // ═══════════════════════════════════════════════
 function showMyMealHistory(){
   if(!CU) return;
-  sec('mealhistory'); // আগে screen switch করো
+  // ✅ Fix: meal history একটা modal (#meal-hist-modal), screen নয়।
+  // sec('mealhistory') কাজ করত না — সরাসরি modal show করো।
+  const modal = document.getElementById('meal-hist-modal');
+  if(modal) modal.classList.add('show');
   const body = document.getElementById('meal-hist-body');
   const lbl  = document.getElementById('meal-hist-cycle-label');
   if(!body){ console.error('meal-hist-body not found'); return; }
