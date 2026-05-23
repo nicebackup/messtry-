@@ -126,8 +126,17 @@ function saveMeal(){
   const dLabel=dT==='off'?'off':(dQ>1?dT+dQ:dT);
   showModal('মিল সেভ করুন',
     `${mealDate} এর মিল:\n\n☀️ সকাল: ${bLabel} = ${bv.toFixed(2)} meals\n🌞 দুপুর: ${lLabel} = ${lv.toFixed(2)} meals\n🌙 রাত: ${dLabel} = ${dv.toFixed(2)} meals\n\nমোট: ${(bv+lv+dv).toFixed(2)} meals`,
-    function(){ DB.meals[CU.u+'_'+mealDate]={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}}; saveDB(); toast('✅ '+mealDate+' মিল সেভ!'); refreshHome(); }
+    function(){ const _mk=CU.u+'_'+mealDate, _mv={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
+    DB.meals[_mk]=_mv;
+    saveMealEntry(_mk, _mv);  // surgical: শুধু এই meal key update
+    invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
+    toast('✅ '+mealDate+' মিল সেভ!'); refreshHome(); }
   );
+}
+function fmtMealLine(t,q,v){
+  if(t==='off') return 'off (বন্ধ)';
+  const label=q>1?t+q:t;
+  return `${label} = ${v.toFixed(2)} meals`;
 }
 function mealTypeValue(slot,type,qty,date,utype){
   if(type==='off') return 0;
@@ -178,6 +187,12 @@ function mTV(t,m,dateStr,utype){
   if(m.t==='P') return (m.q||1)*getCfg(t,dateStr,utype);
   if(m.t==='Q') return (m.q||1)*getCfg(t,dateStr,utype);
   return 0;
+}
+function dayMeals(uname,dateStr){
+  const meal=DB.meals[uname+'_'+dateStr]; if(!meal) return 0;
+  const u=DB.users.find(x=>x.u===uname);
+  const utype=u?u.type:'inside';
+  return ['b','l','d'].reduce((s,t)=>s+mTV(t,meal[t],dateStr,utype),0);
 }
 
 // ── Meal key index: per-user এর key list একবার build করে cache করি

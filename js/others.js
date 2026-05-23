@@ -16,7 +16,7 @@ function initOthers(){
   const sel=document.getElementById('oth-month-sel');
   const _prevOth = sel ? sel.value : '';
   fillHistorySelect(sel);
-  if(sel) sel.value = _prevOth || ''; // auto-select বন্ধ — user select করবে
+  if(sel) sel.value = _prevOth || currentMonthKey;
   renderOthers();
 }
 function switchOthTab(tab){ /* বাবুর্চি বিল tab সরানো হয়েছে */ }
@@ -30,8 +30,9 @@ function addOther(){
   if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
   if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
   if(!date){ toast('❌ তারিখ দিন!'); return; }
-  DB.others.push({id:Date.now(),desc,amount,date,by:CU.name,split});
-  saveDB();
+  const _othItem={id:Date.now(),desc,amount,date,by:CU.name,split};
+  DB.others.push(_othItem);
+  saveOtherItem(_othItem);
   const selO=document.getElementById('oth-month-sel');
   if(selO) selO.value=currentMonthKey;
   renderOthers();
@@ -44,11 +45,6 @@ function renderOthers(){
   const m=sel&&sel.value;
   const list=document.getElementById('oth-list');
   const totalEl=document.getElementById('oth-total');
-  if(!m){
-    if(list) list.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
-    if(totalEl) totalEl.textContent='';
-    return;
-  }
   applyMessCycleBounds('oth-date', m);
   _withMonthData(m, list, ()=>{
     const items=DB.others.filter(o=>dateInMessMonth(o.date,m)).sort((a,b)=>b.date.localeCompare(a.date));
@@ -74,7 +70,7 @@ function renderOthers(){
   });
 }
 function delOther(id){
-  showModal('খরচ মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.others=DB.others.filter(o=>o.id!==id); saveDB(); renderOthers(); toast('✅ মুছে ফেলা হয়েছে!'); });
+  showModal('খরচ মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.others=DB.others.filter(o=>o.id!==id); deleteOtherItem(id); renderOthers(); toast('✅ মুছে ফেলা হয়েছে!'); });
 }
 function editOther(id){
   const o=DB.others.find(x=>x.id===id); if(!o) return;
@@ -100,7 +96,7 @@ function editOther(id){
     if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
     if(!date){ toast('❌ তারিখ দিন!'); return; }
     o.desc=desc; o.amount=amount; o.date=date; o.split=split;
-    saveDB(); renderOthers(); closeModal(); toast('✅ আপডেট হয়েছে!');
+    saveOtherItem(o); renderOthers(); closeModal(); toast('✅ আপডেট হয়েছে!');
   }, true);
 }
 // বাবুর্চি বিল entry সরানো হয়েছে — ওরা বাজারের সাথেই খায়, আলাদা বিল নেই

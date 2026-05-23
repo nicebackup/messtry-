@@ -47,15 +47,14 @@ function initBazar(){
   const sel=document.getElementById('bz-month-sel');
   const _prevBz = sel ? sel.value : '';
   fillHistorySelect(sel);
-  // ইতিহাস auto-load বন্ধ — user মাস select করলে দেখাবে (report-এর মতো)
-  if(sel) sel.value = _prevBz || '';
+  if(sel) sel.value = _prevBz || currentMonthKey;
   if(!document.getElementById('bz-date').value) document.getElementById('bz-date').value=tod();
   applyMessCycleBounds('bz-date', sel ? sel.value : null);
   const mgr=isManagerOrCtrl();
   document.getElementById('bazar-form-wrap').style.display=mgr?'block':'none';
   document.getElementById('bazar-readonly-notice').style.display='none';
   document.getElementById('bazar-header-sub').textContent=mgr?'Bazar Entry':'ইতিহাস দেখুন';
-  renderBazar(); // খালি selection → placeholder দেখাবে
+  renderBazar();
 }
 function addBazar(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -66,8 +65,9 @@ function addBazar(){
   if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
   if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
   if(!date){ toast('❌ তারিখ দিন!'); return; }
-  DB.bazar.push({id:Date.now(),desc,amount,date,by:CU.name});
-  saveDB();
+  const _bzItem={id:Date.now(),desc,amount,date,by:CU.name};
+  DB.bazar.push(_bzItem);
+  saveBazarItem(_bzItem);  // surgical save
   // entry যোগের পর current month দেখাও
   const sel=document.getElementById('bz-month-sel');
   if(sel) sel.value=currentMonthKey;
@@ -79,12 +79,6 @@ function addBazar(){
 function renderBazar(){
   const m=document.getElementById('bz-month-sel').value;
   const list=document.getElementById('bz-list');
-  if(!m){
-    if(list) list.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
-    const totalEl=document.getElementById('bz-total');
-    if(totalEl) totalEl.textContent='';
-    return;
-  }
   const totalEl=document.getElementById('bz-total');
   applyMessCycleBounds('bz-date', m);
   _withMonthData(m, list, ()=>{
@@ -110,7 +104,7 @@ function renderBazar(){
   });
 }
 function delBazar(id){
-  showModal('বাজার মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.bazar=DB.bazar.filter(b=>b.id!==id); saveDB(); renderBazar(); toast('✅ মুছে ফেলা হয়েছে!'); });
+  showModal('বাজার মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{ DB.bazar=DB.bazar.filter(b=>b.id!==id); deleteBazarItem(id); renderBazar(); toast('✅ মুছে ফেলা হয়েছে!'); });
 }
 function editBazar(id){
   const b=DB.bazar.find(x=>x.id===id); if(!b) return;
@@ -130,6 +124,6 @@ function editBazar(id){
     if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
     if(!date){ toast('❌ তারিখ দিন!'); return; }
     b.desc=desc; b.amount=amount; b.date=date;
-    saveDB(); renderBazar(); closeModal(); toast('✅ আপডেট হয়েছে!');
+    saveBazarItem(b); renderBazar(); closeModal(); toast('✅ আপডেট হয়েছে!');
   }, true);
 }
