@@ -1195,14 +1195,15 @@ try{
   </div>
 </div>
 
-<!-- ═══════════ MEAL HISTORY MODAL ═══════════ -->
-<div class="modal-bg" id="meal-hist-modal" style="align-items:flex-end">
-  <div class="modal" style="border-radius:20px 20px 0 0;max-height:88vh">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="modal-title" style="margin:0">📅 মিল ইতিহাস</div>
-      <button onclick="document.getElementById('meal-hist-modal').classList.remove('show')" style="background:var(--bg);color:var(--text-light);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
-    </div>
-    <div id="meal-hist-body" style="overflow-y:auto;max-height:70vh"></div>
+<!-- ═══════════ MEAL HISTORY SCREEN ═══════════ -->
+<div id="sc-mealhistory" class="screen">
+  <div class="app-header">
+    <button class="header-back" onclick="goHome()">← Home</button>
+    <div class="header-title" id="meal-hist-cycle-label">মিল হিসাব</div>
+    <div class="header-sub">আমার মিল ইতিহাস</div>
+  </div>
+  <div class="content pb-nav" id="meal-hist-body">
+    <p style="padding:20px;color:var(--text-light)">লোড হচ্ছে...</p>
   </div>
 </div>
 
