@@ -221,6 +221,7 @@ function togRulesCfg(grpKey){
 }
 function sec(s){
   closeAllAdminCards();
+  if(s==='mealhistory'){ showMyMealHistory(); return; }
   if(s==='meal'){ initMeal(); showSc('meal'); return; }
   if(s==='bazar'){ initBazar(); showSc('bazar'); return; }
   if(s==='others'){ initOthers(); showSc('others'); return; }
@@ -238,7 +239,6 @@ function sec(s){
     initRules(); showSc('rules'); return;
   }
   if(s==='whoeats'){ showSc('whoeats'); return; }
-  if(s==='mealhistory'){ showSc('mealhistory'); return; }
 }
 
 
@@ -269,7 +269,7 @@ function applyDark(force){
 }
 function setTheme(mode){
   const isDark = mode==='night';
-  DB.darkMode = isDark;
+  // Note: darkMode not in GLOBAL_FIELDS — persisted only in localStorage via persistDark()
   applyDark(isDark);
   persistDark(isDark);
   updateThemeBtns();
@@ -286,11 +286,6 @@ function updateThemeBtns(){
     dayBtn.style.background='var(--primary)'; dayBtn.style.color='#fff';
     nightBtn.style.background='transparent'; nightBtn.style.color='var(--text-light)';
   }
-}
-function toggleDark(){
-  const isDark = !document.documentElement.classList.contains('dark-mode');
-  persistDark(isDark);
-  applyDark(isDark);
 }
 
 

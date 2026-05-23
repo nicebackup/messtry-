@@ -114,10 +114,10 @@ function refreshHome(){
 // ═══════════════════════════════════════════════
 function showMyMealHistory(){
   if(!CU) return;
-  // ✅ Fix: meal history একটা modal (#meal-hist-modal), screen নয়।
-  // sec('mealhistory') কাজ করত না — সরাসরি modal show করো।
-  const modal = document.getElementById('meal-hist-modal');
-  if(modal) modal.classList.add('show');
+
+  // ✅ Full page screen — modal নয়
+  showSc('mealhistory');
+
   const body = document.getElementById('meal-hist-body');
   const lbl  = document.getElementById('meal-hist-cycle-label');
   if(!body){ console.error('meal-hist-body not found'); return; }
@@ -127,17 +127,29 @@ function showMyMealHistory(){
   const rateObj = calcMealRate ? calcMealRate(mmKey) : {pm:0};
   const pm = (rateObj && rateObj.pm) ? rateObj.pm : 0;
 
-  // Cycle label
-  if(lbl) lbl.textContent = messMonthLabel();
+  // ✅ English cycle label: "May 11 – June 10, 2026"
+  const _EN = ['January','February','March','April','May','June',
+               'July','August','September','October','November','December'];
+  const [_mmY, _mmM] = mmKey.split('-').map(Number); // _mmM = 1-indexed
+  const _nmM = _mmM === 12 ? 1 : _mmM + 1;
+  const _nmY = _mmM === 12 ? _mmY + 1 : _mmY;
+  const cycleLabel = `${_EN[_mmM-1]} 11 – ${_EN[_nmM-1]} 10, ${_nmY}`;
+  if(lbl) lbl.textContent = cycleLabel;
+
+  // ✅ UTC bug fix: toISOString() UTC+6-এ আগের দিন দেখায়।
+  // local date সরাসরি বের করো — ১০ তারিখও সঠিকভাবে আসবে।
+  const _localISO = dt =>
+    dt.getFullYear() + '-' +
+    String(dt.getMonth()+1).padStart(2,'0') + '-' +
+    String(dt.getDate()).padStart(2,'0');
 
   // Cycle-এর সব দিন generate করো (11 থেকে পরের মাসের 10 পর্যন্ত)
   const {y, m} = getMessMonth();
   const allDates = [];
-  const start = new Date(y, m, 11);  // cycle start
+  const start = new Date(y, m, 11);   // cycle start
   const end   = new Date(y, m+1, 10); // cycle end
   for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-    const iso = d.toISOString().slice(0,10);
-    allDates.push(iso);
+    allDates.push(_localISO(d));  // ✅ local date, UTC নয়
   }
 
   let grand = 0;
