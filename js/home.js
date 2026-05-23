@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-// js/home.js
+// js/home.js — v2 (2026-05-23: shortfall summary, no bill row)
 // Home screen render, date nav, meal history modal,
 // who-eats system (full-page grid + PDF export)
 //
