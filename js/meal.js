@@ -126,9 +126,8 @@ function saveMeal(){
   const dLabel=dT==='off'?'off':(dQ>1?dT+dQ:dT);
   showModal('মিল সেভ করুন',
     `${mealDate} এর মিল:\n\n☀️ সকাল: ${bLabel} = ${bv.toFixed(2)} meals\n🌞 দুপুর: ${lLabel} = ${lv.toFixed(2)} meals\n🌙 রাত: ${dLabel} = ${dv.toFixed(2)} meals\n\nমোট: ${(bv+lv+dv).toFixed(2)} meals`,
-    function(){ const _mk=CU.u+'_'+mealDate, _mv={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
-    DB.meals[_mk]=_mv;
-    saveMealEntry(_mk, _mv);  // surgical: শুধু এই meal key update
+    function(){ const _mk=CU.u+'_'+mealDate,_mv={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
+    DB.meals[_mk]=_mv; saveMealEntry(_mk,_mv);
     invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
     toast('✅ '+mealDate+' মিল সেভ!'); refreshHome(); }
   );

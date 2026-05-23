@@ -111,12 +111,28 @@ function saveGlobal(){
     // Dedup
     const _sv=new Set();
     DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
-    // Guard: Firebase-এর চেয়ে কম user দিয়ে save করবো না
-    if(_minUserCount>0 && DB.users.length<_minUserCount){
-      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount);
+    // Unique count (dedup হওয়ার পর)
+    const _uniqNow=new Set(DB.users.filter(u=>u&&u.u).map(u=>u.u)).size;
+    // Guard: unique count Firebase-এর চেয়ে কম হলে block + recover
+    if(_minUserCount>0 && _uniqNow<_minUserCount){
+      console.error('[saveGlobal BLOCKED] unique='+_uniqNow+' < expected='+_minUserCount+'. Firebase থেকে recover...');
+      globalRef.child('users').once('value').then(snap=>{
+        const fw=snap.val();
+        if(!Array.isArray(fw)) return;
+        const fwUniq=new Set(fw.filter(u=>u&&u.u).map(u=>u.u)).size;
+        if(fwUniq<_minUserCount) return; // Firebase-এও কম — skip
+        // Fresh list থেকে merge: DB-তে যারা নতুন তাদের যোগ করো
+        const merged=[...fw];
+        DB.users.forEach(u=>{ if(u&&u.u && !merged.find(x=>x.u===u.u)) merged.push(u); });
+        DB.users=merged;
+        _minUserCount=Math.max(_minUserCount, new Set(merged.filter(u=>u&&u.u).map(u=>u.u)).size);
+        const data2={}; GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data2[f]=DB[f]; });
+        globalRef.set(data2).catch(e=>console.error('Recover save error:',e));
+        console.log('[saveGlobal RECOVERED] users='+merged.length);
+      }).catch(()=>{});
       return;
     }
-    if(DB.users.length>0) _minUserCount=Math.max(_minUserCount, DB.users.length);
+    if(_uniqNow>0) _minUserCount=Math.max(_minUserCount, _uniqNow);
     const data={};
     GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
     globalRef.set(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
@@ -129,53 +145,21 @@ function saveMonth(){
   if(!_dbLoaded || !currentMonthRef) return;
   if(_monthSaveTimer) clearTimeout(_monthSaveTimer);
   _monthSaveTimer = setTimeout(()=>{
-    // update() ব্যবহার: set()-এর মতো সব overwrite করে না
-    // অন্য user-এর data অস্পৃশ্য থাকে
+    // update() — অন্য user-এর data overwrite করে না
     const data={};
     MONTH_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
     currentMonthRef.update(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
   }, 400);
 }
 
-// ── Surgical single-meal save — race condition proof ──
-// meal save-এ পুরো মাস overwrite না করে শুধু ওই meal key update
-function saveMealEntry(mealKey, mealData){
-  if(!_dbLoaded || !currentMonthRef) return;
-  currentMonthRef.child('meals').child(mealKey).set(mealData)
-    .catch(e=>{ console.error('Meal save error:',e); toast('⚠️ মিল সেভে সমস্যা!'); });
-}
-
-// ── Surgical array item saves — id-based, race proof ──
-function saveBazarItem(item){
-  if(!_dbLoaded || !currentMonthRef || !item?.id) return;
-  currentMonthRef.child('bazar').child(String(item.id)).set(item)
-    .catch(e=>console.error('Bazar save error:',e));
-}
-function deleteBazarItem(id){
-  if(!_dbLoaded || !currentMonthRef) return;
-  currentMonthRef.child('bazar').child(String(id)).remove()
-    .catch(e=>console.error('Bazar delete error:',e));
-}
-function saveOtherItem(item){
-  if(!_dbLoaded || !currentMonthRef || !item?.id) return;
-  currentMonthRef.child('others').child(String(item.id)).set(item)
-    .catch(e=>console.error('Others save error:',e));
-}
-function deleteOtherItem(id){
-  if(!_dbLoaded || !currentMonthRef) return;
-  currentMonthRef.child('others').child(String(id)).remove()
-    .catch(e=>console.error('Others delete error:',e));
-}
-function saveTxItem(item){
-  if(!_dbLoaded || !currentMonthRef || !item?.id) return;
-  currentMonthRef.child('transactions').child(String(item.id)).set(item)
-    .catch(e=>console.error('Tx save error:',e));
-}
-function deleteTxItem(id){
-  if(!_dbLoaded || !currentMonthRef) return;
-  currentMonthRef.child('transactions').child(String(id)).remove()
-    .catch(e=>console.error('Tx delete error:',e));
-}
+// ── Surgical saves — race condition proof ──
+function saveMealEntry(k,v){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('meals').child(k).set(v).catch(e=>console.error('Meal save:',e)); }
+function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('bazar').child(String(item.id)).set(item).catch(e=>console.error('Bazar save:',e)); }
+function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('Bazar del:',e)); }
+function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others save:',e)); }
+function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('Others del:',e)); }
+function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx save:',e)); }
+function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('Tx del:',e)); }
 
 // ── saveDB() — সব পুরানো call-এর জন্য backward compatible ──
 function saveDB(){
@@ -461,9 +445,10 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
-        // Firebase-এর user count track করো
-        if(Array.isArray(data.users) && data.users.length>_minUserCount){
-          _minUserCount=data.users.length;
+        // Firebase-এর UNIQUE user count (duplicate বাদ দিয়ে)
+        if(Array.isArray(data.users)){
+          const _uniq=new Set(data.users.filter(u=>u&&u.u).map(u=>u.u)).size;
+          if(_uniq>_minUserCount) _minUserCount=_uniq;
         }
         _supplementGlobalFields();
       } else {
@@ -481,17 +466,13 @@ function loadDB(){
     currentMonthRef.on('value', snap=>{
       const data=snap.val();
       if(data){
+        const ARRAY_FIELDS=['bazar','others','transactions','officeMealNotes','cookBills'];
         MONTH_FIELDS.forEach(f=>{
           if(data[f]===undefined) return;
-          // Firebase object→array convert (bazar, others, transactions etc.)
-          // surgical save-এ id-keyed object হিসেবে save হয়
-          const ARRAY_FIELDS=['bazar','others','transactions','officeMealNotes','cookBills'];
+          // Firebase object→array convert (surgical save-এ id-keyed object)
           if(ARRAY_FIELDS.includes(f) && data[f] && !Array.isArray(data[f])){
-            // Object {id: item, ...} → Array sorted by id
-            DB[f] = Object.values(data[f]).sort((a,b)=>(a.id||0)-(b.id||0));
-          } else {
-            DB[f]=data[f];
-          }
+            DB[f]=Object.values(data[f]).filter(Boolean).sort((a,b)=>(a.id||0)-(b.id||0));
+          } else { DB[f]=data[f]; }
         });
       }
       _clearHistCache();

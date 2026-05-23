@@ -30,9 +30,8 @@ function addOther(){
   if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
   if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
   if(!date){ toast('❌ তারিখ দিন!'); return; }
-  const _othItem={id:Date.now(),desc,amount,date,by:CU.name,split};
-  DB.others.push(_othItem);
-  saveOtherItem(_othItem);
+  const _othi={id:Date.now(),desc,amount,date,by:CU.name,split};
+  DB.others.push(_othi); saveOtherItem(_othi);
   const selO=document.getElementById('oth-month-sel');
   if(selO) selO.value=currentMonthKey;
   renderOthers();
