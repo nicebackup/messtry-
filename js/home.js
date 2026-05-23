@@ -152,6 +152,8 @@ function showMyMealHistory(){
     allDates.push(_localISO(d));  // ✅ local date, UTC নয়
   }
 
+  const sf = (typeof getShortfallMeals === 'function') ? getShortfallMeals(CU.u, mmKey) : 0;
+
   let grand = 0;
   // ── Ultra compact table ──
   let rows = '';
@@ -180,6 +182,8 @@ function showMyMealHistory(){
     </tr>`;
   });
 
+  const totalWithSF = grand + sf;
+
   const html = `
     <table class="mh-table">
       <thead><tr>
@@ -195,10 +199,15 @@ function showMyMealHistory(){
         <td class="mh-foot-tot">${grand.toFixed(2)}</td>
       </tr></tfoot>
     </table>
-    <div class="mh-bill-row">
-      <span>আনুমানিক বিল</span>
-      <span class="mh-bill-amt">৳ ${(grand * pm).toFixed(2)}</span>
-      <span class="mh-rate">রেট ৳${pm.toFixed(2)}</span>
+    <div class="mh-meal-summary">
+      ${sf > 0 ? `<div class="mh-sf-row">
+        <span class="mh-sf-label">⚠️ Shortfall মিল</span>
+        <span class="mh-sf-amt">+ ${sf.toFixed(2)}</span>
+      </div>` : ''}
+      <div class="mh-grandtotal-row">
+        <span class="mh-gt-label">মোট মিল${sf > 0 ? ' (Shortfall সহ)' : ''}</span>
+        <span class="mh-gt-val">${totalWithSF.toFixed(2)}</span>
+      </div>
     </div>`;
 
   body.innerHTML = safeHTML(html);
