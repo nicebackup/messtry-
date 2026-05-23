@@ -698,3 +698,10 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
   color:#fff;
 }
 .dark-mode .mh-even{ background:rgba(255,255,255,.03); }
+
+/* মিল ইতিহাস স্ক্রিনের হেডার — subtitle নেই তাই আরো compact */
+#sc-mealhistory .app-header{
+  min-height:42px;
+  padding-top:2px;
+  padding-bottom:2px;
+}
