@@ -431,6 +431,8 @@ function deleteMember(){
   const u=DB.users.find(x=>x.u===uname);
   showModal('সদস্য মুছুন',`${u?.name||uname} কে স্থায়ীভাবে মুছে ফেলবেন? সব ডেটা হারিয়ে যাবে!`,()=>{
     DB.users=DB.users.filter(x=>x.u!==uname);
+    // member মুছলে _minUserCount আপডেট করো — নাহলে false block হবে
+    if(typeof _minUserCount !== 'undefined') _minUserCount = Math.max(0, DB.users.length);
     DB.controllers=DB.controllers.filter(c=>c!==uname);
     Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
     saveDB(); closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');

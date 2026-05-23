@@ -113,7 +113,26 @@ function saveGlobal(){
     DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
     // Guard: Firebase-এর চেয়ে কম user দিয়ে save করবো না
     if(_minUserCount>0 && DB.users.length<_minUserCount){
-      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount);
+      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount+'. Firebase থেকে fresh data নিচ্ছি...');
+      // Block করে চুপ না থেকে Firebase থেকে সর্বশেষ users নিয়ে merge করো
+      globalRef.child('users').once('value').then(snap=>{
+        const freshUsers = snap.val();
+        if(Array.isArray(freshUsers) && freshUsers.length >= _minUserCount){
+          // Fresh list দিয়ে DB আপডেট করো
+          const merged = [...freshUsers];
+          // বর্তমান DB-তে যারা fresh-এ নেই তাদের যোগ করো
+          DB.users.forEach(u=>{
+            if(u.u && !merged.find(x=>x.u===u.u)) merged.push(u);
+          });
+          DB.users = merged;
+          _minUserCount = Math.max(_minUserCount, merged.length);
+          // এবার save করো
+          const data={};
+          GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
+          globalRef.set(data).catch(e=>{ console.error('Global save error (after merge):',e); });
+          console.log('[saveGlobal RECOVERED] merged users='+merged.length);
+        }
+      }).catch(()=>{});
       return;
     }
     if(DB.users.length>0) _minUserCount=Math.max(_minUserCount, DB.users.length);
