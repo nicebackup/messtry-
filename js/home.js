@@ -195,17 +195,17 @@ function showMyMealHistory(){
       </tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr class="mh-foot">
-        <td colspan="4" class="mh-foot-lbl">সর্বমোট</td>
+        <td colspan="4" class="mh-foot-lbl">মোট</td>
         <td class="mh-foot-tot">${grand.toFixed(2)}</td>
       </tr></tfoot>
     </table>
     <div class="mh-meal-summary">
       ${sf > 0 ? `<div class="mh-sf-row">
-        <span class="mh-sf-label">⚠️ Shortfall মিল</span>
+        <span class="mh-sf-label">⚠️ Shortfall Meal</span>
         <span class="mh-sf-amt">+ ${sf.toFixed(2)}</span>
       </div>` : ''}
       <div class="mh-grandtotal-row">
-        <span class="mh-gt-label">মোট মিল${sf > 0 ? ' (Shortfall সহ)' : ''}</span>
+        <span class="mh-gt-label">সর্বমোট মিল${sf > 0 ? ' (Shortfall সহ)' : ''}</span>
         <span class="mh-gt-val">${totalWithSF.toFixed(2)}</span>
       </div>
     </div>`;
