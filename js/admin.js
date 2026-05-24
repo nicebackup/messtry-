@@ -340,7 +340,7 @@ function setManager(){
   if(!DB.managers[month].includes(uname)) DB.managers[month].push(uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u && u.role==='member'){ u.role='manager'; syncRole(uname,'manager'); }
-  saveDB(); renderManagerInfo();
+  saveDB(); saveUsers(); renderManagerInfo();
   const sel=document.getElementById('mgr-remove');
   sel.innerHTML='<option value="">-- ম্যানেজার নির্বাচন --</option>';
   (DB.managers[month]||[]).forEach(u=>{ const usr=DB.users.find(x=>x.u===u); if(usr) sel.innerHTML+=`<option value="${esc(u)}">${esc(usr.name)}</option>`; });
@@ -353,7 +353,7 @@ function removeManager(){
   if(DB.managers[month]) DB.managers[month]=DB.managers[month].filter(u=>u!==uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u && u.role==='manager'){ u.role='member'; syncRole(uname,'member'); }
-  saveDB(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
+  saveDB(); saveUsers(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
 // saveCfg() — moved to js/rules.js (rules screen function, misplaced in ADMIN)
 // Extracted: 2026-05-19 | Original lines: 2509–2536
@@ -431,8 +431,6 @@ function deleteMember(){
   const u=DB.users.find(x=>x.u===uname);
   showModal('সদস্য মুছুন',`${u?.name||uname} কে স্থায়ীভাবে মুছে ফেলবেন? সব ডেটা হারিয়ে যাবে!`,()=>{
     DB.users=DB.users.filter(x=>x.u!==uname);
-    // member মুছলে _minUserCount আপডেট করো — নাহলে false block হবে
-    if(typeof _minUserCount !== 'undefined') _minUserCount = Math.max(0, DB.users.length);
     DB.controllers=DB.controllers.filter(c=>c!==uname);
     Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
     saveDB(); closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');

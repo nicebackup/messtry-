@@ -293,8 +293,7 @@ function doLogin(){
             // Duplicate check
             if(!DB.users.find(x=>x.u===CU.u)){
               DB.users.push({...CU});
-              const ni = DB.users.length-1;
-              globalRef.child('users/'+ni).set({...CU}).catch(()=>{});
+              saveUsers();
             } else {
               console.warn('[auth] User already exists in DB.users:', CU.u);
             }
@@ -454,8 +453,7 @@ function doRegister(){
       // Duplicate check — একই user দুবার যেন না ঢোকে
       if(!DB.users.find(x=>x.u===newUser.u)){
         DB.users.push(newUser);
-        const newIdx = DB.users.length - 1;
-        globalRef.child('users/'+newIdx).set(newUser).catch(e=>console.error('User list sync error:',e));
+        saveUsers();
       } else {
         console.warn('[auth] User already in DB.users, skipping push:', newUser.u);
       }

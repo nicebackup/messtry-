@@ -113,46 +113,58 @@ function saveGlobal(){
     DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
     // Guard: Firebase-এর চেয়ে কম user দিয়ে save করবো না
     if(_minUserCount>0 && DB.users.length<_minUserCount){
-      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount+'. Firebase থেকে fresh data নিচ্ছি...');
-      // Block করে চুপ না থেকে Firebase থেকে সর্বশেষ users নিয়ে merge করো
-      globalRef.child('users').once('value').then(snap=>{
-        const freshUsers = snap.val();
-        if(Array.isArray(freshUsers) && freshUsers.length >= _minUserCount){
-          // Fresh list দিয়ে DB আপডেট করো
-          const merged = [...freshUsers];
-          // বর্তমান DB-তে যারা fresh-এ নেই তাদের যোগ করো
-          DB.users.forEach(u=>{
-            if(u.u && !merged.find(x=>x.u===u.u)) merged.push(u);
-          });
-          DB.users = merged;
-          _minUserCount = Math.max(_minUserCount, merged.length);
-          // এবার save করো
-          const data={};
-          GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
-          globalRef.set(data).catch(e=>{ console.error('Global save error (after merge):',e); });
-          console.log('[saveGlobal RECOVERED] merged users='+merged.length);
-        }
-      }).catch(()=>{});
+      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount);
       return;
     }
     if(DB.users.length>0) _minUserCount=Math.max(_minUserCount, DB.users.length);
+    // ⚠️ users এখানে save করা হয় না — saveUsers() দিয়ে আলাদা করা হয়
+    // যেন অন্য browser-এর users list overwrite না হয়
     const data={};
-    GLOBAL_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
-    globalRef.set(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
+    GLOBAL_FIELDS.forEach(f=>{ if(f!=='users' && DB[f]!==undefined) data[f]=DB[f]; });
+    globalRef.update(data).catch(e=>{ console.error('Global save error:',e); toast('⚠️ ডেটা সেভে সমস্যা!'); });
   }, 400);
+}
+
+// ── users আলাদা save — শুধু user management-এ call হবে ──
+function saveUsers(){
+  if(!_dbLoaded) return;
+  const seen=new Set();
+  DB.users=DB.users.filter(u=>{ if(!u.u||seen.has(u.u)) return false; seen.add(u.u); return true; });
+  const _uniq=DB.users.length;
+  if(_minUserCount>0 && _uniq<_minUserCount){
+    console.error('[saveUsers BLOCKED] '+_uniq+' < '+_minUserCount);
+    return;
+  }
+  _minUserCount=Math.max(_minUserCount,_uniq);
+  globalRef.child('users').set(DB.users).catch(e=>{ console.error('Users save error:',e); toast('⚠️ সদস্য সেভে সমস্যা!'); });
 }
 
 // ── Month save: meals, bazar, others, transactions, managers, mealRates, officeMealRates, officeMealNotes, cookBills ──
 let _monthSaveTimer = null;
+// ── array নিশ্চিত করো — Firebase object হলে convert করো ──
+function _ensureArr(val){
+  if(!val) return [];
+  if(Array.isArray(val)) return val;
+  // Firebase object {0:item, id:item} → array
+  return Object.values(val).filter(Boolean);
+}
+
 function saveMonth(){
   if(!_dbLoaded || !currentMonthRef) return;
   if(_monthSaveTimer) clearTimeout(_monthSaveTimer);
   _monthSaveTimer = setTimeout(()=>{
     const data={};
     MONTH_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
-    currentMonthRef.set(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
+    currentMonthRef.update(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
   }, 400);
 }
+function saveMealEntry(k,v){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('meals').child(k).set(v).catch(e=>console.error('Meal:',e)); }
+function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('bazar').child(String(item.id)).set(item).catch(e=>console.error('Bazar:',e)); }
+function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('BazarDel:',e)); }
+function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others:',e)); }
+function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
+function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
+function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
 
 // ── saveDB() — সব পুরানো call-এর জন্য backward compatible ──
 function saveDB(){
@@ -439,8 +451,9 @@ function loadDB(){
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
         // Firebase-এর user count track করো
-        if(Array.isArray(data.users) && data.users.length>_minUserCount){
-          _minUserCount=data.users.length;
+        if(Array.isArray(data.users)){
+          const _u=new Set(data.users.filter(u=>u&&u.u).map(u=>u.u)).size;
+          if(_u>_minUserCount) _minUserCount=_u;
         }
         _supplementGlobalFields();
       } else {
@@ -457,7 +470,16 @@ function loadDB(){
     // ── Current month listener (real-time) ──
     currentMonthRef.on('value', snap=>{
       const data=snap.val();
-      if(data){ MONTH_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; }); }
+      if(data){
+        const ARR=['bazar','others','transactions','officeMealNotes','cookBills'];
+        MONTH_FIELDS.forEach(f=>{
+          if(data[f]===undefined) return;
+          if(ARR.includes(f)){
+            // সবসময় array নিশ্চিত করো — পুরনো array বা নতুন object যাই হোক
+            DB[f]=_ensureArr(data[f]).sort((a,b)=>(a.id||0)-(b.id||0));
+          } else { DB[f]=data[f]; }
+        });
+      }
       _clearHistCache();
       monthReady=true; _checkReady();
     }, err=>{

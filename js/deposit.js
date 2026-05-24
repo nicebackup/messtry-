@@ -185,9 +185,9 @@ function saveDeposit(){
   if(!date){ toast('❌ তারিখ দিন!'); return; }
   if(!['deposit','withdraw'].includes(type)){ toast('❌ ধরন নির্বাচন করুন!'); return; }
   const u=DB.users.find(x=>x.u===uname); if(!u){ toast('❌ সদস্য পাওয়া যায়নি!'); return; }
-  DB.transactions.push({id:Date.now(),uname,type,amount,date,note,by:CU.u});
-  // balance সবসময় getPreBal + transactions থেকে calculate হয়
-  saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
+  const _txi={id:Date.now(),uname,type,amount,date,note,by:CU.u};
+  DB.transactions.push(_txi);
+  saveTxItem(_txi); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
   document.getElementById('dep-amt').value='';
   document.getElementById('dep-note').value='';
   const _tmk=messMonthKey();
@@ -201,15 +201,10 @@ function renderDepHistory(){
   // মাস selector — পূর্বের selection সংরক্ষণ করো, repopulate-এ হারাবে না
   const selEl=document.getElementById('dep-hist-month');
   const _prevVal = selEl ? selEl.value : '';
-  if(selEl) fillMessCycleSelect(selEl, 12, true); // addBlank → auto-select বন্ধ
-  // auto-select বন্ধ — আগের selection থাকলে রাখো, নাহলে খালি
-  if(selEl && _prevVal) selEl.value = _prevVal;
-  else if(selEl) selEl.value = '';
+  if(selEl) fillMessCycleSelect(selEl,12);
+  if(selEl && selEl.value !== _prevVal && _prevVal) selEl.value = _prevVal;
+  if(selEl && !selEl.value) selEl.value = currentMonthKey;
   const mmKey=selEl&&selEl.value;
-  if(!mmKey){
-    if(histEl) histEl.innerHTML='<p class="muted tc" style="padding:24px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
-    return;
-  }
   _withMonthData(mmKey, histEl, ()=>{
     const txs=DB.transactions.filter(tx=>dateInMessMonth(tx.date,mmKey)).slice().reverse();
     if(!txs.length){ histEl.innerHTML='<p class="muted tc">এই মাসে কোনো লেনদেন নেই</p>'; return; }
@@ -248,7 +243,8 @@ function editTransaction(id){
     if(!validAmount(newAmt)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
     tx.amount=newAmt;
     tx.note=newNote;
-    saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
+    saveTxItem(tx);
+    renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
     closeModal(); toast('✅ লেনদেন আপডেট হয়েছে!');
   }, true);
 }
