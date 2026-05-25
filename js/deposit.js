@@ -201,14 +201,10 @@ function renderDepHistory(){
   // মাস selector — পূর্বের selection সংরক্ষণ করো, repopulate-এ হারাবে না
   const selEl=document.getElementById('dep-hist-month');
   const _prevVal = selEl ? selEl.value : '';
-  if(selEl) fillMessCycleSelect(selEl,12);
-  if(selEl && _prevVal) selEl.value = _prevVal;
-  else if(selEl) selEl.value = '';
+  if(selEl) fillMessCycleSelect(selEl, 12, true); // addBlank=true → মাস সিলেক্ট করুন
+  if(selEl && selEl.value !== _prevVal && _prevVal) selEl.value = _prevVal;
+  if(selEl && !selEl.value) selEl.value = currentMonthKey;
   const mmKey=selEl&&selEl.value;
-  if(!mmKey){
-    if(histEl) histEl.innerHTML='<p class="muted tc" style="padding:20px 0;font-size:13px">📅 উপরের dropdown থেকে মাস সিলেক্ট করুন</p>';
-    return;
-  }
   _withMonthData(mmKey, histEl, ()=>{
     const txs=DB.transactions.filter(tx=>dateInMessMonth(tx.date,mmKey)).slice().reverse();
     if(!txs.length){ histEl.innerHTML='<p class="muted tc">এই মাসে কোনো লেনদেন নেই</p>'; return; }

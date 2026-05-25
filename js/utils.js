@@ -133,7 +133,6 @@ function fillMessCycleSelect(sel, months=12, addBlank=false){
   const now = getBSTDate();
   const currentKey = messMonthKey();
   sel.innerHTML='';
-  // blank placeholder option — history screen-এ দরকার
   if(addBlank){
     const blank=document.createElement('option');
     blank.value=''; blank.textContent='-- মাস সিলেক্ট করুন --';
