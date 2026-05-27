@@ -467,36 +467,82 @@ function loadDB(){
       globalReady=true; _checkReady();
     });
 
-    // ── Current month listener (real-time) ──
-    currentMonthRef.on('value', snap=>{
+    // ── Current month: ONCE initial load (full data) ──
+    // Login-এ একবার সব নামায় — bandwidth: 1× per login
+    currentMonthRef.once('value').then(snap=>{
       const data=snap.val();
       if(data){
         const ARR=['bazar','others','transactions','officeMealNotes','cookBills'];
         MONTH_FIELDS.forEach(f=>{
           if(data[f]===undefined) return;
           if(ARR.includes(f)){
-            // সবসময় array নিশ্চিত করো — পুরনো array বা নতুন object যাই হোক
             DB[f]=_ensureArr(data[f]).sort((a,b)=>(a.id||0)-(b.id||0));
           } else { DB[f]=data[f]; }
         });
       }
       _clearHistCache();
       monthReady=true; _checkReady();
-    }, err=>{
+      // initial load শেষ হলে real-time listeners চালু করো
+      _startMealListeners();
+    }).catch(err=>{
       console.error('Month load error:',err);
       monthReady=true; _checkReady();
     });
 
+    // ── mealRates: real-time (tiny, critical for home screen) ──
+    currentMonthRef.child('mealRates').on('value', snap=>{
+      const v=snap.val(); if(v!==null) DB.mealRates=v;
+      invalidateMealRateCache();
+      if(_dbLoaded) refreshHome();
+    });
+
+    // ── Meal real-time: child_added + child_changed ──
+    // একটা meal entry ~43 bytes — পুরো month-এর বদলে শুধু changed entry আসে
+    function _startMealListeners(){
+      const _handleMeal=(snap)=>{
+        const key=snap.key, val=snap.val();
+        if(key && val){ DB.meals[key]=val; }
+        invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
+        if(_dbLoaded) refreshHome();
+      };
+      currentMonthRef.child('meals').on('child_added',   _handleMeal);
+      currentMonthRef.child('meals').on('child_changed', _handleMeal);
+      currentMonthRef.child('meals').on('child_removed', snap=>{
+        if(snap.key) delete DB.meals[snap.key];
+        invalidateMealIndex(); invalidateMealRateCache();
+        if(_dbLoaded) refreshHome();
+      });
+    }
+
     // ── Page hide/show: connection manage ──
-    // Page বন্ধ/minimize → Firebase connection release করো
     document.addEventListener('visibilitychange', ()=>{
       if(document.hidden){
-        firebase.database().goOffline(); // connection release
+        firebase.database().goOffline();
       } else {
-        firebase.database().goOnline(); // reconnect
-        _refreshActiveScreen(); // latest data নেওয়া নিশ্চিত করো
+        firebase.database().goOnline();
+        // meals: child_changed listener নিজেই delta ধরবে (Firebase auto-sync)
+        // bazar/others/transactions: tab active হলে fresh load
+        _reloadNonMealData();
+        _refreshActiveScreen();
       }
     });
+
+    // ── Non-meal data reload (tab active হলে) ──
+    function _reloadNonMealData(){
+      if(!_dbLoaded || !currentMonthRef) return;
+      currentMonthRef.once('value').then(snap=>{
+        const data=snap.val(); if(!data) return;
+        const ARR=['bazar','others','transactions','officeMealNotes','cookBills'];
+        ARR.forEach(f=>{
+          if(data[f]!==undefined) DB[f]=_ensureArr(data[f]).sort((a,b)=>(a.id||0)-(b.id||0));
+        });
+        // mealRates, managers etc (non-meal fields, excluding meals)
+        ['managers','officeMealRates'].forEach(f=>{
+          if(data[f]!==undefined) DB[f]=data[f];
+        });
+        _clearHistCache();
+      }).catch(()=>{});
+    }
 
     // ১০s fallback — blank screen ঠেকাতে
     setTimeout(()=>{
