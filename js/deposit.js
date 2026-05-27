@@ -185,9 +185,10 @@ function saveDeposit(){
   if(!date){ toast('❌ তারিখ দিন!'); return; }
   if(!['deposit','withdraw'].includes(type)){ toast('❌ ধরন নির্বাচন করুন!'); return; }
   const u=DB.users.find(x=>x.u===uname); if(!u){ toast('❌ সদস্য পাওয়া যায়নি!'); return; }
-  DB.transactions.push({id:Date.now(),uname,type,amount,date,note,by:CU.u});
+  const _txi={id:Date.now(),uname,type,amount,date,note,by:CU.u};
+  DB.transactions.push(_txi);
   // balance সবসময় getPreBal + transactions থেকে calculate হয়
-  saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
+  saveTxItem(_txi); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
   document.getElementById('dep-amt').value='';
   document.getElementById('dep-note').value='';
   const _tmk=messMonthKey();
@@ -247,7 +248,7 @@ function editTransaction(id){
     if(!validAmount(newAmt)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
     tx.amount=newAmt;
     tx.note=newNote;
-    saveDB(); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
+    saveTxItem(tx); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();
     closeModal(); toast('✅ লেনদেন আপডেট হয়েছে!');
   }, true);
 }
