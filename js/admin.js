@@ -962,11 +962,11 @@ function showAllMembersBill(){
     </div>
     <div class="amb-fund">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:11px;opacity:.75">🔄 গত মাসের Handover</div>
+        <div style="font-size:11px;opacity:.75">Received Balance</div>
         <div style="font-size:14px;font-weight:700;color:${totalHandover>=0?'#4ade80':'#f87171'}">${totalHandover>=0?'+':'−'}৳${Math.abs(totalHandover).toLocaleString('en-US',{maximumFractionDigits:2})}</div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:11px;opacity:.75">💰 এই মাসের মোট জমা</div>
+        <div style="font-size:11px;opacity:.75">Total deposit</div>
         <div style="font-size:14px;font-weight:700;color:#60a5fa">${totalThisMonthDep>=0?'+':'−'}৳${Math.abs(totalThisMonthDep).toLocaleString('en-US',{maximumFractionDigits:2})}</div>
       </div>
       <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
