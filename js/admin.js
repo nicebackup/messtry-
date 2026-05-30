@@ -731,9 +731,34 @@ function _doMakePDF(type){
       </div>`;
 
       // ── TOTAL ──
-      html += `<div style="background:#1a2e22;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      html += `<div style="background:#1a2e22;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;">Total Monthly Expense</span>
         <span style="font-size:18px;font-weight:700;color:#fcd34d;">Tk ${total.toLocaleString()}</span>
+      </div>`;
+
+      // ── FUND SUMMARY (PDF) ──
+      const _activeU=DB.users.filter(u=>u.type!=='cook'&&isActiveInMonth(u,mmKey));
+      const _handover=_activeU.reduce((s,u)=>s+getPreBal(u.u,mmKey),0);
+      const _thisDep=_activeU.reduce((s,u)=>{
+        const dep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((a,tx)=>a+(tx.amount||0),0);
+        const wd=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((a,tx)=>a+(tx.amount||0),0);
+        return s+(dep-wd);
+      },0);
+      const _messFund=_handover+_thisDep-total;
+      const fF=v=>Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+        <div style="background:#e3f2fd;border-radius:8px;padding:10px;border-left:3px solid #1565c0;">
+          <div style="font-size:9px;color:#666;margin-bottom:2px;">Received (Prev Handover)</div>
+          <div style="font-size:14px;font-weight:700;color:${_handover>=0?'#1565c0':'#e53935'}">${_handover>=0?'+':'-'}Tk ${fF(_handover)}</div>
+        </div>
+        <div style="background:#e8f5e9;border-radius:8px;padding:10px;border-left:3px solid #2e7d32;">
+          <div style="font-size:9px;color:#666;margin-bottom:2px;">This Month Deposit (Net)</div>
+          <div style="font-size:14px;font-weight:700;color:#2e7d32">${_thisDep>=0?'+':'-'}Tk ${fF(_thisDep)}</div>
+        </div>
+        <div style="background:${_messFund>=0?'#e8f5e9':'#fce4ec'};border-radius:8px;padding:10px;border-left:3px solid ${_messFund>=0?'#1a6b3c':'#e53935'};">
+          <div style="font-size:9px;color:#666;margin-bottom:2px;">Mess Fund Balance</div>
+          <div style="font-size:14px;font-weight:700;color:${_messFund>=0?'#1a6b3c':'#e53935'}">${_messFund>=0?'+':'-'}Tk ${fF(_messFund)}</div>
+        </div>
       </div>`;
 
       // ── MEMBER BILL TABLE ──
@@ -916,21 +941,13 @@ function showAllMembersBill(){
   const ofBill=ofMls*ofRateMain;
 
   // ── মেস ফান্ড ──
-  const activeUsers = DB.users.filter(u=>u.type!=='cook');
-  
-  // গত মাসের Handover = সব সদস্যের prevBalance এর মোট
-  const totalHandover = activeUsers.reduce((s,u)=>s+getPreBal(u.u,mmKey), 0);
-  
-  // এই মাসের মোট জমা (deposit - withdraw)
-  const totalThisMonthDep = activeUsers.reduce((s,u)=>{
-    const dep  = (DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit' &&dateInMessMonth(tx.date,mmKey)).reduce((a,tx)=>a+(tx.amount||0),0);
-    const with_ = (DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((a,tx)=>a+(tx.amount||0),0);
-    return s+(dep-with_);
-  }, 0);
-  
-  // মেস ফান্ড = handover + এই মাসের জমা - খরচ
-  const totalDeposited = totalHandover + totalThisMonthDep;
-  const messBalance = totalDeposited - bazar - others;
+  let totalDeposited=0;
+  DB.users.filter(u=>u.type!=='cook').forEach(u=>{
+    const _fDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+    const _fWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+    totalDeposited+=getPreBal(u.u,mmKey)+(_fDep-_fWith);
+  });
+  const messBalance=totalDeposited-bazar-others;
 
   // ── Summary Hero Card (সবাই দেখবে) ──
   let html=`
@@ -961,18 +978,8 @@ function showAllMembersBill(){
       </div>
     </div>
     <div class="amb-fund">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:11px;opacity:.75">Received Balance</div>
-        <div style="font-size:14px;font-weight:700;color:${totalHandover>=0?'#4ade80':'#f87171'}">${totalHandover>=0?'+':'−'}৳${Math.abs(totalHandover).toLocaleString('en-US',{maximumFractionDigits:2})}</div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:11px;opacity:.75">Total deposit</div>
-        <div style="font-size:14px;font-weight:700;color:#60a5fa">${totalThisMonthDep>=0?'+':'−'}৳${Math.abs(totalThisMonthDep).toLocaleString('en-US',{maximumFractionDigits:2})}</div>
-      </div>
-      <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
-        <div style="font-size:11px;opacity:.85">🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)</div>
-        <div style="font-size:22px;font-weight:800;color:${messBalance>=0?'#4ade80':'#f87171'};letter-spacing:-0.3px;margin-top:2px">${messBalance>=0?'+':'−'}৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      </div>
+      <div style="font-size:12px;opacity:.85">🟢 মেস ফান্ড (ম্যানেজারের কাছে জমা)</div>
+      <div style="font-size:20px;font-weight:800;color:${messBalance>=0?'#4ade80':'#f87171'};letter-spacing:-0.3px">${messBalance>=0?'+':'\u2212'}৳${Math.abs(Math.round(messBalance*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>
   </div>`;
 
