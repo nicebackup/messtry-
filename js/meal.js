@@ -40,13 +40,18 @@ function initMeal(){
   const tmr = nextDay(tod());
   mealDate = tmr;
   document.getElementById('meal-date').value=mealDate;
-  applyMessCycleBounds('meal-date');
+  // ✅ FIX: extendToNext=true — পরের মেস মাসের meal আগাম দেওয়া যাবে
+  applyMessCycleBounds('meal-date', null, true);
   updateDateLabel('meal-date');
   loadMealDate();
 }
 function shiftDate(delta){
+  const {minDate, maxDate} = getMessCycleBounds(null, true); // extendToNext
   const d=new Date(mealDate); d.setDate(d.getDate()+delta);
-  mealDate=toISODate(d);
+  const newDate=toISODate(d);
+  // ✅ FIX: arrow দিয়ে navigate করলে extended bounds-এর বাইরে যাবে না
+  if(newDate < minDate || newDate > maxDate) return;
+  mealDate=newDate;
   document.getElementById('meal-date').value=mealDate;
   updateDateLabel('meal-date');
   loadMealDate();
@@ -127,7 +132,11 @@ function saveMeal(){
   showModal('মিল সেভ করুন',
     `${mealDate} এর মিল:\n\n☀️ সকাল: ${bLabel} = ${bv.toFixed(2)} meals\n🌞 দুপুর: ${lLabel} = ${lv.toFixed(2)} meals\n🌙 রাত: ${dLabel} = ${dv.toFixed(2)} meals\n\nমোট: ${(bv+lv+dv).toFixed(2)} meals`,
     function(){ const _mk=CU.u+'_'+mealDate,_mv={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
-    DB.meals[_mk]=_mv; saveMealEntry(_mk,_mv);
+    DB.meals[_mk]=_mv;
+    // ✅ FIX: meal date যে মেস মাসে পড়ে, সেই bucket-এ save।
+    // আগে সবসময় currentMonthRef-এ যেত — পরের মাসের meal ভুল bucket-এ পড়ত।
+    const _mealMmKey = messMonthKey(new Date(mealDate));
+    saveMealEntry(_mk,_mv,_mealMmKey);
     invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
     toast('✅ '+mealDate+' মিল সেভ!'); refreshHome(); }
   );

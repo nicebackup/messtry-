@@ -185,18 +185,24 @@ function saveMonth(){
     currentMonthRef.update(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
   }, 400);
 }
-function saveMealEntry(k,v){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('meals').child(k).set(v).catch(e=>console.error('Meal:',e)); }
+function saveMealEntry(k,v,mmKey){
+  if(!_dbLoaded||!k) return;
+  // ✅ FIX: mmKey দিলে সেই month-এর path-এ save হবে।
+  // না দিলে currentMonthRef (আগের মতো default behavior)।
+  // এটা দরকার কারণ user পরের মেস মাসের meal আগে থেকে দিতে পারে।
+  // e.g. Jun 11 meal → bucket 2026-06, কিন্তু currentMonthRef = 2026-05।
+  const ref = (mmKey && mmKey !== currentMonthKey)
+    ? firebase.database().ref('messData/months/'+mmKey)
+    : currentMonthRef;
+  if(!ref) return;
+  ref.child('meals').child(k).set(v).catch(e=>console.error('Meal ['+mmKey+']:',e));
+}
 function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('bazar').child(String(item.id)).set(item).catch(e=>console.error('Bazar:',e)); }
 function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('BazarDel:',e)); }
 function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others:',e)); }
 function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
 function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
 function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
-
-// ── officeMealNotes individual save/delete ──────────────────────────────
-// saveMonth() এ officeMealNotes নেই — individual path-এ save করতে হবে।
-function saveOfficeMealNoteItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('officeMealNotes').child(String(item.id)).set(item).catch(e=>console.error('OffNote:',e)); }
-function deleteOfficeMealNoteItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('officeMealNotes').child(String(id)).remove().catch(e=>console.error('OffNoteDel:',e)); }
 
 // ── saveDB() — সব পুরানো call-এর জন্য backward compatible ──
 function saveDB(){

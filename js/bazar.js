@@ -2,18 +2,26 @@
 // BAZAR
 // ═══════════════════════════════════════════════
 // ── Mess cycle date bounds for input[type="date"] min/max ──
-function getMessCycleBounds(mmKey){
+function getMessCycleBounds(mmKey, extendToNext){
   const k = mmKey || messMonthKey();
   const [y,m] = k.split('-').map(Number);
   const nm = m===12?1:m+1, ny = m===12?y+1:y;
   const minDate = y+'-'+String(m).padStart(2,'0')+'-11';
-  const maxDate = ny+'-'+String(nm).padStart(2,'0')+'-10';
+  let maxDate;
+  if(extendToNext){
+    // ✅ পরবর্তী মেস মাসের শেষ পর্যন্ত — যেন user আগাম meal দিতে পারে।
+    // e.g. current=2026-05 (May11–Jun10) → extendToNext → max=2026-07-10
+    const nnm = nm===12?1:nm+1, nny = nm===12?ny+1:ny;
+    maxDate = nny+'-'+String(nnm).padStart(2,'0')+'-10';
+  } else {
+    maxDate = ny+'-'+String(nm).padStart(2,'0')+'-10';
+  }
   return {minDate, maxDate};
 }
-function applyMessCycleBounds(inputId, mmKey){
+function applyMessCycleBounds(inputId, mmKey, extendToNext){
   const el = document.getElementById(inputId);
   if(!el) return;
-  const {minDate, maxDate} = getMessCycleBounds(mmKey);
+  const {minDate, maxDate} = getMessCycleBounds(mmKey, extendToNext);
   el.min = minDate;
   el.max = maxDate;
   // Clamp value if outside bounds
@@ -65,7 +73,7 @@ function addBazar(){
   if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
   if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
   if(!date){ toast('❌ তারিখ দিন!'); return; }
-  const _bzi={id:genId(),desc,amount,date,by:CU.name};
+  const _bzi={id:Date.now(),desc,amount,date,by:CU.name};
   DB.bazar.push(_bzi);
   saveBazarItem(_bzi);
   // entry যোগের পর current month দেখাও
