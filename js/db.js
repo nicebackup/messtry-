@@ -8,6 +8,14 @@
 
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 
+// ── Collision-safe ID generator ──────────────────────────────────
+// Date.now() এ একই millisecond-এ দুটো item → same ID → overwrite।
+// Date.now() * 10000 + 4-digit random → collision practically impossible।
+// Integer হওয়ায় sort (a,b)=>a.id-b.id সঠিকভাবে কাজ করে।
+function genId(){
+  return Date.now() * 10000 + Math.floor(Math.random() * 10000);
+}
+
 // ── Splash logic — simple ──
 const _wasAuthed = localStorage.getItem('mq_authed') === '1';
 const _isRefresh = sessionStorage.getItem('mq_session') === '1';
@@ -153,8 +161,14 @@ function saveMonth(){
   if(!_dbLoaded || !currentMonthRef) return;
   if(_monthSaveTimer) clearTimeout(_monthSaveTimer);
   _monthSaveTimer = setTimeout(()=>{
+    // ⚠️ RACE CONDITION FIX:
+    // bazar, others, transactions, officeMealNotes, cookBills — এগুলো
+    // saveBazarItem / saveOtherItem / saveTxItem দিয়ে individual path-এ save হয়।
+    // এখানে bulk-overwrite করলে অন্য browser-এর concurrent save হারিয়ে যাবে।
+    // শুধু object fields save করি — array fields কখনো নয়।
+    const SAFE_MONTH_FIELDS = ['meals','managers','mealRates','officeMealRates'];
     const data={};
-    MONTH_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
+    SAFE_MONTH_FIELDS.forEach(f=>{ if(DB[f]!==undefined) data[f]=DB[f]; });
     currentMonthRef.update(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
   }, 400);
 }
@@ -519,11 +533,16 @@ function loadDB(){
       if(document.hidden){
         firebase.database().goOffline();
       } else {
-        firebase.database().goOnline();
-        // meals: child_changed listener নিজেই delta ধরবে (Firebase auto-sync)
-        // bazar/others/transactions: tab active হলে fresh load
-        _reloadNonMealData();
-        _refreshActiveScreen();
+        // ✅ Jitter delay: সবাই একসাথে reconnect করলে Firebase-এ spike হয়।
+        // 0–1200ms random delay — 150 user ছড়িয়ে পড়বে, connection spike কমবে।
+        const jitter = Math.floor(Math.random() * 1200);
+        setTimeout(()=>{
+          firebase.database().goOnline();
+          // meals: child_changed listener নিজেই delta ধরবে (Firebase auto-sync)
+          // bazar/others/transactions: tab active হলে fresh load
+          _reloadNonMealData();
+          _refreshActiveScreen();
+        }, jitter);
       }
     });
 

@@ -340,7 +340,10 @@ function setManager(){
   if(!DB.managers[month].includes(uname)) DB.managers[month].push(uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u && u.role==='member'){ u.role='manager'; syncRole(uname,'manager'); }
-  saveDB(); saveUsers(); renderManagerInfo();
+  // ✅ FIX: saveDB() বাদ — targeted saves। managers=month data, users=global।
+  // saveDB() → saveMonth() পুরো month array overwrite করত (race condition)।
+  currentMonthRef.child('managers').set(DB.managers).catch(e=>console.error('Managers save:',e));
+  saveGlobal(); saveUsers(); renderManagerInfo();
   const sel=document.getElementById('mgr-remove');
   sel.innerHTML='<option value="">-- ম্যানেজার নির্বাচন --</option>';
   (DB.managers[month]||[]).forEach(u=>{ const usr=DB.users.find(x=>x.u===u); if(usr) sel.innerHTML+=`<option value="${esc(u)}">${esc(usr.name)}</option>`; });
@@ -353,7 +356,9 @@ function removeManager(){
   if(DB.managers[month]) DB.managers[month]=DB.managers[month].filter(u=>u!==uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u && u.role==='manager'){ u.role='member'; syncRole(uname,'member'); }
-  saveDB(); saveUsers(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
+  // ✅ FIX: targeted saves — managers path + global only
+  currentMonthRef.child('managers').set(DB.managers).catch(e=>console.error('Managers save:',e));
+  saveGlobal(); saveUsers(); renderManagerInfo(); toast('✅ ম্যানেজার বাদ দেওয়া হয়েছে!');
 }
 // saveCfg() — moved to js/rules.js (rules screen function, misplaced in ADMIN)
 // Extracted: 2026-05-19 | Original lines: 2509–2536
@@ -374,8 +379,14 @@ function saveAdmMeal(){
   if(!isOnline()){ noNetPopup(); return; }
   if(!admBuf.uname||!admBuf.dateStr){ toast('❌ সদস্য ও তারিখ নির্বাচন করুন!'); return; }
   ['b','l','d'].forEach(t=>{ if(!admBuf[t]) admBuf[t]={t:'off',q:1}; admBuf[t].q=parseInt(document.getElementById('adm-qty-'+t).value)||1; });
-  DB.meals[admBuf.uname+'_'+admBuf.dateStr]={b:{...admBuf.b},l:{...admBuf.l},d:{...admBuf.d}};
-  saveDB(); toast('✅ মিল আপডেট হয়েছে!'); closeAdmPopup();
+  const _admKey=admBuf.uname+'_'+admBuf.dateStr;
+  const _admVal={b:{...admBuf.b},l:{...admBuf.l},d:{...admBuf.d}};
+  DB.meals[_admKey]=_admVal;
+  // ✅ FIX: saveDB() বাদ — শুধু এই একটা meal entry save হবে।
+  // saveDB() → saveMonth() → পুরো meals object overwrite (race condition)।
+  saveMealEntry(_admKey, _admVal);
+  invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
+  toast('✅ মিল আপডেট হয়েছে!'); closeAdmPopup();
 }
 // Edit member
 function loadEditMem(){
@@ -409,7 +420,9 @@ function saveEditMem(){
   // joined ও activeFrom edit করা নিষিদ্ধ — registration-এ set হয়, পরে অপরিবর্তনীয়
   if(['inside','outside','cook'].includes(newType)) u.type=newType;
 
-  saveDB();
+  // ✅ FIX: saveDB() বাদ — শুধু users (global data) পরিবর্তন হয়েছে।
+  // saveDB() → saveMonth() month arrays overwrite করত।
+  saveGlobal(); saveUsers();
 
   // ✅ users/{uid} path-ও update করো — না হলে refresh-এ পুরনো data ফিরে আসে
   if(u.uid){
@@ -433,7 +446,10 @@ function deleteMember(){
     DB.users=DB.users.filter(x=>x.u!==uname);
     DB.controllers=DB.controllers.filter(c=>c!==uname);
     Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
-    saveDB(); closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');
+    // ✅ FIX: targeted saves — users/controllers=global, managers=month
+    saveGlobal(); saveUsers();
+    currentMonthRef.child('managers').set(DB.managers).catch(e=>console.error('Managers save:',e));
+    closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');
   });
 }
 // Controller management
@@ -470,7 +486,8 @@ function addController(){
   if(!DB.controllers.includes(uname)) DB.controllers.push(uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u){ u.role='controller'; syncRole(uname,'controller'); }
-  saveDB(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
+  // ✅ FIX: controllers + users = global data only
+  saveGlobal(); saveUsers(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
 }
 function removeController(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -480,7 +497,8 @@ function removeController(){
   const u=DB.users.find(x=>x.u===uname);
   if(u&&u.role==='controller'){ u.role='member'; }
   syncRole(uname,'member');
-  saveDB(); renderControllerList(); toast('✅ Controller বাদ দেওয়া হয়েছে!');
+  // ✅ FIX: controllers + users = global data only
+  saveGlobal(); saveUsers(); renderControllerList(); toast('✅ Controller বাদ দেওয়া হয়েছে!');
 }
 
 // ═══════════════════════════════════════════════
@@ -1131,7 +1149,8 @@ function saveSiteNote(){
   if(!isOnline()){ noNetPopup(); return; }
   const val=sanitizeInput(document.getElementById('site-note-input').value).slice(0,80);
   DB.siteNote=val;
-  saveDB();
+  // ✅ FIX: siteNote = global data only — saveGlobal() যথেষ্ট
+  saveGlobal();
   document.getElementById('home-mgr').textContent=val||'Midland East Power Limited';
   toast('✅ ঠিকানা/নোট সেভ হয়েছে!'); closeAdmPopup();
 }

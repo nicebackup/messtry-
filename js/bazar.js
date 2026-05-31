@@ -65,7 +65,7 @@ function addBazar(){
   if(!desc||desc.length<2){ toast('❌ বিবরণ দিন!'); return; }
   if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
   if(!date){ toast('❌ তারিখ দিন!'); return; }
-  const _bzi={id:Date.now(),desc,amount,date,by:CU.name};
+  const _bzi={id:genId(),desc,amount,date,by:CU.name};
   DB.bazar.push(_bzi);
   saveBazarItem(_bzi);
   // entry যোগের পর current month দেখাও

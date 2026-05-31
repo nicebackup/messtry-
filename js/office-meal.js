@@ -63,7 +63,7 @@ function saveOfficeMealNote(){
   const text=sanitizeInput(document.getElementById('ofm-note-input').value);
   if(!text||text.length<3){ toast('❌ নোট লিখুন!'); return; }
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
-  DB.officeMealNotes.push({id:Date.now(), date:tod(), text, by:CU?CU.name:'Admin'});
+  DB.officeMealNotes.push({id:genId(), date:tod(), text, by:CU?CU.name:'Admin'});
   saveDB();
   document.getElementById('ofm-note-input').value='';
   renderOfficeMealNotes();
@@ -292,7 +292,7 @@ function saveOfficeMeal(key){
     date+' — '+OFFICE_ACCOUNTS[key]+'\n\n☀️ সকাল: '+bLabel+' = '+bv.toFixed(2)+' meals\n🌞 দুপুর: '+lLabel+' = '+lv.toFixed(2)+' meals\n🌙 রাত: '+dLabel+' = '+dv.toFixed(2)+' meals\n\nমোট: '+(bv+lv+dv).toFixed(2)+' meals',
     function(){
       DB.meals[u.u+'_'+date]={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
-      if(note){ if(!DB.officeMealNotes) DB.officeMealNotes=[]; DB.officeMealNotes.push({id:Date.now(),date,text:OFFICE_ACCOUNTS[key]+': '+note,by:CU?CU.name:'Admin'}); }
+      if(note){ if(!DB.officeMealNotes) DB.officeMealNotes=[]; DB.officeMealNotes.push({id:genId(),date,text:OFFICE_ACCOUNTS[key]+': '+note,by:CU?CU.name:'Admin'}); }
       saveDB(); toggleOfficeMealEntry(key); loadOfficeMealScreen();
       toast('✅ '+OFFICE_ACCOUNTS[key]+' মিল সেভ! ('+date+')');
     }
@@ -304,7 +304,7 @@ function saveOfficeMealNoteScreen(){
   const text = sanitizeInput(noteInput?.value||'');
   if(!text||text.length<2){ toast('❌ নোট লিখুন!'); return; }
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
-  DB.officeMealNotes.push({id:Date.now(), date:tod(), text, by:CU?CU.name:'Admin'});
+  DB.officeMealNotes.push({id:genId(), date:tod(), text, by:CU?CU.name:'Admin'});
   saveMonth();
   if(noteInput) noteInput.value='';
   renderOfficeMealNotesScreen();

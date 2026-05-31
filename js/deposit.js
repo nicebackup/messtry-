@@ -185,7 +185,7 @@ function saveDeposit(){
   if(!date){ toast('❌ তারিখ দিন!'); return; }
   if(!['deposit','withdraw'].includes(type)){ toast('❌ ধরন নির্বাচন করুন!'); return; }
   const u=DB.users.find(x=>x.u===uname); if(!u){ toast('❌ সদস্য পাওয়া যায়নি!'); return; }
-  const _txi={id:Date.now(),uname,type,amount,date,note,by:CU.u};
+  const _txi={id:genId(),uname,type,amount,date,note,by:CU.u};
   DB.transactions.push(_txi);
   // balance সবসময় getPreBal + transactions থেকে calculate হয়
   saveTxItem(_txi); renderDepHistory(); showMemberBalance(); renderDepMyBalance(); renderDepMyHistory();

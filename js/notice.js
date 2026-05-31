@@ -59,7 +59,8 @@ function updatePopupToggleBtn(){
 }
 function toggleNoticePopup(){
   DB.notice.popupEnabled=!DB.notice.popupEnabled;
-  saveDB(); updatePopupToggleBtn();
+  // ✅ FIX: notice = global data — saveGlobal() যথেষ্ট, saveDB() বাদ
+  saveGlobal(); updatePopupToggleBtn();
   toast(DB.notice.popupEnabled?'🔔 পপআপ চালু হয়েছে!':'🔕 পপআপ বন্ধ করা হয়েছে!');
 }
 function saveNotice(){
@@ -67,13 +68,14 @@ function saveNotice(){
   const ta=document.getElementById('notice-text-input');
   const text=ta?(ta.value||'').trim().slice(0,2000):'';
   DB.notice.text=text;
-  saveDB(); initNotice();
+  // ✅ FIX: notice = global data — saveGlobal() যথেষ্ট
+  saveGlobal(); initNotice();
   toast('✅ নোটিশ সেভ হয়েছে!');
 }
 function clearNotice(){
   if(!isOnline()){ noNetPopup(); return; }
   showModal('নোটিশ মুছুন','নোটিশ মুছে ফেলবেন?',()=>{
-    DB.notice.text=''; saveDB(); initNotice(); toast('✅ নোটিশ মুছে ফেলা হয়েছে!');
+    DB.notice.text=''; saveGlobal(); initNotice(); toast('✅ নোটিশ মুছে ফেলা হয়েছে!');
   });
 }
 // ═══════════════════════════════════════════════

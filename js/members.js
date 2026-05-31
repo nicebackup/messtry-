@@ -234,7 +234,8 @@ function toggleBlockMember(){
   const action=u.blocked?'আনব্লক':'ব্লক';
   showModal(`${action} করুন`,`${u.name} কে ${action} করবেন?`,()=>{
     u.blocked=!u.blocked;
-    saveDB();
+    // ✅ FIX: blocked field = global (users) data only — saveDB() বাদ
+    saveGlobal(); saveUsers();
     // ✅ users/{uid}/blocked sync — না হলে login-এ block কাজ করে না
     const doBlockSync = uid => {
       firebase.database().ref('users/'+uid+'/blocked').set(u.blocked||null).catch(()=>{});
@@ -322,9 +323,20 @@ function saveProfile(){
   // ID change — update all references
   if(newId && newId !== cu.u){
     const oldId=cu.u;
-    DB.transactions.forEach(t=>{ if(t.uname===oldId) t.uname=newId; });
-    DB.meals && Object.values(DB.meals).forEach(month=>{
-      if(month[oldId]){ month[newId]=month[oldId]; delete month[oldId]; }
+    // ── Transactions: uname rename ──
+    DB.transactions.forEach(t=>{ if(t.uname===oldId){ t.uname=newId; saveTxItem(t); } });
+    // ── Meals: key format = "userId_YYYY-MM-DD" — Object.values() ভুল ছিল ──
+    // ✅ FIX: Object.keys() দিয়ে prefix match করো
+    const _mealKeys=Object.keys(DB.meals||{});
+    _mealKeys.forEach(key=>{
+      if(key.startsWith(oldId+'_')){
+        const newKey=newId+'_'+key.slice(oldId.length+1);
+        DB.meals[newKey]=DB.meals[key];
+        delete DB.meals[key];
+        // Firebase: নতুন key save + পুরনো key delete
+        saveMealEntry(newKey, DB.meals[newKey]);
+        if(currentMonthRef) currentMonthRef.child('meals').child(key).remove().catch(()=>{});
+      }
     });
     cu.u=newId; CU.u=newId;
   }
@@ -337,7 +349,9 @@ function saveProfile(){
   cu.email=newEmail||cu.email||'';
   cu.address=newAddr||cu.address||'';
 
-  saveDB();
+  saveGlobal(); saveUsers();
+  // ✅ FIX: saveDB() বাদ — users = global data। ID change হলে
+  // উপরেই transactions/meals individually save হয়েছে।
 
   // ✅ users/{uid} path-ও update করো — না হলে refresh-এ পুরনো data ফিরে আসে
   if(CU.uid){
