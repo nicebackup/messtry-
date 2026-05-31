@@ -121,7 +121,20 @@ function saveGlobal(){
     DB.users=DB.users.filter(u=>{ if(!u.u||_sv.has(u.u)) return false; _sv.add(u.u); return true; });
     // Guard: Firebase-এর চেয়ে কম user দিয়ে save করবো না
     if(_minUserCount>0 && DB.users.length<_minUserCount){
-      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount);
+      console.error('[saveGlobal BLOCKED] users='+DB.users.length+' < expected='+_minUserCount+'. Recovering...');
+      globalRef.child('users').once('value').then(snap=>{
+        const fw=snap.val(); if(!Array.isArray(fw)) return;
+        const fwU=new Set(fw.filter(u=>u&&u.u).map(u=>u.u)).size;
+        if(fwU<_minUserCount) return;
+        const merged=[...fw];
+        DB.users.forEach(u=>{ if(u&&u.u&&!merged.find(x=>x.u===u.u)) merged.push(u); });
+        DB.users=merged;
+        _minUserCount=Math.max(_minUserCount,new Set(merged.filter(u=>u&&u.u).map(u=>u.u)).size);
+        const d2={}; GLOBAL_FIELDS.forEach(f=>{ if(f!=='users'&&DB[f]!==undefined) d2[f]=DB[f]; });
+        globalRef.update(d2).catch(()=>{});
+        globalRef.child('users').set(merged).catch(()=>{});
+        console.log('[saveGlobal RECOVERED] users='+merged.length);
+      }).catch(()=>{});
       return;
     }
     if(DB.users.length>0) _minUserCount=Math.max(_minUserCount, DB.users.length);
@@ -179,6 +192,11 @@ function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return
 function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
 function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
 function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
+
+// ── officeMealNotes individual save/delete ──────────────────────────────
+// saveMonth() এ officeMealNotes নেই — individual path-এ save করতে হবে।
+function saveOfficeMealNoteItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('officeMealNotes').child(String(item.id)).set(item).catch(e=>console.error('OffNote:',e)); }
+function deleteOfficeMealNoteItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('officeMealNotes').child(String(id)).remove().catch(e=>console.error('OffNoteDel:',e)); }
 
 // ── saveDB() — সব পুরানো call-এর জন্য backward compatible ──
 function saveDB(){

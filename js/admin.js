@@ -446,7 +446,8 @@ function deleteMember(){
     DB.users=DB.users.filter(x=>x.u!==uname);
     DB.controllers=DB.controllers.filter(c=>c!==uname);
     Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
-    // ✅ FIX: targeted saves — users/controllers=global, managers=month
+    // member মুছলে _minUserCount আপডেট — নাহলে false block
+    if(typeof _minUserCount!=='undefined') _minUserCount=Math.max(0,new Set(DB.users.filter(u=>u&&u.u).map(u=>u.u)).size);
     saveGlobal(); saveUsers();
     currentMonthRef.child('managers').set(DB.managers).catch(e=>console.error('Managers save:',e));
     closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');

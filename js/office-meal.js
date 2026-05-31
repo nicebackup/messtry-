@@ -53,7 +53,7 @@ function saveOfficeMealRate(){
   if(isNaN(rate)||rate<0){ toast('❌ সঠিক রেট দিন!'); return; }
   if(!DB.officeMealRates) DB.officeMealRates={};
   DB.officeMealRates[mmKey]=rate;
-  saveDB();
+  saveMonth();
   loadOfficeMealInfo();
   toast('✅ অফিস মিল রেট সেভ হয়েছে! ৳'+rate.toFixed(2));
 }
@@ -63,8 +63,10 @@ function saveOfficeMealNote(){
   const text=sanitizeInput(document.getElementById('ofm-note-input').value);
   if(!text||text.length<3){ toast('❌ নোট লিখুন!'); return; }
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
-  DB.officeMealNotes.push({id:genId(), date:tod(), text, by:CU?CU.name:'Admin'});
-  saveDB();
+  const _ni={id:genId(), date:tod(), text, by:CU?CU.name:'Admin'};
+  DB.officeMealNotes.push(_ni);
+  // ✅ FIX: saveMonth()-এ officeMealNotes নেই — individual path-এ save
+  saveOfficeMealNoteItem(_ni);
   document.getElementById('ofm-note-input').value='';
   renderOfficeMealNotes();
   toast('✅ নোট সেভ হয়েছে!');
@@ -73,7 +75,9 @@ function saveOfficeMealNote(){
 function deleteOfficeMealNote(id){
   showModal('নোট মুছুন','এই নোট মুছে ফেলবেন?',()=>{
     DB.officeMealNotes=DB.officeMealNotes.filter(n=>n.id!==id);
-    saveDB(); renderOfficeMealNotes(); toast('✅ নোট মুছে ফেলা হয়েছে!');
+    // ✅ FIX: individual path-এ delete
+    deleteOfficeMealNoteItem(id);
+    renderOfficeMealNotes(); toast('✅ নোট মুছে ফেলা হয়েছে!');
   });
 }
 
@@ -124,7 +128,8 @@ function getOrCreateOfficeUser(key){
     u = {u:'off_'+key, p:'', name:name, mob:'', job:'OFF-'+key.toUpperCase(),
          room:'—', role:'member', type:'outside', joined:tod(), _office:true};
     DB.users.push(u);
-    saveDB();
+    // ✅ FIX: users = global data — saveMonth() নয়, saveGlobal()+saveUsers()
+    saveGlobal(); saveUsers();
   }
   return u;
 }
@@ -270,7 +275,7 @@ function saveOfficeMealRateScreen(){
   if(isNaN(rate)||rate<0){ toast('❌ সঠিক রেট দিন!'); return; }
   if(!DB.officeMealRates) DB.officeMealRates={};
   DB.officeMealRates[mmKey] = rate;
-  saveDB(); loadOfficeMealScreen();
+  saveMonth(); loadOfficeMealScreen();
   toast('✅ অফিস মিল রেট সেভ: ৳'+rate.toFixed(2));
 }
 
@@ -291,9 +296,19 @@ function saveOfficeMeal(key){
   showModal('মিল সেভ করুন',
     date+' — '+OFFICE_ACCOUNTS[key]+'\n\n☀️ সকাল: '+bLabel+' = '+bv.toFixed(2)+' meals\n🌞 দুপুর: '+lLabel+' = '+lv.toFixed(2)+' meals\n🌙 রাত: '+dLabel+' = '+dv.toFixed(2)+' meals\n\nমোট: '+(bv+lv+dv).toFixed(2)+' meals',
     function(){
-      DB.meals[u.u+'_'+date]={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
-      if(note){ if(!DB.officeMealNotes) DB.officeMealNotes=[]; DB.officeMealNotes.push({id:genId(),date,text:OFFICE_ACCOUNTS[key]+': '+note,by:CU?CU.name:'Admin'}); }
-      saveDB(); toggleOfficeMealEntry(key); loadOfficeMealScreen();
+      const _mKey=u.u+'_'+date;
+      const _mVal={b:{t:bT,q:bQ},l:{t:lT,q:lQ},d:{t:dT,q:dQ}};
+      DB.meals[_mKey]=_mVal;
+      // ✅ FIX: surgical meal save — saveMonth() meals object overwrite করত
+      saveMealEntry(_mKey, _mVal);
+      if(note){
+        if(!DB.officeMealNotes) DB.officeMealNotes=[];
+        const _ni={id:genId(),date,text:OFFICE_ACCOUNTS[key]+': '+note,by:CU?CU.name:'Admin'};
+        DB.officeMealNotes.push(_ni);
+        // ✅ FIX: individual note save — saveMonth()-এ officeMealNotes নেই
+        saveOfficeMealNoteItem(_ni);
+      }
+      toggleOfficeMealEntry(key); loadOfficeMealScreen();
       toast('✅ '+OFFICE_ACCOUNTS[key]+' মিল সেভ! ('+date+')');
     }
   );
@@ -304,8 +319,10 @@ function saveOfficeMealNoteScreen(){
   const text = sanitizeInput(noteInput?.value||'');
   if(!text||text.length<2){ toast('❌ নোট লিখুন!'); return; }
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
-  DB.officeMealNotes.push({id:genId(), date:tod(), text, by:CU?CU.name:'Admin'});
-  saveMonth();
+  const _ni={id:genId(), date:tod(), text, by:CU?CU.name:'Admin'};
+  DB.officeMealNotes.push(_ni);
+  // ✅ FIX: individual note save
+  saveOfficeMealNoteItem(_ni);
   if(noteInput) noteInput.value='';
   renderOfficeMealNotesScreen();
   toast('✅ নোট সেভ হয়েছে!');
@@ -367,7 +384,8 @@ function delOfficeMealNote(id){
   if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; }
   showModal('নোট মুছুন','এই নোট মুছে ফেলবেন?',()=>{
     DB.officeMealNotes = (DB.officeMealNotes||[]).filter(n=>n.id!==id);
-    saveMonth();
+    // ✅ FIX: individual delete
+    deleteOfficeMealNoteItem(id);
     renderOfficeMealNotesScreen();
     toast('🗑️ নোট মুছে ফেলা হয়েছে');
   });
@@ -385,7 +403,8 @@ function editOfficeMealNote(id){
     const text = sanitizeInput(document.getElementById('edit-ofms-note').value);
     if(!text||text.length<2){ toast('❌ নোট লিখুন!'); return; }
     n.text = text;
-    saveMonth();
+    // ✅ FIX: individual update (set overwrites the path)
+    saveOfficeMealNoteItem(n);
     renderOfficeMealNotesScreen();
     closeModal();
     toast('✅ নোট আপডেট হয়েছে!');
