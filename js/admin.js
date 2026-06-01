@@ -126,12 +126,12 @@ function deleteMessCycle(){
         // nextKey এর prevBalance ছোঁয়া যাবে না — ওটা পরের মাসের opening balance
         if(DB.prevBalances && DB.prevBalances[key]){
           delete DB.prevBalances[key];
-          saveHandover(); // ✅ FIX: controller-only path
+          saveHandover(); // ✅ controller-only Firebase path
         }
         // handoverDone থেকে এই মাস সরাও
         if(DB.handoverDone){
           DB.handoverDone = DB.handoverDone.filter(h=>h!==key);
-          saveHandover(); // ✅ FIX: controller-only path
+          saveHandover(); // ✅ controller-only Firebase path
         }
         toast(`✅ "${label}" চক্রের ডেটা মুছে ফেলা হয়েছে!`);
         initAdmin();
@@ -229,10 +229,7 @@ function doMonthHandover(){
         }
         if(!DB.handoverDone) DB.handoverDone = [];
         DB.handoverDone.push(mmKey);
-        // ✅ FIX: saveGlobal() → saveHandover()
-        // prevBalances + handoverDone controller-only path।
-        // saveGlobal() দিলে manager-এর permission denied → data হারায়।
-        saveHandover();
+        saveHandover(); // ✅ controller-only Firebase path — saveGlobal() বাদ
         toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
       };
 
@@ -451,7 +448,7 @@ function deleteMember(){
     Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
     // member মুছলে _minUserCount আপডেট — নাহলে false block
     if(typeof _minUserCount!=='undefined') _minUserCount=Math.max(0,new Set(DB.users.filter(u=>u&&u.u).map(u=>u.u)).size);
-    saveGlobal(); saveUsers();
+    saveControllers(); saveGlobal(); saveUsers(); // ✅ controllers আলাদা path
     currentMonthRef.child('managers').set(DB.managers).catch(e=>console.error('Managers save:',e));
     closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');
   });
@@ -490,8 +487,8 @@ function addController(){
   if(!DB.controllers.includes(uname)) DB.controllers.push(uname);
   const u=DB.users.find(x=>x.u===uname);
   if(u){ u.role='controller'; syncRole(uname,'controller'); }
-  // ✅ FIX: controllers + users = global data only
-  saveGlobal(); saveUsers(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
+  // ✅ controllers = controller-only path → saveControllers() আলাদা
+  saveControllers(); saveGlobal(); saveUsers(); renderControllerList(); toast('✅ Controller যোগ করা হয়েছে!');
 }
 function removeController(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -501,8 +498,8 @@ function removeController(){
   const u=DB.users.find(x=>x.u===uname);
   if(u&&u.role==='controller'){ u.role='member'; }
   syncRole(uname,'member');
-  // ✅ FIX: controllers + users = global data only
-  saveGlobal(); saveUsers(); renderControllerList(); toast('✅ Controller বাদ দেওয়া হয়েছে!');
+  // ✅ controllers = controller-only path → saveControllers() আলাদা
+  saveControllers(); saveGlobal(); saveUsers(); renderControllerList(); toast('✅ Controller বাদ দেওয়া হয়েছে!');
 }
 
 // ═══════════════════════════════════════════════

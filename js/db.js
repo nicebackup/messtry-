@@ -146,17 +146,30 @@ function saveGlobal(){
   }, 400);
 }
 
-// ── Handover-only save — শুধু controller path ──────────────────────────────
-// prevBalances + handoverDone Firebase Rules-এ controller-only write।
+// ── controllers আলাদা save — controller-only Firebase path ─────────────────
+// Firebase Rule: global/controllers → শুধু controller লিখতে পারবে।
+// GLOBAL_FIELDS-এ নেই কারণ saveGlobal() manager-ও call করে →
+// manager permission denied → পুরো update fail → data হারায়।
+// শুধু addController() / removeController() / deleteMember() call করবে।
+function saveControllers(){
+  if(!_dbLoaded||!globalRef) return;
+  globalRef.child('controllers').set(DB.controllers||[]).catch(e=>{
+    console.error('Controllers save:',e);
+    toast('⚠️ Controllers সেভে সমস্যা!');
+  });
+}
+
+// ── Handover-only save — controller-only paths ──────────────────────────────
+// Firebase Rule: global/prevBalances + global/handoverDone → শুধু controller।
 // saveGlobal()-এ রাখা যাবে না — manager call করলে permission denied → fail।
-// শুধু doMonthHandover() + deleteMonthCycle()-এ call হবে।
+// শুধু doMonthHandover() + deleteMonthCycle() call করবে।
 function saveHandover(){
-  if(!_dbLoaded || !globalRef) return;
-  const updates = {};
-  if(DB.prevBalances !== undefined) updates['prevBalances'] = DB.prevBalances;
-  if(DB.handoverDone  !== undefined) updates['handoverDone']  = DB.handoverDone;
+  if(!_dbLoaded||!globalRef) return;
+  const updates={};
+  if(DB.prevBalances!==undefined) updates['prevBalances']=DB.prevBalances;
+  if(DB.handoverDone !==undefined) updates['handoverDone'] =DB.handoverDone;
   globalRef.update(updates).catch(e=>{
-    console.error('Handover save error:',e);
+    console.error('Handover save:',e);
     toast('⚠️ Handover সেভে সমস্যা! ইন্টারনেট চেক করুন।');
   });
 }
@@ -492,9 +505,10 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
-        // ✅ prevBalances + handoverDone GLOBAL_FIELDS-এ নেই — manually load করো
-        if(data.prevBalances !== undefined) DB.prevBalances = data.prevBalances;
-        if(data.handoverDone  !== undefined) DB.handoverDone  = data.handoverDone;
+        // ✅ GLOBAL_FIELDS-এ নেই — manually load করো
+        if(data.controllers !==undefined) DB.controllers  = data.controllers;
+        if(data.prevBalances!==undefined) DB.prevBalances = data.prevBalances;
+        if(data.handoverDone!==undefined) DB.handoverDone = data.handoverDone;
         // Firebase-এর user count track করো
         if(Array.isArray(data.users)){
           const _u=new Set(data.users.filter(u=>u&&u.u).map(u=>u.u)).size;
@@ -504,9 +518,10 @@ function loadDB(){
       } else {
         migrateDB();
         const initG={}; GLOBAL_FIELDS.forEach(f=>{ initG[f]=DB[f]; });
-        // ✅ নতুন DB-তে prevBalances + handoverDone-ও initialize করো
+        // ✅ নতুন DB — সব fields initialize করো
+        initG.controllers  = DB.controllers  || [];
         initG.prevBalances = DB.prevBalances || {};
-        initG.handoverDone  = DB.handoverDone  || [];
+        initG.handoverDone = DB.handoverDone || [];
         globalRef.set(initG);
       }
       globalReady=true; _checkReady();

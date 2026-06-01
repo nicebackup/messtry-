@@ -50,11 +50,14 @@ const monthsRef  = database.ref('messData/months');  // per-mess-month: meals, b
 let currentMonthRef = null;
 let currentMonthKey = '';
 
-const GLOBAL_FIELDS = ['users','cfg','controllers','siteNote','notice','shortfall'];
-// ⚠️ prevBalances + handoverDone এখানে নেই — saveHandover() দিয়ে আলাদা save।
-// Firebase Rules-এ এই দুটো শুধু controller লিখতে পারবে।
-// GLOBAL_FIELDS-এ রাখলে saveGlobal() → manager-এর write fail → data হারায়।
-// rules — feature বাদ দেওয়া হয়েছে।
+// ── GLOBAL_FIELDS: saveGlobal() যা লেখে ────────────────────────────────────
+// শুধু manager + controller উভয়েই লিখতে পারে এমন fields।
+// controllers → saveControllers()  (controller-only Firebase path)
+// prevBalances → saveHandover()    (controller-only Firebase path)
+// handoverDone → saveHandover()    (controller-only Firebase path)
+// rules        → feature বাদ দেওয়া হয়েছে
+// উপরেরগুলো GLOBAL_FIELDS-এ থাকলে manager-এর saveGlobal() call fail করে → data হারায়।
+const GLOBAL_FIELDS = ['users','cfg','siteNote','notice','shortfall'];
 const MONTH_FIELDS  = ['meals','bazar','others','transactions','managers','mealRates','officeMealRates','officeMealNotes','cookBills'];
 
 const auth = firebase.auth();
