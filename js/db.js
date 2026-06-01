@@ -146,6 +146,21 @@ function saveGlobal(){
   }, 400);
 }
 
+// ── Handover-only save — শুধু controller path ──────────────────────────────
+// prevBalances + handoverDone Firebase Rules-এ controller-only write।
+// saveGlobal()-এ রাখা যাবে না — manager call করলে permission denied → fail।
+// শুধু doMonthHandover() + deleteMonthCycle()-এ call হবে।
+function saveHandover(){
+  if(!_dbLoaded || !globalRef) return;
+  const updates = {};
+  if(DB.prevBalances !== undefined) updates['prevBalances'] = DB.prevBalances;
+  if(DB.handoverDone  !== undefined) updates['handoverDone']  = DB.handoverDone;
+  globalRef.update(updates).catch(e=>{
+    console.error('Handover save error:',e);
+    toast('⚠️ Handover সেভে সমস্যা! ইন্টারনেট চেক করুন।');
+  });
+}
+
 // ── users আলাদা save — শুধু user management-এ call হবে ──
 function saveUsers(){
   if(!_dbLoaded) return;
@@ -185,18 +200,7 @@ function saveMonth(){
     currentMonthRef.update(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
   }, 400);
 }
-function saveMealEntry(k,v,mmKey){
-  if(!_dbLoaded||!k) return;
-  // ✅ FIX: mmKey দিলে সেই month-এর path-এ save হবে।
-  // না দিলে currentMonthRef (আগের মতো default behavior)।
-  // এটা দরকার কারণ user পরের মেস মাসের meal আগে থেকে দিতে পারে।
-  // e.g. Jun 11 meal → bucket 2026-06, কিন্তু currentMonthRef = 2026-05।
-  const ref = (mmKey && mmKey !== currentMonthKey)
-    ? firebase.database().ref('messData/months/'+mmKey)
-    : currentMonthRef;
-  if(!ref) return;
-  ref.child('meals').child(k).set(v).catch(e=>console.error('Meal ['+mmKey+']:',e));
-}
+function saveMealEntry(k,v){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('meals').child(k).set(v).catch(e=>console.error('Meal:',e)); }
 function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('bazar').child(String(item.id)).set(item).catch(e=>console.error('Bazar:',e)); }
 function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('BazarDel:',e)); }
 function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others:',e)); }
@@ -488,6 +492,9 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
+        // ✅ prevBalances + handoverDone GLOBAL_FIELDS-এ নেই — manually load করো
+        if(data.prevBalances !== undefined) DB.prevBalances = data.prevBalances;
+        if(data.handoverDone  !== undefined) DB.handoverDone  = data.handoverDone;
         // Firebase-এর user count track করো
         if(Array.isArray(data.users)){
           const _u=new Set(data.users.filter(u=>u&&u.u).map(u=>u.u)).size;
@@ -497,6 +504,9 @@ function loadDB(){
       } else {
         migrateDB();
         const initG={}; GLOBAL_FIELDS.forEach(f=>{ initG[f]=DB[f]; });
+        // ✅ নতুন DB-তে prevBalances + handoverDone-ও initialize করো
+        initG.prevBalances = DB.prevBalances || {};
+        initG.handoverDone  = DB.handoverDone  || [];
         globalRef.set(initG);
       }
       globalReady=true; _checkReady();

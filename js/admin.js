@@ -126,12 +126,12 @@ function deleteMessCycle(){
         // nextKey এর prevBalance ছোঁয়া যাবে না — ওটা পরের মাসের opening balance
         if(DB.prevBalances && DB.prevBalances[key]){
           delete DB.prevBalances[key];
-          saveGlobal();
+          saveHandover(); // ✅ FIX: controller-only path
         }
         // handoverDone থেকে এই মাস সরাও
         if(DB.handoverDone){
           DB.handoverDone = DB.handoverDone.filter(h=>h!==key);
-          saveGlobal();
+          saveHandover(); // ✅ FIX: controller-only path
         }
         toast(`✅ "${label}" চক্রের ডেটা মুছে ফেলা হয়েছে!`);
         initAdmin();
@@ -229,7 +229,10 @@ function doMonthHandover(){
         }
         if(!DB.handoverDone) DB.handoverDone = [];
         DB.handoverDone.push(mmKey);
-        saveGlobal();  // শুধু global (prevBalances, handoverDone) — month data নষ্ট হবে না
+        // ✅ FIX: saveGlobal() → saveHandover()
+        // prevBalances + handoverDone controller-only path।
+        // saveGlobal() দিলে manager-এর permission denied → data হারায়।
+        saveHandover();
         toast(`✅ "${label}" মাসের হস্তান্তর সম্পন্ন!`);
       };
 
