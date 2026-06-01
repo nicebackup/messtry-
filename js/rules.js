@@ -108,27 +108,16 @@ function saveShortfall(){
   } else {
     DB.shortfall[_sfUser.u+'_'+mmKey]=amt;
   }
-  saveDB();
+  // ✅ FIX: shortfall = global data — saveGlobal() যথেষ্ট, saveDB() বাদ
+  saveGlobal();
   // Update display
   const net=getNetMemberMeals(_sfUser.u,mmKey);
   document.getElementById('sf-mem-meals').textContent=net.toFixed(2);
   document.getElementById('sf-current-note').textContent=amt>0?'বর্তমান Shortfall: '+amt.toFixed(2)+' মিল':'';
   toast('✅ '+_sfUser.name+' এর Shortfall '+amt.toFixed(2)+' মিল সেভ হয়েছে!');
 }
-function saveRules(){
-  if(!isOnline()){ noNetPopup(); return; }
-  const ta=document.getElementById('rules-text-input');
-  const text=ta?(ta.value||'').trim().slice(0,5000):'';
-  DB.rules.text=text;
-  saveDB(); initRules();
-  toast('✅ নিয়মাবলী সেভ হয়েছে!');
-}
-function clearRules(){
-  if(!isOnline()){ noNetPopup(); return; }
-  showModal('নিয়মাবলী মুছুন','নিয়মাবলী মুছে ফেলবেন?',()=>{
-    DB.rules.text=''; saveDB(); initRules(); toast('✅ নিয়মাবলী মুছে ফেলা হয়েছে!');
-  });
-}
+// saveRules() এবং clearRules() — নিয়মনীতি text feature বাদ দেওয়া হয়েছে।
+// Firebase-এ rules node থাকলেও ব্যবহার হচ্ছে না।
 // ═══════════════════════════════════════════════
 // showNoticePopup(), closeNoticePopup()
 // Moved to js/notice.js | Extracted: 2026-05-20
