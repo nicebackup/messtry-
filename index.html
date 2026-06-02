@@ -901,6 +901,7 @@ try{
   <div class="content">
     <div class="card">
       <div class="sec-title">⚙️ Admin কার্যক্রম</div>
+      <div class="adm-item ctrl-only" onclick="tog('card-approval');initApprovalPanel()"><div class="adm-icon">🔔</div><div><div class="adm-lbl">সদস্য অনুমোদন <span id="approval-badge" style="display:none;background:var(--danger);color:#fff;border-radius:50%;padding:1px 7px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle"></span></div><div class="adm-sub">নতুন সদস্যের আবেদন অনুমোদন করুন</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-mgr')"><div class="adm-icon">👑</div><div><div class="adm-lbl">ম্যানেজার নিয়োগ</div><div class="adm-sub">প্রতি মাসের ম্যানেজার সেট করুন (সর্বোচ্চ ১০ জন)</div></div></div>
       <div class="adm-item" onclick="tog('card-adm-meal')"><div class="adm-icon">🔓</div><div><div class="adm-lbl">যেকোনো সদস্যের মিল এডিট</div><div class="adm-sub">যেকোনো তারিখ — Lock নেই</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-edit-mem')"><div class="adm-icon">✏️</div><div><div class="adm-lbl">সদস্যের তথ্য সম্পাদনা</div><div class="adm-sub">নাম, রুম, ফোন, ধরন পরিবর্তন</div></div></div>
@@ -910,6 +911,14 @@ try{
       <div class="adm-item" onclick="tog('card-sitenote')"><div class="adm-icon">📍</div><div><div class="adm-lbl">ঠিকানা / সাইট নোট</div><div class="adm-sub">Home এ দেখানো ঠিকানা বা শর্ট নোট</div></div></div>
       <div class="adm-item" onclick="sec('notice')"><div class="adm-icon">📢</div><div><div class="adm-lbl">নোটিশ বোর্ড</div><div class="adm-sub">নোটিশ লিখুন ও পপআপ নিয়ন্ত্রণ করুন</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-handover');initHandoverCard()" style="border-left:3px solid var(--accent);padding-left:12px"><div class="adm-icon">🔄</div><div><div class="adm-lbl">মাস হস্তান্তর</div><div class="adm-sub">মাস শেষে নেট ব্যালেন্স পরবর্তী মাসে স্থানান্তর করুন</div></div></div>
+    </div>
+
+    <!-- Approval Card -->
+    <div class="card" id="card-approval" style="display:none">
+      <div class="sec-title">🔔 সদস্য অনুমোদন</div>
+      <div id="approval-list">
+        <div style="text-align:center;padding:20px;color:var(--text-light)">⏳ লোড হচ্ছে...</div>
+      </div>
     </div>
 
     <!-- Manager Card -->
