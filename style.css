@@ -594,3 +594,15 @@ body{display:block;}
 .dark-mode .mh-even{ background:rgba(255,255,255,.03); }
 
 #sc-mealhistory .app-header{ min-height:42px; padding-top:2px; padding-bottom:2px; }
+/* ── Remaining white-element fixes for Full Black Mode ── */
+.dark-mode .header-back{background:rgba(30,30,30,0.9) !important;border:1px solid rgba(255,255,255,0.1) !important;color:#e5e5e5 !important;}
+.dark-mode .btn[style*="background"],.dark-mode button[style*="background"]{background:#1a1a1a !important;color:#e5e5e5 !important;border:1px solid rgba(255,255,255,0.12) !important;}
+.dark-mode .date-nav-btn{background:#1a1a1a !important;border:1px solid rgba(255,255,255,0.12) !important;color:#a3a3a3 !important;box-shadow:none !important;}
+.dark-mode .balance-card,.dark-mode .stat-card,.dark-mode .today-card{border-color:rgba(255,255,255,0.08) !important;}
+.dark-mode .menu-item{border-top:3px solid #333333 !important;}
+.dark-mode .menu-item.ac{border-top-color:#888888 !important;}
+.dark-mode .menu-item.dg{border-top-color:#ef4444 !important;}
+.dark-mode .menu-item.in{border-top-color:#3b82f6 !important;}
+.dark-mode .badge-ctrl{background:rgba(255,255,255,0.08) !important;color:#e5e5e5 !important;border-color:rgba(255,255,255,0.12) !important;}
+.dark-mode .mpill.l{background:rgba(255,255,255,0.06) !important;color:#a3a3a3 !important;border-color:rgba(255,255,255,0.12) !important;}
+.dark-mode .tab-btn.active{background:#262626 !important;border-color:#404040 !important;}
