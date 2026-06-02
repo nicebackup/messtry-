@@ -415,15 +415,6 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
 .alert-danger{background:var(--danger-light);color:var(--danger);border:1px solid #ffcdd2;}
 .alert-success{background:var(--success-light);color:var(--success);border:1px solid #c8e6c9;}
 .alert-info{background:var(--info-light);color:var(--info);border:1px solid #bbdefb;}
-.alert-warning{background:#fff8e1;color:#f57c00;border:1px solid #ffe082;}
-.dark-mode .alert-warning{background:rgba(251,191,36,0.1);color:#fcd34d;border-color:rgba(251,191,36,0.25);}
-/* Approval Panel */
-.approval-item{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);}
-.apv-info{flex:1;}
-.apv-name{font-size:15px;font-weight:700;margin-bottom:4px;}
-.apv-meta{font-size:12px;color:var(--text-light);margin-top:2px;}
-.apv-btns{display:flex;flex-direction:column;gap:6px;min-width:90px;}
-.dark-mode .approval-item{border-bottom-color:rgba(167,139,250,0.1);}
 /* HOME */
 .welcome-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .welcome-name{font-size:18px;font-weight:700;}
