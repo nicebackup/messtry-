@@ -281,42 +281,6 @@ try{
   </div>
 </div>
 
-
-<!-- ═══════════════════════════════════════════════ -->
-<!-- PENDING APPROVAL SCREEN                         -->
-<!-- ═══════════════════════════════════════════════ -->
-<div id="sc-pending-approval">
-  <!-- Waiting state -->
-  <div id="pending-wait-msg">
-    <div class="pending-illustration">📋</div>
-    <div class="pending-title">নিবন্ধন পর্যালোচনাধীন</div>
-    <div class="pending-subtitle">
-      আপনার নিবন্ধন সফলভাবে সম্পন্ন হয়েছে।<br>
-      Controller-এর অনুমোদনের পর আপনি সদস্য হিসেবে যুক্ত হবেন।
-    </div>
-    <div class="pending-info-box">
-      📞 অনুমোদনের জন্য Controller বা Admin-এর সাথে যোগাযোগ করুন।<br><br>
-      ✅ ইমেইল যাচাই করা থাকলে অনুমোদন পাওয়া মাত্র স্বয়ংক্রিয়ভাবে সক্রিয় হবে।
-    </div>
-  </div>
-  <!-- Rejected state -->
-  <div id="pending-reject-msg" style="display:none">
-    <div class="pending-illustration" style="background:linear-gradient(135deg,#ffebee,#ffcdd2);font-size:40px">❌</div>
-    <div class="pending-title" style="color:var(--danger)">নিবন্ধন প্রত্যাখ্যাত</div>
-    <div class="pending-subtitle">
-      দুঃখিত, আপনার নিবন্ধন অনুরোধ গ্রহণ করা হয়নি।
-    </div>
-    <div class="pending-reject-box">
-      <div class="rej-title">⚠️ প্রত্যাখ্যানের কারণ:</div>
-      <div class="rej-reason" id="pending-reject-reason">—</div>
-    </div>
-    <div class="pending-info-box">
-      বিস্তারিত জানতে Controller বা Admin-এর সাথে যোগাযোগ করুন।
-    </div>
-  </div>
-  <button class="pending-logout-btn" onclick="confirmLogout()">🚪 লগআউট করুন</button>
-</div>
-
 <!-- ═══════════ LOGIN ═══════════ -->
 <div id="sc-login" class="screen">
   <div class="app-header">
@@ -945,18 +909,7 @@ try{
       <div class="adm-item ctrl-only" onclick="tog('card-ctrl')"><div class="adm-icon">⭐</div><div><div class="adm-lbl">Controller নিয়োগ</div><div class="adm-sub">নতুন Controller যোগ/বাদ দিন</div></div></div>
       <div class="adm-item" onclick="tog('card-sitenote')"><div class="adm-icon">📍</div><div><div class="adm-lbl">ঠিকানা / সাইট নোট</div><div class="adm-sub">Home এ দেখানো ঠিকানা বা শর্ট নোট</div></div></div>
       <div class="adm-item" onclick="sec('notice')"><div class="adm-icon">📢</div><div><div class="adm-lbl">নোটিশ বোর্ড</div><div class="adm-sub">নোটিশ লিখুন ও পপআপ নিয়ন্ত্রণ করুন</div></div></div>
-      <div class="adm-item ctrl-only" id="adm-item-approval" onclick="tog('card-approval');renderApprovalList();updatePendingBadge()"><div class="adm-icon">📝</div><div><div class="adm-lbl">সদস্য অনুমোদন <span class="approval-badge-dot" id="approval-badge" style="display:none">0</span></div><div class="adm-sub">নতুন নিবন্ধন অনুমোদন বা প্রত্যাখ্যান করুন</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-handover');initHandoverCard()" style="border-left:3px solid var(--accent);padding-left:12px"><div class="adm-icon">🔄</div><div><div class="adm-lbl">মাস হস্তান্তর</div><div class="adm-sub">মাস শেষে নেট ব্যালেন্স পরবর্তী মাসে স্থানান্তর করুন</div></div></div>
-    </div>
-
-    
-    <!-- Member Approval Card -->
-    <div class="card" id="card-approval" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div class="sec-title" style="margin:0">📝 সদস্য অনুমোদন</div>
-        <button onclick="renderApprovalList()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text-light)">🔄 রিফ্রেশ</button>
-      </div>
-      <div id="approval-list"><p class="muted tc">লোড হচ্ছে...</p></div>
     </div>
 
     <!-- Manager Card -->
@@ -1341,7 +1294,6 @@ try{
 
 // OFFICE MEAL → moved to js/office-meal.js
 </script>
-<script src="js/approval.js"></script>
 <script src="js/bazar.js"></script>
 <script src="js/meal.js"></script>
 <script src="js/office-meal.js"></script>
