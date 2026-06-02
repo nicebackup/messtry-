@@ -1,6 +1,6 @@
-/* ── Critical background: prevents white flash before CSS loads ──
+/* ─ Critical background: prevents white flash before CSS loads ─
 Must be at the very top so it applies immediately */
-html { background: #0f0f1a; }
+html { background: #000000; }
 html.light-mode { background: #f4f7f5; }
 /* ── Splash screen loading dots animation ── */
 @keyframes mq-dot {
@@ -28,7 +28,7 @@ margin-bottom: 18px;
 width: 100%;
 height: auto;
 display: block;
-filter: drop-shadow(0 8px 32px rgba(255,255,255,0.05));
+filter: drop-shadow(0 8px 32px rgba(255,255,255,0.08));
 }
 .splash-title {
 font-family: 'Hind Siliguri', sans-serif;
@@ -468,7 +468,7 @@ body{display:block;}
 .pqo-btn.selQ{background:#e3f2fd;border-color:#1565c0;color:#1565c0;}
 .pqo-btn.seloff{background:#ffebee;border-color:#c62828;color:#c62828;}
 .pqo-btn:disabled{opacity:.4;cursor:not-allowed;}
-/* ── ADDITIONAL RESPONSIVE TWEAKS ── */
+/* ─ ADDITIONAL RESPONSIVE TWEAKS ── */
 @media(min-width:769px){
 .pqo-btn{padding:16px 10px;font-size:20px;}
 .qty-input{width:72px;padding:13px 8px;font-size:17px;}
