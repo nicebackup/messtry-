@@ -68,6 +68,19 @@ auth.onAuthStateChanged(fbUser=>{
       if(al){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; }
       return;
     }
+    // ── APPROVAL CHECK: pending/rejected users cannot enter ──
+    if(userData.role === 'pending' || userData.approved === false) {
+      firebase.database().ref('pendingApprovals/' + uid).once('value').then(psnap => {
+        const pdata = psnap.val();
+        hideSplash();
+        if(pdata && pdata.status === 'rejected') {
+          showPendingScreen(uid, 'rejected', pdata.rejectReason || '');
+        } else {
+          showPendingScreen(uid, 'pending', '');
+        }
+      });
+      return;
+    }
     // Check role from RTDB roles/{uid}
     firebase.database().ref('roles/' + uid).once('value').then(rsnap=>{
       const roleData = rsnap.val();
@@ -268,6 +281,19 @@ function doLogin(){
       const userData = snap.val();
       if(!userData){ al.textContent='❌ RTDB-তে আপনার প্রোফাইল পাওয়া যায়নি। Admin এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; auth.signOut(); if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } return; }
       if(userData.blocked){ al.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; al.className='alert alert-danger show'; auth.signOut(); if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } return; }
+      // ── APPROVAL CHECK ──
+      if(userData.role === 'pending' || userData.approved === false) {
+        firebase.database().ref('pendingApprovals/' + uid).once('value').then(psnap => {
+          const pdata = psnap.val();
+          if(pdata && pdata.status === 'rejected') {
+            showPendingScreen(uid, 'rejected', pdata.rejectReason || '');
+          } else {
+            showPendingScreen(uid, 'pending', '');
+          }
+          if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+        });
+        return;
+      }
       // Load role from roles/{uid} and sanitize (remove any accidental extra quotes)
       firebase.database().ref('roles/'+uid).once('value').then(rsnap=>{
         const roleData = rsnap.val();
@@ -442,24 +468,19 @@ function doRegister(){
       if(!user){ throw new Error('auth/no-current-user'); }
       await user.sendEmailVerification();
 
-      // Step 3 — Now persist the profile data to Realtime Database
-      const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'member', createdAt: tod() };
+      // Step 3 — Store minimal auth record in RTDB (role = pending, NOT member)
+      // ⚠️ APPROVAL SYSTEM: user is NOT added to messData/global/users yet.
+      // They will be added ONLY after Controller approval.
+      const userData = { name, mobile: mob, jobId: job, u: uname, room, type, role: 'pending', createdAt: tod(), approved: false };
       await firebase.database().ref('users/' + uid).set(userData);
-      await firebase.database().ref('roles/' + uid).set({ role: 'member' });
+      await firebase.database().ref('roles/' + uid).set({ role: 'pending' });
 
-      // Step 4 — Mirror into local DB cache AND write directly to messData
-      if(!DB.users) DB.users=[];
-      const newUser = { uid, u: uname, name, mob, email, job, room, type, role:'member', joined: tod(), emailVerified: false, activeFrom: messMonthKey() };
-      // Duplicate check — একই user দুবার যেন না ঢোকে
-      if(!DB.users.find(x=>x.u===newUser.u)){
-        DB.users.push(newUser);
-        saveUsers();
-      } else {
-        console.warn('[auth] User already in DB.users, skipping push:', newUser.u);
-      }
+      // Step 4 — Write to pendingApprovals (separate path, NOT messData)
+      await createPendingRecord(uid, { name, mob, email, job, room, type });
 
       // Step 5 — Show success, then sign out cleanly
-      ok.textContent='✅ রেজিস্ট্রেশন সফল! আপনার Email চেক করুন — Verification লিংক পাঠানো হয়েছে।';
+      // ✅ DO NOT add to DB.users or saveUsers() — approval pending
+      ok.textContent='✅ নিবন্ধন সম্পন্ন! ইমেইল যাচাই করুন — তারপর Controller অনুমোদন দিলে সদস্য হবেন।';
       ok.className='alert alert-success show';
       al.className='alert';
       if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
