@@ -693,3 +693,55 @@ min-height:42px;
 padding-top:2px;
 padding-bottom:2px;
 }
+/* ─ Dark Mode: White element fixes ── */
+/* Table header — Meal History */
+.dark-mode .mh-th{
+background:#1a1a1a !important;
+color:#e5e5e5 !important;
+border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.dark-mode .mh-foot{
+background:#111111 !important;
+color:#e5e5e5 !important;
+}
+.dark-mode .mh-tot{color:#e5e5e5;}
+/* Header back button (← Home) */
+.dark-mode .header-back{
+background:rgba(255,255,255,0.08) !important;
+border:1px solid rgba(255,255,255,0.15) !important;
+color:#e5e5e5 !important;
+}
+/* PDF button & date-nav buttons (‹ ›) */
+.dark-mode .date-nav-btn{
+background:#1a1a1a !important;
+border:1px solid rgba(255,255,255,0.15) !important;
+color:#e5e5e5 !important;
+box-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+.dark-mode .date-nav-btn:hover{
+background:#262626 !important;
+}
+/* PDF download button override */
+.dark-mode .btn-pdf,.dark-mode [class*="pdf-btn"]{
+background:#1a1a1a !important;
+border:1px solid rgba(255,255,255,0.15) !important;
+color:#e5e5e5 !important;
+}
+/* Any inline white button in dark mode */
+.dark-mode .btn-white,.dark-mode button[style*="background:#fff"],.dark-mode button[style*="background: white"]{
+background:#1a1a1a !important;
+color:#e5e5e5 !important;
+border:1px solid rgba(255,255,255,0.15) !important;
+}
+/* Meal pills — light pill (lunch) was using purple, fix to dark */
+.dark-mode .mpill.l{
+background:rgba(255,255,255,0.08) !important;
+color:#e5e5e5 !important;
+border:1px solid rgba(255,255,255,0.2) !important;
+}
+/* Stat card / today card white borders */
+.dark-mode .stat-card,.dark-mode .today-card,.dark-mode .balance-card{
+border-color:rgba(255,255,255,0.12) !important;
+}
+/* Table row even highlight */
+.dark-mode .mh-even{background:rgba(255,255,255,0.03) !important;}
