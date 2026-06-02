@@ -42,15 +42,6 @@ function initAdmin(){
   const sub=document.getElementById('admin-panel-sub');
   if(sub) sub.textContent=ctrl?'পরিচালনা কেন্দ্র (Controller)':'পরিচালনা কেন্দ্র (Manager)';
 
-  // Controller হলে pending approval count badge লোড করো
-  if(ctrl){
-    firebase.database().ref('pendingApprovals').once('value').then(snap=>{
-      const data=snap.val()||{};
-      const count=Object.values(data).filter(v=>v.status==='pending').length;
-      _updateApprovalBadge(count);
-    }).catch(()=>{});
-  }
-
   const sortedForSel=[...DB.users].sort((a,b)=>{
     const ai=parseInt(a.job)||Infinity, bi=parseInt(b.job)||Infinity;
     if(ai!==Infinity||bi!==Infinity) return ai-bi;
@@ -1167,93 +1158,6 @@ function saveSiteNote(){
 function initSiteNoteCard(){
   const el=document.getElementById('site-note-input');
   if(el) el.value=DB.siteNote||'';
-}
-
-// ═══════════════════════════════════════════════
-// MEMBER APPROVAL PANEL (Controller only)
-// ═══════════════════════════════════════════════
-function initApprovalPanel(){
-  if(!isController()){ toast('❌ শুধুমাত্র Controller এক্সেস করতে পারবেন!'); return; }
-  const list=document.getElementById('approval-list');
-  if(!list) return;
-  list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-light)">⏳ লোড হচ্ছে...</div>';
-
-  firebase.database().ref('pendingApprovals').once('value').then(snap=>{
-    const data=snap.val();
-    if(!data){
-      list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-light)">✅ কোনো অপেক্ষমাণ আবেদন নেই।</div>';
-      _updateApprovalBadge(0);
-      return;
-    }
-    const pending=Object.entries(data).filter(([,v])=>v.status==='pending');
-    if(!pending.length){
-      list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-light)">✅ কোনো অপেক্ষমাণ আবেদন নেই।</div>';
-      _updateApprovalBadge(0);
-      return;
-    }
-    _updateApprovalBadge(pending.length);
-    list.innerHTML=pending.map(([uid,p])=>`
-      <div class="approval-item" id="apv-${esc(uid)}">
-        <div class="apv-info">
-          <div class="apv-name">${esc(p.name)}</div>
-          <div class="apv-meta">📱 ${esc(p.mobile)} &nbsp;|&nbsp; 🪪 ID: ${esc(p.jobId||'-')}</div>
-          <div class="apv-meta">🏠 ${esc(p.room||'-')} &nbsp;|&nbsp; 📅 ${esc(p.requestedAt||'-')}</div>
-        </div>
-        <div class="apv-btns">
-          <button class="btn btn-primary btn-sm" onclick="approveUser('${esc(uid)}')">✅ Approve</button>
-          <button class="btn btn-danger btn-sm" onclick="rejectUser('${esc(uid)}')">❌ Reject</button>
-        </div>
-      </div>
-    `).join('');
-  }).catch(()=>{
-    list.innerHTML='<div style="color:var(--danger);padding:12px">❌ লোড ব্যর্থ। ইন্টারনেট চেক করুন।</div>';
-  });
-}
-
-function approveUser(uid){
-  if(!isController()){ toast('❌ শুধুমাত্র Controller পারবেন!'); return; }
-  showModal('সদস্য অনুমোদন','এই সদস্যকে মেসে যোগ দেওয়ার অনুমতি দেবেন?',()=>{
-    firebase.database().ref('pendingApprovals/'+uid).once('value').then(snap=>{
-      const pendData=snap.val();
-      if(!pendData){ toast('❌ আবেদন পাওয়া যায়নি!'); return; }
-      return approvePendingUser(uid, pendData);
-    }).then(()=>{
-      toast('✅ '+' সদস্য অনুমোদিত হয়েছে!');
-      const el=document.getElementById('apv-'+uid);
-      if(el) el.remove();
-      // বাকি pending count আপডেট
-      const remaining=document.querySelectorAll('[id^="apv-"]').length;
-      _updateApprovalBadge(remaining);
-      if(!remaining){
-        const list=document.getElementById('approval-list');
-        if(list) list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-light)">✅ কোনো অপেক্ষমাণ আবেদন নেই।</div>';
-      }
-    }).catch(e=>{ console.error(e); toast('❌ অনুমোদনে সমস্যা!'); });
-  });
-}
-
-function rejectUser(uid){
-  if(!isController()){ toast('❌ শুধুমাত্র Controller পারবেন!'); return; }
-  showModal('আবেদন প্রত্যাখ্যান','এই সদস্যের আবেদন প্রত্যাখ্যান করবেন?',()=>{
-    rejectPendingUser(uid).then(()=>{
-      toast('✅ আবেদন প্রত্যাখ্যান করা হয়েছে।');
-      const el=document.getElementById('apv-'+uid);
-      if(el) el.remove();
-      const remaining=document.querySelectorAll('[id^="apv-"]').length;
-      _updateApprovalBadge(remaining);
-      if(!remaining){
-        const list=document.getElementById('approval-list');
-        if(list) list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-light)">✅ কোনো অপেক্ষমাণ আবেদন নেই।</div>';
-      }
-    }).catch(()=>toast('❌ প্রত্যাখ্যানে সমস্যা!'));
-  });
-}
-
-function _updateApprovalBadge(count){
-  const badge=document.getElementById('approval-badge');
-  if(!badge) return;
-  badge.textContent=count||'';
-  badge.style.display=count?'inline-flex':'none';
 }
 
 // ═══════════════════════════════════════════════

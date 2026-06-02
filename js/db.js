@@ -146,6 +146,34 @@ function saveGlobal(){
   }, 400);
 }
 
+// ── controllers আলাদা save — controller-only Firebase path ─────────────────
+// Firebase Rule: global/controllers → শুধু controller লিখতে পারবে।
+// GLOBAL_FIELDS-এ নেই কারণ saveGlobal() manager-ও call করে →
+// manager permission denied → পুরো update fail → data হারায়।
+// শুধু addController() / removeController() / deleteMember() call করবে।
+function saveControllers(){
+  if(!_dbLoaded||!globalRef) return;
+  globalRef.child('controllers').set(DB.controllers||[]).catch(e=>{
+    console.error('Controllers save:',e);
+    toast('⚠️ Controllers সেভে সমস্যা!');
+  });
+}
+
+// ── Handover-only save — controller-only paths ──────────────────────────────
+// Firebase Rule: global/prevBalances + global/handoverDone → শুধু controller।
+// saveGlobal()-এ রাখা যাবে না — manager call করলে permission denied → fail।
+// শুধু doMonthHandover() + deleteMonthCycle() call করবে।
+function saveHandover(){
+  if(!_dbLoaded||!globalRef) return;
+  const updates={};
+  if(DB.prevBalances!==undefined) updates['prevBalances']=DB.prevBalances;
+  if(DB.handoverDone !==undefined) updates['handoverDone'] =DB.handoverDone;
+  globalRef.update(updates).catch(e=>{
+    console.error('Handover save:',e);
+    toast('⚠️ Handover সেভে সমস্যা! ইন্টারনেট চেক করুন।');
+  });
+}
+
 // ── users আলাদা save — শুধু user management-এ call হবে ──
 function saveUsers(){
   if(!_dbLoaded) return;
@@ -192,49 +220,6 @@ function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return
 function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
 function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
 function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
-
-// ── Pending Approval helpers ────────────────────────────────────────────────
-// pendingApprovals/{uid} — controller approve/reject করে।
-// Firebase root-এ থাকে (messData-এর বাইরে)।
-function deletePendingApproval(uid){
-  if(!uid) return;
-  firebase.database().ref('pendingApprovals/'+uid).remove().catch(e=>console.error('PendDel:',e));
-}
-// Approve করলে: users/{uid} + roles/{uid} লেখো, DB.users-এ যোগ করো, pending মুছো
-function approvePendingUser(uid, pendData){
-  if(!uid||!pendData) return Promise.reject('invalid');
-  const userData={
-    name:     pendData.name,
-    mobile:   pendData.mobile,
-    jobId:    pendData.jobId,
-    u:        pendData.u,
-    room:     pendData.room||'',
-    type:     pendData.type||'inside',
-    role:     'member',
-    createdAt:tod()
-  };
-  return firebase.database().ref('users/'+uid).set(userData)
-    .then(()=>firebase.database().ref('roles/'+uid).set({role:'member'}))
-    .then(()=>{
-      // DB.users-এ যোগ করো
-      if(!DB.users) DB.users=[];
-      const newU={uid, u:pendData.u, name:pendData.name, mob:pendData.mobile,
-        email:pendData.email||'', job:pendData.jobId||'', room:pendData.room||'',
-        type:pendData.type||'inside', role:'member', joined:tod(),
-        activeFrom:messMonthKey()};
-      if(!DB.users.find(x=>x.u===newU.u)){
-        DB.users.push(newU);
-        saveGlobal(); saveUsers();
-      }
-      // pending মুছো
-      return firebase.database().ref('pendingApprovals/'+uid).remove();
-    });
-}
-// Reject করলে: status=rejected লেখো (user নিজে দেখতে পাবে)
-function rejectPendingUser(uid){
-  if(!uid) return Promise.reject('invalid');
-  return firebase.database().ref('pendingApprovals/'+uid+'/status').set('rejected');
-}
 
 // ── saveDB() — সব পুরানো call-এর জন্য backward compatible ──
 function saveDB(){
@@ -520,6 +505,10 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
+        // ✅ GLOBAL_FIELDS-এ নেই — manually load করো
+        if(data.controllers !==undefined) DB.controllers  = data.controllers;
+        if(data.prevBalances!==undefined) DB.prevBalances = data.prevBalances;
+        if(data.handoverDone!==undefined) DB.handoverDone = data.handoverDone;
         // Firebase-এর user count track করো
         if(Array.isArray(data.users)){
           const _u=new Set(data.users.filter(u=>u&&u.u).map(u=>u.u)).size;
@@ -529,6 +518,10 @@ function loadDB(){
       } else {
         migrateDB();
         const initG={}; GLOBAL_FIELDS.forEach(f=>{ initG[f]=DB[f]; });
+        // ✅ নতুন DB — সব fields initialize করো
+        initG.controllers  = DB.controllers  || [];
+        initG.prevBalances = DB.prevBalances || {};
+        initG.handoverDone = DB.handoverDone || [];
         globalRef.set(initG);
       }
       globalReady=true; _checkReady();
