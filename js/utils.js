@@ -34,13 +34,11 @@ function validPass(s){ return s && s.length>=6 && s.length<=100; }
 function validUsername(s){ return s && /^[a-zA-Z0-9_\-\.]{3,30}$/.test(s); }
 function validAmount(v){ return !isNaN(v) && v > 0 && v < 10000000; }
 function sanitizeInput(s){
-  return String(s||'').trim().slice(0,200)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#x27;')
-    .replace(/\//g,'&#x2F;');
+  // ✅ FIX BUG-06: শুধু trim ও length-limit।
+  // HTML encoding এখানে করলে render-এর সময় esc() দিয়ে double-encode হয়:
+  // "&" → "&amp;" (storage) → "&amp;amp;" (display) → user দেখে "&amp;"
+  // HTML encoding সম্পূর্ণভাবে render layer-এর দায়িত্ব: esc() বা safeHTML()।
+  return String(s||'').trim().slice(0,200);
 }
 
 
@@ -152,22 +150,47 @@ function fillMessCycleSelect(sel, months=12, addBlank=false){
   }
 }
 
-// ── ইতিহাস screen: শুধু handoverDone মাস দেখাও + current মাস ──
+// ── ইতিহাস screen: মাস dropdown populate ──
 function fillHistorySelect(sel, months=12){
   if(!sel) return;
   const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
   const currentKey = messMonthKey();
-  // handoverDone + current month — sort newest first
-  const validMonths = [...new Set([...(DB.handoverDone||[]), currentKey])].sort().reverse();
-  sel.innerHTML='<option value="">-- মাস সিলেক্ট করুন --</option>';
-  validMonths.forEach(key=>{
-    const {y,m} = getMessMonth(new Date(key+'-15'));
-    const nm=(m+1)%12;
-    const opt=document.createElement('option');
-    opt.value=key;
-    opt.textContent=`${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
-    sel.appendChild(opt);
-  });
+
+  // options render helper — selection preserve করে
+  function _renderOpts(keys){
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">-- মাস সিলেক্ট করুন --</option>';
+    keys.forEach(key => {
+      const {y,m} = getMessMonth(new Date(key+'-15'));
+      const nm = (m+1)%12;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${mnames[m]} ১১ – ${mnames[nm]} ১০, ${y}`;
+      if(key === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ── Step 1 (sync): handoverDone + current month সাথে সাথে দেখাও ──
+  const fromHandover = [...new Set([...(DB.handoverDone||[]), currentKey])].sort().reverse();
+  _renderOpts(fromHandover);
+
+  // ── Step 2 (async): Firebase months bucket থেকে বাকি মাস নাও ──
+  // FIX: handoverDone empty বা incomplete থাকলেও Firebase-এ যে মাসের
+  // data আছে সেগুলো dropdown-এ দেখাবে।
+  // Bug: DB.handoverDone === null হলে শুধু current month দেখাত —
+  // আগের মাসের data থাকলেও select করার উপায় ছিল না।
+  if(monthsRef){
+    monthsRef.once('value').then(snap => {
+      if(!snap.exists()) return;
+      const fbKeys = Object.keys(snap.val() || {});
+      const combined = [...new Set([...fbKeys, ...(DB.handoverDone||[]), currentKey])].sort().reverse();
+      // নতুন মাস পাওয়া গেলেই re-render করো
+      if(combined.length > fromHandover.length){
+        _renderOpts(combined);
+      }
+    }).catch(() => {});
+  }
 }
 
 // ── Session-level historical data cache — Firebase reads কমাতে ──
@@ -181,7 +204,27 @@ function _clearHistCache(){ Object.keys(_histCache).forEach(k=>delete _histCache
 function _swapAndRender(hist, renderFn){
   const saved = {};
   MONTH_FIELDS.forEach(f=>{ saved[f]=DB[f]; });
-  MONTH_FIELDS.forEach(f=>{ DB[f]=hist[f]||(f==='meals'||f==='managers'||f==='mealRates'||f==='officeMealRates'?{}:[]); });
+
+  // ✅ FIX: Firebase array fields normalize করো
+  // Bug: Firebase-এ bazar/others/transactions/cookBills object হিসেবে store হয়
+  // (e.g. {"1780489892497": {id,desc,amount,...}})।
+  // hist[f] সরাসরি DB[f]-এ রাখলে .filter()/.map() crash করে।
+  // _ensureArr() → Array.isArray check করে, object হলে Object.values() দেয়।
+  const _HIST_ARR = new Set(['bazar','others','transactions','cookBills']);
+  MONTH_FIELDS.forEach(f=>{
+    if(!hist[f]){
+      // data নেই — সঠিক default দাও
+      DB[f] = (f==='meals'||f==='managers'||f==='mealRates'||f==='officeMealRates'||f==='officeMealNotes') ? {} : [];
+    } else if(_HIST_ARR.has(f)){
+      // _ensureArr: db.js-এ defined (global)। inline fallback safety-র জন্য।
+      DB[f] = (typeof _ensureArr==='function')
+        ? _ensureArr(hist[f])
+        : (Array.isArray(hist[f]) ? hist[f] : Object.values(hist[f]||{}).filter(Boolean));
+    } else {
+      DB[f] = hist[f];
+    }
+  });
+
   invalidateMealIndex(); invalidateMealRateCache();
   try{ renderFn(); } finally {
     MONTH_FIELDS.forEach(f=>{ DB[f]=saved[f]; });
@@ -226,7 +269,38 @@ function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
     _histViewMode = false;
   }).catch(e=>{
     console.error('_withMonthData error:',e);
+    // ✅ FIX: _histViewMode reset করো
+    // Bug: error হলে _histViewMode = true রয়ে যেত।
+    // ফলে current month-এ ফিরে গেলেও edit/delete buttons দেখা যেত না।
+    _histViewMode = false;
     if(loadingEl) loadingEl.innerHTML='<p class="muted tc">❌ লোড ব্যর্থ। পুনরায় চেষ্টা করুন।</p>';
   });
+}
+
+// ═══════════════════════════════════════════════
+// BENGALI DAY NAME HELPERS
+// বাংলা বার সংক্ষেপ: রবি / সোম / মঙ্গল / বুধ / বৃহঃ / শুক্র / শনি
+// ═══════════════════════════════════════════════
+const BANGLA_DAYS_SHORT = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
+
+function getBengaliDayAbbr(dateStr){
+  if(!dateStr) return '';
+  // T12:00:00 দিয়ে timezone edge case এড়ানো হচ্ছে
+  const d = new Date(dateStr + 'T12:00:00');
+  return BANGLA_DAYS_SHORT[d.getDay()] || '';
+}
+
+// date-display-label স্প্যানে বার যোগ করে — যেমন: 04-06-2026(বৃহঃ)
+// inputId: date input এর id (e.g. 'meal-date')
+// labelId: optional custom label id, না দিলে inputId+'-lbl' ধরা হয়
+function appendDayToBNLabel(inputId, labelId){
+  const input = document.getElementById(inputId);
+  const lbl   = document.getElementById(labelId || (inputId + '-lbl'));
+  if(!input || !lbl || !input.value) return;
+  const day = getBengaliDayAbbr(input.value);
+  if(!day) return;
+  // আগের (বার) অংশ সরিয়ে নতুন করে জুড়ি
+  const baseText = lbl.textContent.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  lbl.textContent = baseText + '(' + day + ')';
 }
 

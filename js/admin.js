@@ -78,9 +78,13 @@ function initAdmin(){
       if(key===currentKey) opt.selected=true;
       mgrMonSel.appendChild(opt);
     }
+    // ✅ FIX: মাস dropdown বদলালে আগে ম্যানেজার তথ্য রিফ্রেশ হতো না — এখন হবে
+    mgrMonSel.onchange = renderManagerInfo;
   }
   document.getElementById('adm-dt').value=tod();
   applyMessCycleBounds('adm-dt');
+  _reconcileManagerRoles();
+  _cleanOrphanManagerRefs();
   renderManagerInfo();
   renderControllerList();
   initSiteNoteCard();
@@ -225,16 +229,21 @@ function doMonthHandover(){
 
       // ── Step 2: rows পেলে prevBalances সেট ও saveGlobal ──
       // saveDB() না, saveGlobal() — month data ছোঁব না
+      // ✅ FIX BUG-12: beforeCount async load শুরুর আগে capture করো।
+      // আগে: beforeCount _applyHandover-এর ভেতরে ছিল — async load-এর পরে capture হত,
+      // তাই load চলাকালীন user list পরিবর্তন detect করতে পারত না।
+      const beforeCount = DB.users.length;
       const _applyHandover = (rows) => {
-        const beforeCount = DB.users.length;
-        const nextKey = nextCycleKey(mmKey);
-        if(!DB.prevBalances) DB.prevBalances = {};
-        if(!DB.prevBalances[nextKey]) DB.prevBalances[nextKey] = {};
-        rows.forEach(({u, netBal}) => { DB.prevBalances[nextKey][u.u] = netBal; });
+        // ✅ FIX BUG-12: guard check prevBalances modify করার আগে।
+        // আগে: prevBalances modify → তারপর guard check → return করলেও data আধা-modified থাকত।
         if(DB.users.length !== beforeCount){
           toast('❌ ত্রুটি: user list পরিবর্তন হয়ে গেছে! Handover বাতিল।');
           return;
         }
+        const nextKey = nextCycleKey(mmKey);
+        if(!DB.prevBalances) DB.prevBalances = {};
+        if(!DB.prevBalances[nextKey]) DB.prevBalances[nextKey] = {};
+        rows.forEach(({u, netBal}) => { DB.prevBalances[nextKey][u.u] = netBal; });
         if(!DB.handoverDone) DB.handoverDone = [];
         DB.handoverDone.push(mmKey);
         saveHandover(); // ✅ controller-only Firebase path — saveGlobal() বাদ
@@ -242,21 +251,57 @@ function doMonthHandover(){
       };
 
       // ── Step 1: historical data দিয়ে calculate, তারপর DB restore করো ──
+      // ✅ FIX (হ্যান্ডওভার crash + সব ডাটা 0): bazar/others/transactions/
+      // officeMealNotes/cookBills — এই ফিল্ডগুলো Firebase-এ item.id
+      // (genId() = বড় সংখ্যা) দিয়ে key করা OBJECT আকারে থাকে, array আকারে
+      // না (saveBazarItem/saveTxItem ইত্যাদি .child(id).set() দিয়ে সেভ করে)।
+      // আগে এখানে সরাসরি DB[f]=hist[f] বসানো হতো, ফলে DB.bazar/others/
+      // transactions একটা plain object হয়ে যেত। এরপর _calcHandoverData()
+      // → calcMealRate()-এ DB.bazar.filter(...) চালাতে গিয়ে "filter is not
+      // a function" TypeError থ্রো হতো — সেটাই "ডেটাবেস load ব্যর্থ" টোস্টের
+      // আসল কারণ। db.js-এর loadDB() ঠিক এই কারণেই একই ফিল্ডগুলোতে
+      // _ensureArr() ব্যবহার করে — এখানেও এখন সেটাই করা হলো।
+      const _HIST_ARR_FIELDS = ['bazar','others','transactions','officeMealNotes','cookBills'];
       const _calcWithHist = (hist) => {
         const saved = {};
         MONTH_FIELDS.forEach(f => { saved[f] = DB[f]; });
-        MONTH_FIELDS.forEach(f => { DB[f] = hist[f] || (f==='meals'||f==='managers'||f==='mealRates'||f==='officeMealRates' ? {} : []); });
+        MONTH_FIELDS.forEach(f => {
+          const v = hist[f] || (f==='meals'||f==='managers'||f==='mealRates'||f==='officeMealRates' ? {} : []);
+          DB[f] = _HIST_ARR_FIELDS.includes(f) ? _ensureArr(v).sort((a,b)=>(a.id||0)-(b.id||0)) : v;
+        });
         invalidateMealIndex(); invalidateMealRateCache();
-        const rows = _calcHandoverData(mmKey);   // ঐতিহাসিক data দিয়ে সঠিক হিসাব
-        // *** DB restore — saveGlobal-এর আগে অবশ্যই ***
-        MONTH_FIELDS.forEach(f => { DB[f] = saved[f]; });
-        invalidateMealIndex(); invalidateMealRateCache();
+        // ✅ FIX (লক রিসেট না করলে ডাটা ফেরত আসত না): _calcHandoverData()
+        // এর ভেতরে (উপরের bug ছাড়াও, ভবিষ্যতে অন্য যেকোনো কারণে) exception
+        // থ্রো করলে আগে নিচের DB restore লাইন কখনো চলত না — DB চিরস্থায়ীভাবে
+        // ঐতিহাসিক/আধা-swap অবস্থায় আটকে থাকত, তাই মেসের সব হিসাব 0 দেখাত,
+        // যতক্ষণ না loadDB() আবার পুরো ডেটা টেনে ঠিক করে দিত (যা "লক রিসেট"
+        // এর পরের কোনো full reload/refresh-এ ঘটছিল)। try/finally দিয়ে এখন
+        // restore সবসময় guaranteed — error হলেও DB ঠিক জায়গায় ফিরবে, শুধু
+        // এই handover-টা বাতিল হয়ে toast দেখাবে, ডাটা নষ্ট হবে না।
+        let rows;
+        try{
+          rows = _calcHandoverData(mmKey);   // ঐতিহাসিক data দিয়ে সঠিক হিসাব
+        } finally {
+          // *** DB restore — saveGlobal-এর আগে অবশ্যই, error হলেও ***
+          MONTH_FIELDS.forEach(f => { DB[f] = saved[f]; });
+          invalidateMealIndex(); invalidateMealRateCache();
+        }
         _applyHandover(rows);
       };
 
-      // Current month হলে DB-তেই আছে, সরাসরি calculate করো
+      // ✅ FIX BUG-04: Current month-এও Firebase থেকে fresh data নাও।
+      // আগে: local DB দিয়ে সরাসরি calculate করত।
+      // সমস্যা: অন্য browser-এ কেউ একই সময়ে bazar/transaction যোগ করলে
+      // local DB সেটা জানত না → handover calculation-এ miss → পরের মাসের prevBalance ভুল।
       if(mmKey === currentMonthKey){
-        _applyHandover(_calcHandoverData(mmKey));
+        toast('⏳ সর্বশেষ ডেটা লোড হচ্ছে...');
+        monthsRef.child(mmKey).once('value').then(snap=>{
+          const hist=snap.val()||{};
+          _calcWithHist(hist);
+        }).catch(e=>{
+          toast('❌ ডেটা লোড ব্যর্থ! আবার চেষ্টা করুন।');
+          console.error('Handover current month load error:', e);
+        });
         return;
       }
 
@@ -290,9 +335,59 @@ function resetHandoverLock(){
       // পরের মাসের prevBalances মুছো
       const nextKey=nextCycleKey(mmKey);
       if(DB.prevBalances&&DB.prevBalances[nextKey]) delete DB.prevBalances[nextKey];
-      saveGlobal();  // শুধু global — month data ছোঁব না
+      // ✅ FIX: saveGlobal() → saveHandover()
+      // Bug: GLOBAL_FIELDS = ['users','cfg','siteNote','notice','shortfall'] —
+      // handoverDone এবং prevBalances এতে নেই!
+      // saveGlobal() এই দুটো field লিখতই পারে না।
+      // ফলে reset করলে DB মেমরিতে পরিবর্তন হতো কিন্তু Firebase-এ কিছু সেভ হতো না।
+      // পেজ refresh করলে পুরনো lock ফিরে আসত।
+      saveHandover(); // controller-only path → handoverDone + prevBalances সেভ হবে
       toast('✅ লক রিসেট হয়েছে। এখন সঠিক মাস হস্তান্তর করুন।');
     });
+}
+// ✅ FIX: চলতি মাসের ম্যানেজার লিস্টে নেই এমন কারো role এখনো 'manager' থেকে
+// গেলে (আগের মাসে সেট হয়েছিল, কখনো বাদ দেওয়া হয়নি) সেটা 'member'-এ ফিরিয়ে
+// দাও — নাহলে stale manager-level অ্যাক্সেস থেকে যায় (badge ছাড়াও)।
+function _reconcileManagerRoles(){
+  const curMgrs = DB.managers[messMonthKey()]||[];
+  let changed=false;
+  DB.users.forEach(u=>{
+    if(u.role==='manager' && !curMgrs.includes(u.u)){
+      u.role='member'; syncRole(u.u,'member'); changed=true;
+    }
+    // Controller থেকে বাদ দেওয়ার পরও role field মাঝেমধ্যে 'controller'
+    // আটকে থেকে যেতে পারে (DB.controllers থেকে বাদ গেলেও)। মিলিয়ে দেখে
+    // ঠিক করে দিচ্ছি — নাহলে ভুল Controller ব্যাজ দেখায়।
+    else if(u.role==='controller' && !(DB.controllers&&DB.controllers.includes(u.u))){
+      u.role='member'; syncRole(u.u,'member'); changed=true;
+    }
+  });
+  if(changed) saveUsers();
+}
+// ✅ FIX (হালকা সংস্করণ): আগের ভার্সন পুরো months tree পড়ত (মিল/বাজার/
+// লেনদেন সহ সব ইতিহাস) — ডাউনলোড খরচ অনাবশ্যক বাড়ত। এখন শুধু প্রতি মাসের
+// ছোট্ট "managers" অংশটুকু আলাদাভাবে পড়া হয় (কয়েক বাইট), আর গত ১২ মাসের
+// মধ্যেই সীমাবদ্ধ, এবং প্রতি সেশনে মাত্র একবার চলে (বারবার Admin প্যানেলে
+// ঢুকলেও দ্বিতীয়বার চলবে না)। কাউকে ডিলিট (fully removed) না করলে কারো
+// রেফারেন্স মোছে না — চলমান/বর্তমান কোনো ম্যানেজার এতে কখনো সরানো হয় না।
+let _orphanMgrCleanDone=false;
+function _cleanOrphanManagerRefs(){
+  if(_orphanMgrCleanDone) return;
+  _orphanMgrCleanDone=true;
+  if(typeof monthsRef==='undefined'||!monthsRef) return;
+  const base=messMonthKey(); let [y,m]=base.split('-').map(Number);
+  for(let i=0;i<12;i++){
+    const mk2=y+'-'+String(m).padStart(2,'0');
+    monthsRef.child(mk2).child('managers').child(mk2).once('value').then(snap=>{
+      const arr=snap.val();
+      if(!Array.isArray(arr)) return;
+      const cleaned=arr.filter(u=>DB.users.some(x=>x.u===u));
+      if(cleaned.length!==arr.length){
+        monthsRef.child(mk2).child('managers').child(mk2).set(cleaned).catch(()=>{});
+      }
+    }).catch(()=>{});
+    m--; if(m<1){ m=12; y--; }
+  }
 }
 function renderManagerInfo(){
   const m=document.getElementById('mgr-month').value||mk();
@@ -311,7 +406,6 @@ function renderManagerInfo(){
           &nbsp; রুম ${esc(usr.room||'-')}
         </div>
       </div>
-      <button onclick="editController('${esc(u)}')" style="background:rgba(26,107,60,.15);color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✏️ Edit</button>
     </div>`;
   }).join(''));
   const sel=document.getElementById('mgr-remove');
@@ -450,7 +544,28 @@ function deleteMember(){
   if(!isOnline()){ noNetPopup(); return; }
   const uname=document.getElementById('del-mem-sel').value; if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
   const u=DB.users.find(x=>x.u===uname);
-  showModal('সদস্য মুছুন',`${u?.name||uname} কে স্থায়ীভাবে মুছে ফেলবেন? সব ডেটা হারিয়ে যাবে!`,()=>{
+
+  // ✅ FIX BUG-05: মুছে দেওয়ার আগে balance check।
+  // সমস্যা: outstanding balance সহ member delete করলে handover-এ তার balance
+  // আর দেখা যায় না — DB.users-এ নেই তাই _calcHandoverData() miss করে।
+  // সমাধান: balance থাকলে manager-কে সতর্ক করো, সে সচেতনভাবে সিদ্ধান্ত নিক।
+  const mmKey=messMonthKey();
+  const _dep=(DB.transactions||[]).filter(tx=>tx.uname===uname&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _with=(DB.transactions||[]).filter(tx=>tx.uname===uname&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const bal=getPreBal(uname,mmKey)+(_dep-_with);
+  const balWarn=bal!==0
+    ? `\n\n⚠️ সতর্কতা: এই সদস্যের বর্তমান ব্যালেন্স ৳${Math.abs(bal).toFixed(2)} (${bal>0?'জমা আছে':'বকেয়া আছে'})। মুছে ফেললে এই হিসাব হারিয়ে যাবে!`
+    : '';
+  // ✅ FIX: ব্যালেন্সের পাশাপাশি চলতি মাসের মিলও ০ কিনা চেক করো — মিল থাকা
+  // অবস্থায় মুছলে চলতি মাসের মিল-হিসাব থেকে সেটা বাদ পড়ে যাবে।
+  const myMeals=messMonthMeals(uname,mmKey);
+  const mealWarn=myMeals>0
+    ? `\n\n⚠️ সতর্কতা: এই সদস্যের চলতি মাসে ${myMeals.toFixed(2)} মিল রেকর্ড আছে। মুছে ফেললে চলতি মাসের মিল হিসাব থেকে এটা বাদ পড়ে যাবে!`
+    : '';
+
+  showModal('সদস্য মুছুন',`${u?.name||uname} কে স্থায়ীভাবে মুছে ফেলবেন? সব ডেটা হারিয়ে যাবে!${balWarn}${mealWarn}`,()=>{
+    // ✅ FIX: RTDB cleanup-এর জন্য uid আগেই নাও — DB.users filter করার পরে u হারিয়ে যাবে
+    const targetUid = u?.uid;
     DB.users=DB.users.filter(x=>x.u!==uname);
     DB.controllers=DB.controllers.filter(c=>c!==uname);
     Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
@@ -458,6 +573,34 @@ function deleteMember(){
     if(typeof _minUserCount!=='undefined') _minUserCount=Math.max(0,new Set(DB.users.filter(u=>u&&u.u).map(u=>u.u)).size);
     saveControllers(); saveGlobal(); saveUsers(); // ✅ controllers আলাদা path
     currentMonthRef.child('managers').set(DB.managers).catch(e=>console.error('Managers save:',e));
+    // ✅ FIX: শুধু বর্তমানে লোড করা মাস না — গত ২৪ মাসের ম্যানেজার
+    // রেফারেন্স থেকেও এই সদস্যকে সরিয়ে দাও, একেবারে delete-এর মুহূর্তেই।
+    // এটা শুধু "কে ম্যানেজার ছিল" এই ছোট্ট রেফারেন্স ছোঁয় — মিল/বাজার/
+    // জমা-উত্তোলনের কোনো ঐতিহাসিক হিসাবে হাত দেয় না।
+    (function _purgeManagerRefsAllMonths(){
+      if(typeof monthsRef==='undefined'||!monthsRef) return;
+      const base=messMonthKey(); let [py,pm]=base.split('-').map(Number);
+      for(let i=0;i<24;i++){
+        const pk=py+'-'+String(pm).padStart(2,'0');
+        monthsRef.child(pk).child('managers').child(pk).once('value').then(snap=>{
+          const arr=snap.val();
+          if(Array.isArray(arr)&&arr.includes(uname)){
+            monthsRef.child(pk).child('managers').child(pk).set(arr.filter(x=>x!==uname)).catch(()=>{});
+          }
+        }).catch(()=>{});
+        pm--; if(pm<1){ pm=12; py--; }
+      }
+    })();
+    // ✅ FIX: RTDB node cleanup — users/{uid} + roles/{uid} + pendingApprovals/{uid}
+    // Bug: আগে এই cleanup ছিল না।
+    // users/{uid} থেকে যায় → deleted user পেজ refresh করলে onAuthStateChanged
+    // users/{uid} পড়ে ভেতরে ঢুকে যেত (_waitUntilReady-এ global/users চেক করে kick করে,
+    // কিন্তু এই orphan node থাকলে RTDB স্পেস নষ্ট হয় + security hole থাকে)।
+    if(targetUid){
+      firebase.database().ref('users/'+targetUid).remove().catch(()=>{});
+      firebase.database().ref('roles/'+targetUid).remove().catch(()=>{});
+      firebase.database().ref('pendingApprovals/'+targetUid).remove().catch(()=>{});
+    }
     closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');
   });
 }
@@ -477,7 +620,6 @@ function renderControllerList(){
             &nbsp; রুম ${esc(usr.room||'-')} · ${esc(usr.job||'-')}
           </div>
         </div>
-        <button onclick="editController('${esc(c)}')" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✏️ Edit</button>
       </div>`;
     }).join(''));
   }
@@ -554,113 +696,181 @@ function downloadDayPDF(){
     return String(a.job||'').localeCompare(String(b.job||''));
   });
 
-  // ── Rows: compact ──
-  let rows='';
-  sorted.forEach((u,ri)=>{
+  // ── দুই কলামের layout: প্রতি row-এ দুজন member ──────────────────────────
+  // Spreadsheet অনুযায়ী column order: ID | নাম | Total | সকাল | দুপুর | রাত
+  // ৬০ জন → ৩০ row → এক পেজেই সব
+
+  // একটা member-এর ৬টা cell তৈরি করে দেয়
+  // u=null হলে ফাঁকা cell (odd-count member list-এর শেষ row-এর ডান দিক)
+  function _mCells(u){
+    if(!u) return '<td></td><td></td><td></td><td></td><td></td><td></td>';
     const meal=DB.meals[u.u+'_'+dt]||{};
     const bm=meal.b||{t:'off',q:1}, lm=meal.l||{t:'off',q:1}, dm=meal.d||{t:'off',q:1};
     const bv=mTV('b',bm,dt,u.type), lv=mTV('l',lm,dt,u.type), dv=mTV('d',dm,dt,u.type);
-    const rowTot=(bv+lv+dv).toFixed(2);
-    const bg=ri%2===0?'#f7f9f7':'#ffffff';
-
-    const cell=(m,v)=>{
-      if(m.t==='off') return `<td style="text-align:center;color:#bbb;padding:2px 4px;">—</td>`;
-      const q=m.q&&m.q>1?m.q:1;
-      const label=m.t+(q>1?'×'+q:'');
-      const c=m.t==='P'?'#1a6b3c':'#1565c0';
-      return `<td style="text-align:center;font-weight:700;color:${c};padding:2px 4px;">${label}</td>`;
-    };
-
+    const tot=(bv+lv+dv);
     const isOff=(bm.t==='off'&&lm.t==='off'&&dm.t==='off');
-    const totColor=isOff?'#bbb':'#1a2e22';
-    const totWeight=isOff?'400':'700';
+    // meal cell: P বা Q দেখায়, off হলে —
+    const mc=(m)=>{
+      if(m.t==='off') return `<td style="text-align:center;color:#ccc;padding:1px 2px;font-size:9px;">—</td>`;
+      const q=m.q&&m.q>1?'×'+m.q:'';
+      // ✅ উজ্জ্বলতা বাড়ানো: আগের #1a6b3c/#1565c0 (একটু dull) → এখন vivid green/blue
+      // size একই থাকল, শুধু রং বেশি জ্বলজ্বলে — চোখে তাড়াতাড়ি পড়বে
+      const c=m.t==='P'?'#16a34a':'#2563eb';
+      return `<td style="text-align:center;font-weight:700;color:${c};padding:1px 2px;font-size:9px;">${m.t+q}</td>`;
+    };
+    return `
+      <td style="padding:1px 3px;font-size:9px;color:#555;white-space:nowrap;overflow:hidden;">${String(u.job||u.u).substring(0,8)}</td>
+      <td style="padding:1px 3px;font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:145px;">${(u.name||'').substring(0,40)}</td>
+      <td style="text-align:right;padding:1px 4px;font-size:9px;font-weight:700;color:${isOff?'#ccc':'#1a2e22'};">${isOff?'—':tot.toFixed(2)}</td>
+      ${mc(bm)}${mc(lm)}${mc(dm)}`;
+  }
 
-    rows+=`<tr style="background:${bg};border-top:1px solid #e8f0eb;">
-      <td style="padding:2px 4px;font-size:10px;color:#555;white-space:nowrap;">${String(u.job||u.u).substring(0,8)}</td>
-      <td style="padding:2px 4px;font-size:10px;font-weight:600;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(u.name||'').substring(0,16)}</td>
-      ${cell(bm,bv)}${cell(lm,lv)}${cell(dm,dv)}
-      <td style="text-align:right;padding:2px 6px;font-weight:${totWeight};color:${totColor};font-size:10px;">${isOff?'—':rowTot}</td>
-    </tr>`;
-  });
+  // sorted-কে দুই ভাগ: বাম অর্ধেক + ডান অর্ধেক
+  const _half=Math.ceil(sorted.length/2);
+  const rowHtmlArr=[];
+  for(let i=0;i<_half;i++){
+    const uL=sorted[i], uR=sorted[i+_half]; // uR undefined হতে পারে শেষ row-এ
+    const bg=i%2===0?'#f5f9f5':'#ffffff';
+    rowHtmlArr.push(`<tr style="background:${bg};border-top:1px solid #e8f0eb;">
+      ${_mCells(uL)}
+      <td style="width:6px;background:#c4d9c4;padding:0;"></td>
+      ${_mCells(uR)}
+    </tr>`);
+  }
 
-  const html=`<div style="font-family:Arial,sans-serif;background:#fff;padding:10px 14px;width:720px;color:#1a2e22;font-size:10px;">
-
-    <!-- Compact Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1a6b3c;padding-bottom:6px;margin-bottom:8px;">
-      <div style="font-size:14px;font-weight:700;color:#1a6b3c;">Daily Meal Sheet</div>
-      <div style="text-align:right;">
-        <span style="font-size:13px;font-weight:700;">${dd}-${mm}-20${yy}</span>
-        <span style="font-size:10px;color:#666;margin-left:6px;">${dayName}</span>
-      </div>
+  const WRAP_W=720;
+  const _thead=`<thead>
+    <tr style="background:#1a6b3c;color:#fff;font-size:9px;">
+      <!-- বাম কলাম header -->
+      <th style="padding:3px 3px;text-align:left;width:48px;">ID</th>
+      <th style="padding:3px 3px;text-align:left;width:130px;">নাম</th>
+      <th style="padding:3px 4px;text-align:right;width:40px;">Total</th>
+      <th style="padding:3px 2px;text-align:center;width:38px;">সকাল</th>
+      <th style="padding:3px 2px;text-align:center;width:38px;">দুপুর</th>
+      <th style="padding:3px 2px;text-align:center;width:38px;">রাত</th>
+      <!-- মাঝের separator -->
+      <th style="width:6px;background:#0f4526;padding:0;"></th>
+      <!-- ডান কলাম header -->
+      <th style="padding:3px 3px;text-align:left;width:48px;">ID</th>
+      <th style="padding:3px 3px;text-align:left;width:130px;">নাম</th>
+      <th style="padding:3px 4px;text-align:right;width:40px;">Total</th>
+      <th style="padding:3px 2px;text-align:center;width:38px;">সকাল</th>
+      <th style="padding:3px 2px;text-align:center;width:38px;">দুপুর</th>
+      <th style="padding:3px 2px;text-align:center;width:38px;">রাত</th>
+    </tr>
+  </thead>`;
+  const _tfoot=`<tfoot>
+    <!-- Grand Total: বাম দিকে count, ডান দিকে মোট -->
+    <tr style="background:#0f4526;color:#fff;font-weight:700;font-size:9px;">
+      <td colspan="2" style="padding:3px 4px;">Grand Total</td>
+      <td style="padding:3px 4px;text-align:right;color:#fcd34d;">${grandTotal}</td>
+      <td style="padding:3px 2px;text-align:center;">${totBQ}(${totBM.toFixed(2)})</td>
+      <td style="padding:3px 2px;text-align:center;">${totLQ}(${totLM.toFixed(2)})</td>
+      <td style="padding:3px 2px;text-align:center;">${totDQ}(${totDM.toFixed(2)})</td>
+      <td style="background:#0a3520;padding:0;"></td>
+      <td colspan="6" style="padding:3px 4px;text-align:center;font-size:8px;color:rgba(255,255,255,.7);">P=Plant · Q=Quarter · off=— · Generated: ${dd}.${mm}.20${yy}</td>
+    </tr>
+  </tfoot>`;
+  const _header=`
+    <!-- Header: title + date -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1a6b3c;padding-bottom:5px;margin-bottom:7px;">
+      <div style="font-size:13px;font-weight:700;color:#1a6b3c;">Daily Meal Sheet</div>
+      <div><span style="font-size:12px;font-weight:700;">${dd}-${mm}-20${yy}</span><span style="font-size:9px;color:#666;margin-left:5px;">${dayName}</span></div>
     </div>
 
-    <!-- Compact Summary -->
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <div style="flex:1;background:#fff8f0;border:1px solid #f0a05a;border-radius:5px;padding:4px 6px;text-align:center;">
-        <div style="font-size:9px;color:#888;">Morning</div>
-        <div style="font-size:13px;font-weight:700;color:#c45000;">${totBQ} <span style="font-size:9px;font-weight:400;">(${totBM.toFixed(2)})</span></div>
+    <!-- Summary: ৪টা card -->
+    <div style="display:flex;gap:6px;margin-bottom:7px;">
+      <div style="flex:1;background:#fff8f0;border:1px solid #f0a05a;border-radius:4px;padding:3px 5px;text-align:center;">
+        <div style="font-size:8px;color:#888;">Morning</div>
+        <div style="font-size:12px;font-weight:700;color:#ea580c;">${totBQ}<span style="font-size:8px;font-weight:400;"> (${totBM.toFixed(2)})</span></div>
       </div>
-      <div style="flex:1;background:#f0fff4;border:1px solid #5abf7a;border-radius:5px;padding:4px 6px;text-align:center;">
-        <div style="font-size:9px;color:#888;">Lunch</div>
-        <div style="font-size:13px;font-weight:700;color:#1a6b3c;">${totLQ} <span style="font-size:9px;font-weight:400;">(${totLM.toFixed(2)})</span></div>
+      <div style="flex:1;background:#f0fff4;border:1px solid #5abf7a;border-radius:4px;padding:3px 5px;text-align:center;">
+        <div style="font-size:8px;color:#888;">Lunch</div>
+        <div style="font-size:12px;font-weight:700;color:#16a34a;">${totLQ}<span style="font-size:8px;font-weight:400;"> (${totLM.toFixed(2)})</span></div>
       </div>
-      <div style="flex:1;background:#f0f4ff;border:1px solid #5a7abf;border-radius:5px;padding:4px 6px;text-align:center;">
-        <div style="font-size:9px;color:#888;">Night</div>
-        <div style="font-size:13px;font-weight:700;color:#1565c0;">${totDQ} <span style="font-size:9px;font-weight:400;">(${totDM.toFixed(2)})</span></div>
+      <div style="flex:1;background:#f0f4ff;border:1px solid #5a7abf;border-radius:4px;padding:3px 5px;text-align:center;">
+        <div style="font-size:8px;color:#888;">Night</div>
+        <div style="font-size:12px;font-weight:700;color:#2563eb;">${totDQ}<span style="font-size:8px;font-weight:400;"> (${totDM.toFixed(2)})</span></div>
       </div>
-      <div style="flex:1;background:#1a6b3c;border-radius:5px;padding:4px 6px;text-align:center;">
-        <div style="font-size:9px;color:rgba(255,255,255,.8);">Total</div>
-        <div style="font-size:13px;font-weight:700;color:#fff;">${grandTotal}</div>
+      <div style="flex:1;background:#1a6b3c;border-radius:4px;padding:3px 5px;text-align:center;">
+        <div style="font-size:8px;color:rgba(255,255,255,.75);">Total</div>
+        <div style="font-size:12px;font-weight:700;color:#fff;">${grandTotal}</div>
       </div>
-    </div>
+    </div>`;
 
-    <!-- Table -->
-    <table style="width:100%;border-collapse:collapse;font-size:10px;">
-      <thead>
-        <tr style="background:#1a6b3c;color:#fff;">
-          <th style="padding:4px 4px;text-align:left;width:55px;">ID</th>
-          <th style="padding:4px 4px;text-align:left;width:120px;">Name</th>
-          <th style="padding:4px 4px;text-align:center;width:60px;">Morning</th>
-          <th style="padding:4px 4px;text-align:center;width:60px;">Lunch</th>
-          <th style="padding:4px 4px;text-align:center;width:60px;">Night</th>
-          <th style="padding:4px 6px;text-align:right;width:60px;">Total</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-      <tfoot>
-        <tr style="background:#0f4526;color:#fff;font-weight:700;font-size:10px;">
-          <td colspan="2" style="padding:4px 4px;">Grand Total</td>
-          <td style="padding:4px 4px;text-align:center;">${totBQ} (${totBM.toFixed(2)})</td>
-          <td style="padding:4px 4px;text-align:center;">${totLQ} (${totLM.toFixed(2)})</td>
-          <td style="padding:4px 4px;text-align:center;">${totDQ} (${totDM.toFixed(2)})</td>
-          <td style="padding:4px 6px;text-align:right;color:#fcd34d;">${grandTotal}</td>
-        </tr>
-      </tfoot>
-    </table>
-    <div style="margin-top:6px;font-size:8px;color:#aaa;text-align:right;">P=Plant · Q=Quarter · off=— · Generated: ${dd}.${mm}.20${yy}</div>
-  </div>`;
+  // ✅ প্রতিটা page-এর HTML বানানোর reusable function — header+thead সব
+  // page-এ repeat হয়, tfoot শুধু শেষ page-এ। rowSlice = এই page-এ যেই rows যাবে।
+  function _buildPage(rowSlice,isLast){
+    return `<div style="font-family:Arial,sans-serif;background:#fff;padding:8px 12px;width:${WRAP_W}px;color:#1a2e22;">
+      ${_header}
+      <table style="width:100%;border-collapse:collapse;">
+        ${_thead}<tbody>${rowSlice.join('')}</tbody>${isLast?_tfoot:''}
+      </table>
+    </div>`;
+  }
 
-  const wrap=document.createElement('div');
-  wrap.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1;';
-  wrap.innerHTML=html;
-  document.body.appendChild(wrap);
-  toast('⏳ PDF তৈরি হচ্ছে...');
-  html2canvas(wrap.firstChild,{scale:2.5,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
-    document.body.removeChild(wrap);
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const imgW=210, imgH=(canvas.height*imgW)/canvas.width;
-    const pageH=297;
-    let yPos=0;
-    while(yPos<imgH){
-      if(yPos>0) doc.addPage();
-      doc.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,-yPos*canvas.width/imgW/2.5,imgW,imgH);
-      yPos+=pageH;
+  // ✅ Step 1: পুরো table একবার off-screen বানিয়ে আসল row height measure করো।
+  // হাতে-হিসাব করা সংখ্যা না — সরাসরি DOM থেকে মাপ নেওয়া হচ্ছে, তাই member
+  // সংখ্যা ৬০ হোক বা ১২০ বা তার বেশি, হিসাব নিজে থেকেই ঠিক থাকবে।
+  const _measureWrap=document.createElement('div');
+  _measureWrap.style.cssText='position:absolute;left:-9999px;top:0;z-index:-1;';
+  _measureWrap.innerHTML=_buildPage(rowHtmlArr,true);
+  document.body.appendChild(_measureWrap);
+  void _measureWrap.offsetHeight; // layout flush নিশ্চিত করো
+
+  const _trEls=Array.from(_measureWrap.querySelectorAll('tbody tr'));
+  const _tfootEl=_measureWrap.querySelector('tfoot');
+  const rowTop=_trEls.map(r=>r.offsetTop);
+  const rowBot=_trEls.map(r=>r.offsetTop+r.offsetHeight);
+  const overheadPx=rowTop.length?rowTop[0]:0; // header+summary+thead-এর উচ্চতা
+  const tfootPx=_tfootEl?_tfootEl.offsetHeight:0;
+  document.body.removeChild(_measureWrap);
+
+  // mm↔px সম্পর্ক: wrap-এর CSS width-ই PDF-এ 210mm হয়ে যায় (html2canvas-এর
+  // scale যাই হোক, addImage-এ canvas.width থেকে এটা বাতিল হয়ে যায়)।
+  const imgW=210;
+  const mmPerCssPx=imgW/WRAP_W;
+  const SAFE_PAGE_MM=290; // 297mm-এর নিচে কিছু safety margin
+  const maxPageCssPx=SAFE_PAGE_MM/mmPerCssPx;
+  // প্রতি page-এ header+thead repeat হবে, এবং কোনটা শেষ page হবে আগে জানা
+  // নেই — তাই সবসময় tfoot-এর জায়গাও reserve রাখা হলো (নিরাপদ পদ্ধতি)।
+  const rowBudgetPx=maxPageCssPx-overheadPx-tfootPx;
+
+  // ✅ Step 2: measured উচ্চতা দিয়ে precise chunk বানাও — কোনো row মাঝখানে কাটবে না
+  const chunks=[];
+  let chunkStart=0;
+  for(let i=0;i<_trEls.length;i++){
+    const usedByChunk=rowBot[i]-rowTop[chunkStart];
+    if(usedByChunk>rowBudgetPx && i>chunkStart){
+      chunks.push([chunkStart,i-1]);
+      chunkStart=i;
     }
-    // File name: DD.MM.YY_mealsheet
-    doc.save(`${dd}.${mm}.${yy}_mealsheet.pdf`);
-    toast('✅ PDF তৈরি হয়েছে!');
-  }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
+  }
+  if(_trEls.length>0) chunks.push([chunkStart,_trEls.length-1]);
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+
+  // ✅ Step 3: প্রতিটা chunk আলাদাভাবে render + আলাদা PDF page — একটা বড় canvas
+  // কেটে ভাগ করা হচ্ছে না, তাই কোনো row দুই page-এ ভাগ হওয়ার সুযোগ নেই।
+  toast('⏳ PDF তৈরি হচ্ছে...');
+  function _renderChunk(idx){
+    if(idx>=chunks.length){ doc.save(`${dd}.${mm}.${yy}_mealsheet.pdf`); toast('✅ PDF তৈরি হয়েছে!'); return; }
+    const [s,e]=chunks[idx];
+    const isLast=(idx===chunks.length-1);
+    const wrap=document.createElement('div');
+    wrap.style.cssText='position:absolute;left:-9999px;top:0;z-index:-1;';
+    wrap.innerHTML=_buildPage(rowHtmlArr.slice(s,e+1),isLast);
+    document.body.appendChild(wrap);
+    html2canvas(wrap.firstChild,{scale:2,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
+      document.body.removeChild(wrap);
+      if(idx>0) doc.addPage();
+      const imgH=(canvas.height*imgW)/canvas.width;
+      doc.addImage(canvas.toDataURL('image/jpeg',0.88),'JPEG',0,0,imgW,imgH);
+      _renderChunk(idx+1);
+    }).catch(e=>{ document.body.removeChild(wrap); toast('❌ PDF তৈরিতে সমস্যা!'); console.error(e); });
+  }
+  _renderChunk(0);
   } catch(err){ toast('❌ Error: '+err.message); console.error('downloadDayPDF error:',err); }
 }
 
@@ -1022,7 +1232,10 @@ function showAllMembersBill(){
   const myMeals=messMonthMeals(cu.u,mmKey);
   const myShortfall=getShortfallMeals(cu.u,mmKey);
   const myNetMeals=myMeals+myShortfall;
-  const mealBill=myNetMeals*appliedRate;
+  // ✅ FIX: বাবুর্চির নিজের bill নেই — bill.js এর loadBill()-এর সাথে একই রুল।
+  // cookFoodShare আগে থেকেই calcMemberOtherShares()-এ cook-দের জন্য ০ হয়;
+  // শুধু mealBill এখানে ০ করা হলো না বলেই বাবুর্চির Home স্ক্রিনে ভুল বিল দেখাচ্ছিল।
+  const mealBill=cu.type==='cook'?0:myNetMeals*appliedRate;
   const {othersShare,cookBillShare,cookFoodShare}=isOff
     ?{othersShare:0,cookBillShare:0,cookFoodShare:0}
     :calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
@@ -1072,7 +1285,7 @@ function showAllMembersBill(){
     <div style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.6px;margin-bottom:10px;text-transform:uppercase">বিল বিবরণী</div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
       <div style="font-size:12px;color:var(--text-light)">
-        মিল ${myShortfall>0?'('+myMeals.toFixed(2)+'+'+myShortfall.toFixed(2)+'SF)':'× '+myMeals.toFixed(2)}
+        মিল বিল - ${myShortfall>0?'('+myMeals.toFixed(2)+'+'+myShortfall.toFixed(2)+'SF)':myMeals.toFixed(2)}
         <span style="font-size:10px;color:var(--primary)"> × ৳${appliedRate.toFixed(2)}</span>
       </div>
       <div style="font-size:13px;font-weight:700">৳${fmtTk(mealBill)}</div>
@@ -1208,11 +1421,20 @@ function doApproveUser(uid){
   showModal('সদস্য অনুমোদন','এই সদস্যকে মেসে যোগ দেওয়ার অনুমতি দেবেন?',()=>{
     firebase.database().ref('pendingApprovals/'+uid).once('value').then(snap=>{
       const p=snap.val();
-      if(!p){ toast('❌ আবেদন পাওয়া যায়নি!'); return; }
-      if(DB.users.find(x=>x.u===p.u||x.u===('u_'+(p.mobile||'')))){
+      if(!p){
+        toast('❌ আবেদন পাওয়া যায়নি!');
+        // ✅ FIX: return → throw
+        // Bug: return undefined করলে পরের .then() চলে যেত →
+        // "✅ সদস্য অনুমোদিত হয়েছে!" toast দেখাত যদিও কিছুই হয়নি।
+        throw Object.assign(new Error('not_found'), { _handled: true });
+      }
+      const _uArr = Array.isArray(DB.users) ? DB.users : Object.values(DB.users||{}).filter(Boolean);
+      if(_uArr.find(x=>x.u===p.u||x.u===('u_'+(p.mobile||'')))){
         toast('❌ এই মোবাইল নম্বরে ইতিমধ্যে সদস্য আছে!');
         firebase.database().ref('pendingApprovals/'+uid).remove();
-        initApprovalPanel(); return;
+        initApprovalPanel();
+        // ✅ FIX: return → throw
+        throw Object.assign(new Error('duplicate'), { _handled: true });
       }
       return approvePendingUser(uid, p);
     }).then(()=>{
@@ -1222,7 +1444,10 @@ function doApproveUser(uid){
       _updateApprovalBadge(rem);
       if(!rem){ const l=document.getElementById('approval-list'); if(l) l.innerHTML='<div style="text-align:center;padding:16px;opacity:.6">✅ কোনো অপেক্ষমাণ আবেদন নেই।</div>'; }
       initAdmin(); // dropdown list আপডেট
-    }).catch(e=>{ console.error(e); toast('❌ অনুমোদনে সমস্যা!'); });
+    }).catch(e=>{
+      // _handled=true মানে already user-friendly toast দেওয়া হয়েছে
+      if(!e?._handled){ console.error(e); toast('❌ অনুমোদনে সমস্যা!'); }
+    });
   });
 }
 function doRejectUser(uid){

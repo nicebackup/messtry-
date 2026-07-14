@@ -33,14 +33,14 @@ const LS_USER = 'mq7u';
 // FIREBASE CONFIG & INIT
 // ═══════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: 'AIzaSyDqHnuTefG_v2KJ5rFVmsPO1P0KQvH40OU',
-  authDomain: 'midlandquarter-c516b.firebaseapp.com',
-  databaseURL: 'https://midlandquarter-c516b-default-rtdb.firebaseio.com/',
-  projectId: 'midlandquarter-c516b',
-  storageBucket: 'midlandquarter-c516b.firebasestorage.app',
-  messagingSenderId: '899146057513',
-  appId: '1:899146057513:web:636a096affb5dd40a3d938',
-  measurementId: 'G-CNXVF9KG9Y'
+  apiKey: 'AIzaSyDBR9Z3gnk0oHBRyqC5eOcGhu8ONa8Up-U',
+  authDomain: 'midlandquarter-19623.firebaseapp.com',
+  databaseURL: 'https://midlandquarter-19623-default-rtdb.firebaseio.com',
+  projectId: 'midlandquarter-19623',
+  storageBucket: 'midlandquarter-19623.firebasestorage.app',
+  messagingSenderId: '370339958840',
+  appId: '1:370339958840:web:dc81e43f4f584d1b1956cd',
+  measurementId: 'G-VT2V2QEYQ6'
 };
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();

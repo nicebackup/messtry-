@@ -43,6 +43,7 @@ function initMeal(){
   // ✅ FIX: extendToNext=true — পরের মেস মাসের meal আগাম দেওয়া যাবে
   applyMessCycleBounds('meal-date', null, true);
   updateDateLabel('meal-date');
+  appendDayToBNLabel('meal-date');
   loadMealDate();
 }
 function shiftDate(delta){
@@ -54,6 +55,7 @@ function shiftDate(delta){
   mealDate=newDate;
   document.getElementById('meal-date').value=mealDate;
   updateDateLabel('meal-date');
+  appendDayToBNLabel('meal-date');
   loadMealDate();
 }
 function toISODate(d){ return d.toISOString().split('T')[0]; }
@@ -63,9 +65,9 @@ function loadMealDate(){
   document.getElementById('meal-sub').textContent=fmtDate(mealDate);
   const todStr=tod(), hour=getBSTHour();
   const tmr=nextDay(todStr);
-  // Lock rules: past dates always locked for non-admin. Tomorrow after 11pm locked.
+  // Lock rules: past dates always locked for non-admin. Tomorrow after 10pm locked.
   const diff=dateDiff(todStr,mealDate);
-  const locked=!isManagerOrCtrl()&&(diff<0||(diff===1&&hour>=23)||(diff===0));
+  const locked=!isManagerOrCtrl()&&(diff<0||(diff===1&&hour>=22)||(diff===0));
   document.getElementById('meal-lock-notice').style.display=locked?'block':'none';
   const meal=DB.meals[CU.u+'_'+mealDate]||{b:{t:'off',q:1},l:{t:'off',q:1},d:{t:'off',q:1}};
   ['b','l','d'].forEach(t=>{
@@ -359,6 +361,9 @@ function _getMemberCounts(mmKey=null){
 function invalidateMemberCountsCache(){ _memberCountsCache = null; }
 
 function calcMemberOtherShares(u, mmKey, othersAll, cookBillsAll, cookFoodCost=0){
+  // ✅ FIX: বাবুর্চির নিজের কোনো share নেই
+  // তাদের খাবার খরচ ইতিমধ্যে অন্য সদস্যদের cookFoodShare-এ যোগ হয়ে যায়
+  if(u.type==='cook') return {othersShare:0, cookBillShare:0, cookFoodShare:0};
   // অফিস মিল ইউজারদের বাবুর্চি ও অন্যান্য খরচ বহন করতে হয় না
   if(isOfficeMealUser(u)) return {othersShare:0, cookBillShare:0, cookFoodShare:0};
   // ✅ mmKey দিয়ে — historical month-এ শুধু সেই সময়ের active members গণনা

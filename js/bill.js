@@ -41,7 +41,14 @@ function loadBill(){
   const {othersShare,cookBillShare,cookFoodShare}=calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
 
   let netPayable, mealBillDisplay=mealBill;
-  if(isOfficeMealUser(cu)){
+  if(cu.type==='cook'){
+    // ✅ FIX: বাবুর্চির নিজের bill নেই।
+    // তাদের খাবার খরচ ইতিমধ্যে cookFoodCost (CB) হিসেবে অন্য
+    // সদস্যদের মধ্যে ভাগ হয়ে যায়। তাই cook-কে আলাদা bill দিলে
+    // double counting হয়।
+    mealBillDisplay = 0;
+    netPayable = 0;
+  } else if(isOfficeMealUser(cu)){
     const ofRate=getOfficeMealRate(mmKey);
     mealBillDisplay=myNetMeals*ofRate;
     netPayable=mealBillDisplay; // no misc for office
@@ -61,7 +68,6 @@ function loadBill(){
   document.getElementById('bl-my-meals').textContent=myNetMeals.toFixed(2)+' মিল'+(myMeals!==myNetMeals?' ('+myMeals.toFixed(2)+'+'+getShortfallMeals(CU.u,mmKey).toFixed(2)+')':'');
   document.getElementById('bl-meal-bill').textContent='৳ '+mealBillDisplay.toFixed(2);
   document.getElementById('bl-other-share').textContent='৳ '+othersShare.toFixed(2);
-  document.getElementById('bl-cook-food-share').textContent='৳ '+(cookFoodShare||0).toFixed(2);
   document.getElementById('bl-cook-food-share').textContent='৳ '+(cookFoodShare||0).toFixed(2);
   document.getElementById('bl-cook-share').textContent='৳ '+cookBillShare.toFixed(2);
   document.getElementById('bl-my-bill').textContent='৳ '+netPayable.toFixed(2);

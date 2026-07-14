@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════
 
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
+let _loadDBStarted = false; // Guard: loadDB() একবারের বেশি চলতে দেবো না
 
 // ── Collision-safe ID generator ──────────────────────────────────
 // Date.now() এ একই millisecond-এ দুটো item → same ID → overwrite।
@@ -188,6 +189,35 @@ function saveUsers(){
   globalRef.child('users').set(DB.users).catch(e=>{ console.error('Users save error:',e); toast('⚠️ সদস্য সেভে সমস্যা!'); });
 }
 
+// ── deleteMemberFromDB: admin.js deleteMember()-এ call করো ─────────────────
+// DB.users filter করার পরে, saveUsers()-এর আগে এই function call করো।
+//
+// কাজ তিনটা:
+//   ① _minUserCount decrement — না করলে (N-1 < N) হয় → saveUsers() BLOCKED
+//   ② users/{uid} + roles/{uid} RTDB node মুছো
+//      → refresh করলেও onAuthStateChanged সাথে সাথে বাউন্স করে ফেলবে
+//   ③ pendingApprovals/{uid} orphan cleanup
+//
+// ⚠️ NOTE: admin.js deleteMember() নিজে _minUserCount সেট করে এবং RTDB cleanup
+// inline করে — তাই সেখান থেকে এই function call করা হয় না।
+// শুধু বাইরের কোড (যদি থাকে) থেকে call করার জন্য রাখা।
+//
+// Usage (outside admin.js):
+//   deleteMemberFromDB(targetUid).then(()=>{ saveUsers(); toast('✅ সদস্য মুছে ফেলা হয়েছে'); });
+function deleteMemberFromDB(uid){
+  if(!uid||!_dbLoaded) return Promise.resolve();
+  // ① saveUsers() guard: delete-এর পরে length কমে → guard-কে আগেই জানাও
+  if(_minUserCount>0) _minUserCount--;
+  // ② RTDB node cleanup — এগুলো থাকলে refresh-এ onAuthStateChanged পাস করে
+  return Promise.all([
+    firebase.database().ref('users/'+uid).remove()
+      .catch(e=>console.warn('[deleteMember] users/'+uid+' remove failed:',e)),
+    firebase.database().ref('roles/'+uid).remove()
+      .catch(e=>console.warn('[deleteMember] roles/'+uid+' remove failed:',e)),
+    firebase.database().ref('pendingApprovals/'+uid).remove().catch(()=>{})
+  ]);
+}
+
 // ── Month save: meals, bazar, others, transactions, managers, mealRates, officeMealRates, officeMealNotes, cookBills ──
 let _monthSaveTimer = null;
 // ── array নিশ্চিত করো — Firebase object হলে convert করো ──
@@ -213,28 +243,90 @@ function saveMonth(){
     currentMonthRef.update(data).catch(e=>{ console.error('Month save error:',e); toast('⚠️ ডেটা সেভে সমস্যা! ইন্টারনেট চেক করুন।'); });
   }, 400);
 }
-function saveMealEntry(k,v){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('meals').child(k).set(v).catch(e=>console.error('Meal:',e)); }
+function saveMealEntry(k, v, mealMmKey){
+  if(!_dbLoaded) return;
+  // ✅ FIX: mealMmKey দেওয়া থাকলে সেই মাসের Firebase bucket-এ save করো।
+  // Bug: আগে সবসময় currentMonthRef-এ যেত।
+  // ফলে user যদি পরবর্তী মাসের জন্য আগাম meal দেয়
+  // (extendToNext=true), সেটা ভুল bucket-এ সেভ হতো।
+  const targetRef = (mealMmKey && mealMmKey !== currentMonthKey && monthsRef)
+    ? monthsRef.child(mealMmKey)
+    : currentMonthRef;
+  if(!targetRef) return;
+  targetRef.child('meals').child(k).set(v).catch(e => console.error('Meal:', e));
+}
 function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('bazar').child(String(item.id)).set(item).catch(e=>console.error('Bazar:',e)); }
 function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('BazarDel:',e)); }
 function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others:',e)); }
 function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
 function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
 function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
+// ✅ FIX: office-meal.js এই দুইটা function ৬ জায়গায় call করে (saveOfficeMeal,
+// saveOfficeMealNote, saveOfficeMealNoteScreen, editOfficeMealNote,
+// delOfficeMealNote), file_report.md-ও এদের db.js-এর অংশ বলে ধরে নিয়েছে —
+// কিন্তু আসলে কোথাও define করা ছিল না। ফলে note থাকলে saveOfficeMeal()-এর
+// callback এই লাইনে এসে থেমে যেত (ReferenceError) — DB.meals আর
+// DB.officeMealNotes লোকালি বসে যেত (তাই UI-তে দেখাত/মিল "চালু" মনে হতো),
+// কিন্তু এর ঠিক পরের toggleOfficeMealEntry()/toast() আর কখনো চলত না
+// (confirmation msg না আসা), আর নোটটা Firebase-এ আসলে লেখাই হতো না
+// (তাই refresh করলে হারিয়ে যেত)। saveBazarItem/saveOtherItem/saveTxItem-এর
+// মতোই individual-path pattern।
+function saveOfficeMealNoteItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('officeMealNotes').child(String(item.id)).set(item).catch(e=>console.error('OfficeMealNote:',e)); }
+function deleteOfficeMealNoteItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('officeMealNotes').child(String(id)).remove().catch(e=>console.error('OfficeMealNoteDel:',e)); }
 
 // ── Pending Approval helpers ────────────────────────────────────────────────
 // Approve: users/{uid} + roles/{uid} লেখো, DB.users-এ যোগ করো, pending মুছো
+// ✅ Firebase transaction ব্যবহার করো — rapid approval-এ data হারায় না
 function approvePendingUser(uid, p){
   if(!uid||!p) return Promise.reject('invalid');
   const uObj={name:p.name, mobile:p.mobile, jobId:p.jobId||'', u:p.u||('u_'+p.mobile),
     room:p.room||'', type:p.type||'inside', role:'member', createdAt:tod()};
-  return firebase.database().ref('users/'+uid).set(uObj)
+
+  // ✅ নতুন: approve করার আগে একই mobile-এর সব duplicate pending entries reject করো।
+  // কারণ: doRegister()-এ bug বা network retry-এর কারণে একই user দুইবার register
+  // করলে দুটো pendingApprovals entry তৈরি হয়। controller দুটোই approve করলে
+  // Firebase Auth-এ orphaned account থাকে এবং সদস্য data এলোমেলো হয়।
+  // সমাধান: এই uid approve করার সময় বাকি duplicate entries auto-reject করো।
+  const cleanupDuplicates = firebase.database().ref('pendingApprovals').once('value')
+    .then(allSnap => {
+      const allPend = allSnap.val() || {};
+      const rejectPromises = Object.entries(allPend)
+        .filter(([pUid, pData]) =>
+          pUid !== uid &&                       // এই uid নয় (যেটা approve হচ্ছে)
+          pData &&
+          pData.mobile === p.mobile &&           // same mobile number = same person
+          pData.status === 'pending'             // এখনো pending আছে
+        )
+        .map(([pUid]) => {
+          console.log('[approvePendingUser] Auto-rejecting duplicate pending:', pUid);
+          return firebase.database().ref('pendingApprovals/'+pUid+'/status').set('rejected');
+        });
+      return Promise.all(rejectPromises);
+    })
+    .catch(e => { console.warn('[approvePendingUser] cleanupDuplicates warning:', e); });
+  // error হলেও proceed করো — main approval আটকাবো না
+
+  return cleanupDuplicates
+    .then(()=>firebase.database().ref('users/'+uid).set(uObj))
     .then(()=>firebase.database().ref('roles/'+uid).set({role:'member'}))
     .then(()=>{
-      if(!DB.users) DB.users=[];
-      const newU={uid, u:uObj.u, name:uObj.name, mob:uObj.mobile, email:p.email||'',
-        job:uObj.jobId, room:uObj.room, type:uObj.type, role:'member',
-        joined:tod(), activeFrom:messMonthKey()};
-      if(!DB.users.find(x=>x.u===newU.u)){ DB.users.push(newU); saveGlobal(); saveUsers(); }
+      // ✅ transaction: current Firebase array পড়ে, নতুন user যোগ করে, atomic write করে।
+      // debounced saveUsers() ব্যবহার করলে rapid approval-এ race condition হয়।
+      return globalRef.child('users').transaction(current=>{
+        if(!Array.isArray(current)) current=[];
+        const newU={uid, u:uObj.u, name:uObj.name, mob:uObj.mobile,
+          email:p.email||'', job:uObj.jobId, room:uObj.room, type:uObj.type,
+          role:'member', joined:tod(), activeFrom:messMonthKey()};
+        if(!current.find(x=>x.u===newU.u)) current.push(newU);
+        return current;
+      });
+    })
+    .then(result=>{
+      // transaction সফল হলে local DB.users-ও sync করো
+      if(result.committed && Array.isArray(result.snapshot.val())){
+        DB.users=result.snapshot.val();
+        if(_minUserCount<DB.users.length) _minUserCount=DB.users.length;
+      }
       return firebase.database().ref('pendingApprovals/'+uid).remove();
     });
 }
@@ -438,41 +530,24 @@ function _refreshActiveScreen(){
   else if(activeId==='profile') loadProfile();
   else if(activeId==='notice') initNotice();
   else if(activeId==='rules') initRules();
+  // ✅ FIX: whoeats screen আগে missing ছিল।
+  // Firebase real-time update (meal change) হলে whoeats screen refresh হত না।
+  // renderWeScreen() এখন আর no-op নয় — data collect + grid re-render করে।
+  else if(activeId==='whoeats') renderWeScreen();
 }
 
-// ── Background: global-এ missing fields পুরানো top-level থেকে copy করা ──
-let _supplementDone = false;
-function _supplementGlobalFields(){
-  if(_supplementDone) return;
-  _supplementDone = true;
-  const toCheck = [];
-  if(!DB.rules || !DB.rules.text) toCheck.push('rules');
-  if(!DB.shortfall || !Object.keys(DB.shortfall).length) toCheck.push('shortfall');
-  if(!DB.prevBalances) toCheck.push('prevBalances');
-  if(!DB.handoverDone || !DB.handoverDone.length) toCheck.push('handoverDone');
-  // পুরানো top-level fields — missing supplement + cleanup একসাথে
-  const OLD_FIELDS = ['cfg','users','notice','siteNote','controllers','rules','shortfall',
-    'prevBalances','handoverDone','meals','bazar','others','transactions','managers',
-    'mealRates','officeMealRates','officeMealNotes','cookBills'];
-  const reads = OLD_FIELDS.map(f=>
-    dbRef.child(f).once('value').then(s=>({f,v:s.val()})).catch(()=>({f,v:null}))
-  );
-  Promise.all(reads).then(results=>{
-    const gUpdates={};
-    const cleanups=[];
-    results.forEach(({f,v})=>{
-      if(v===null) return;
-      if(toCheck.includes(f)){ DB[f]=v; gUpdates[f]=v; }
-      cleanups.push(dbRef.child(f).remove().catch(()=>{}));
-    });
-    if(Object.keys(gUpdates).length) globalRef.update(gUpdates).catch(()=>{});
-    Promise.all(cleanups).then(()=>console.log('✅ Firebase cleanup done'));
-  });
-}
-
-// Real-time listener — দুটো listener: global + current mess month
+// ── Real-time listener — দুটো listener: global + current mess month
 function loadDB(){
-  
+  // ── Idempotency guard ─────────────────────────────────────────────────────
+  // index.html-এর bootstrap observer প্রতিটা sign-in event-এ loadDB() call করে।
+  // Guard না থাকলে: login → loadDB() → globalRef listener attached
+  //                registration → new Firebase auth event → loadDB() AGAIN!
+  //                → দ্বিতীয় globalRef listener attached!
+  //                → প্রতিটা Firebase change দুইবার process হয় → race condition
+  // সমাধান: একবার start হলে আর চলবে না।
+  if(_loadDBStarted) return;
+  _loadDBStarted = true;
+  // ──────────────────────────────────────────────────────────────────────────
 
   currentMonthKey = messMonthKey();
   currentMonthRef = monthsRef.child(currentMonthKey);
@@ -528,6 +603,15 @@ function loadDB(){
       const data=snap.val();
       if(data){
         GLOBAL_FIELDS.forEach(f=>{ if(data[f]!==undefined) DB[f]=data[f]; });
+        // ✅ FIX: Firebase-এ array-এ null থাকলে (সরাসরি DB থেকে delete করলে)
+        // Firebase SDK object হিসেবে return করে — DB.users.find() crash করে।
+        // সব সময় নিশ্চিত করো DB.users একটি array।
+        if(!Array.isArray(DB.users)){
+          DB.users = Object.values(DB.users || {}).filter(Boolean);
+          console.warn('[db] DB.users was not an array — converted from object. Check Firebase for null/sparse entries in global/users.');
+        }
+        // Null entries filter করো
+        DB.users = DB.users.filter(u => u && u.u);
         // ✅ GLOBAL_FIELDS-এ নেই — manually load করো
         if(data.controllers !==undefined) DB.controllers  = data.controllers;
         if(data.prevBalances!==undefined) DB.prevBalances = data.prevBalances;
@@ -537,7 +621,61 @@ function loadDB(){
           const _u=new Set(data.users.filter(u=>u&&u.u).map(u=>u.u)).size;
           if(_u>_minUserCount) _minUserCount=_u;
         }
-        _supplementGlobalFields();
+        // ── Real-time kick: global/users থেকে সদস্য মুছে দেওয়া হলে
+        // যে browser-এ সে লগইন আছে সেখানেও সাথে সাথে logout হয়ে যাবে।
+        // _dbLoaded guard: initial load-এ false → false kick নেই।
+        // CU guard: login-এর আগে null → false kick নেই।
+        if(_dbLoaded && CU && Array.isArray(DB.users)){
+          const _myEntry = DB.users.find(x=>x.uid===CU.uid||x.u===CU.u);
+          if(!_myEntry){
+            // ✅ FIX: false "account deleted" logout ঠেকানো —
+            // আগে এখানে entry না পেলেই সাথে সাথে logout করে দেওয়া হতো।
+            // কিন্তু Firebase থেকে মাঝেমধ্যে সাময়িক/অসম্পূর্ণ snapshot আসে
+            // (অন্য client একই সময়ে users write করলে, বা race condition-এ)
+            // — তখন real deletion ছাড়াও ভুলভাবে kick হয়ে যেত (একজন
+            // controller নিজেই "account deleted" দেখেছিলেন যদিও ডাটা ঠিকই ছিল)।
+            // এখন: users count যদি Firebase-এর জানা সর্বোচ্চ count
+            // (_minUserCount)-এর চেয়ে কম হয়, snapshot-টা অসম্পূর্ণ/অবিশ্বস্ত
+            // ধরে নিয়ে kick স্কিপ করো — পরের সম্পূর্ণ snapshot এলে আবার চেক হবে।
+            const _uniqNow=new Set(DB.users.filter(u=>u&&u.u).map(u=>u.u)).size;
+            if(_minUserCount>0 && _uniqNow<_minUserCount){
+              console.warn('[kick SKIPPED] incomplete snapshot: users='+_uniqNow+' < expected='+_minUserCount+'. Not logging out.');
+              return; // অবিশ্বস্ত snapshot — কিছুই করার দরকার নেই, পরের update-এর অপেক্ষা
+            }
+            console.warn('[kick] CU no longer in global/users — forcing logout. uid=',CU.uid);
+            auth.signOut().catch(()=>{});
+            CU=null; localStorage.removeItem('mq_authed');
+            try{ showSc('login'); }catch(e){}
+            try{
+              const _kal=document.getElementById('login-alert');
+              if(_kal){ _kal.textContent='❌ আপনার অ্যাকাউন্টটি সাইট থেকে মুছে ফেলা হয়েছে।'; _kal.className='alert alert-danger show'; }
+            }catch(e){}
+            return; // এই listener call-এ আর কিছু করার নেই
+          }
+          // ✅ FIX: ব্লক করা হলে active session থেকেও সাথে সাথে logout।
+          // আগে শুধু auth.js-এর onAuthStateChanged-এ (login-time, একবারই) চেক হতো —
+          // চলমান session-এ ব্লক করলে ধরা পড়ত না। globalRef.on('value') প্রতিটা
+          // change-এ চলে বলে এখানে active session-ও কভার হয়ে যায়।
+          if(_myEntry.blocked){
+            console.warn('[kick] CU has been blocked — forcing logout. uid=',CU.uid);
+            auth.signOut().catch(()=>{});
+            CU=null; localStorage.removeItem('mq_authed');
+            try{ showSc('login'); }catch(e){}
+            try{
+              const _kal=document.getElementById('login-alert');
+              if(_kal){ _kal.textContent='❌ আপনার অ্যাকাউন্ট ব্লক করা হয়েছে। Manager এর সাথে যোগাযোগ করুন।'; _kal.className='alert alert-danger show'; }
+            }catch(e){}
+            return; // এই listener call-এ আর কিছু করার নেই
+          }
+          // ✅ FIX: role পরিবর্তন হলে (manager/controller assign বা remove) active
+          // session-এ সাথে সাথে reflect করা। CU শুধু login-এ set হতো, তাই role
+          // বদলালেও re-login না করা পর্যন্ত পুরনো role/মেনু আটকে থাকত।
+          if(_myEntry.role && _myEntry.role!==CU.role){
+            console.info('[sync] CU role updated:',CU.role,'→',_myEntry.role);
+            CU.role=_myEntry.role;
+            try{ _refreshActiveScreen(); }catch(e){}
+          }
+        }
       } else {
         migrateDB();
         const initG={}; GLOBAL_FIELDS.forEach(f=>{ initG[f]=DB[f]; });
@@ -594,6 +732,27 @@ function loadDB(){
       currentMonthRef.child('meals').on('child_added',   _handleMeal);
       currentMonthRef.child('meals').on('child_changed', _handleMeal);
       currentMonthRef.child('meals').on('child_removed', snap=>{
+        if(snap.key) delete DB.meals[snap.key];
+        invalidateMealIndex(); invalidateMealRateCache();
+        if(_dbLoaded) refreshHome();
+      });
+      // ✅ FIX: চলতি মেস-চক্রের শেষ দিন/রাতেই পরের চক্রের মিল দেওয়া শুরু
+      // হয়ে যায় (যেমন সকালের নাস্তার জন্য আগের রাতেই এন্ট্রি লাগে) — কিন্তু
+      // শুধু currentMonthRef লোড হতো, তাই পরের bucket-এর মিল Firebase-এ
+      // ঠিকই সেভ হতো কিন্তু কোথাও দেখাই যেত না। এখন পরের মাসের মিলও
+      // একইভাবে লোড ও লাইভ-সিঙ্ক করা হচ্ছে — একই DB.meals-এ merge হয়
+      // (key-তে exact তারিখ থাকে বলে দুই মাসের এন্ট্রি কখনো একে অপরকে
+      // ওভাররাইট করবে না, আলাদা meal.js/home.js ফাইল ছোঁয়ার দরকার নেই)।
+      const nextMonthRef = monthsRef.child(nextCycleKey(currentMonthKey));
+      nextMonthRef.child('meals').once('value').then(snap=>{
+        const data=snap.val();
+        if(data) Object.keys(data).forEach(k=>{ DB.meals[k]=data[k]; });
+        invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
+        if(_dbLoaded) refreshHome();
+      }).catch(()=>{});
+      nextMonthRef.child('meals').on('child_added',   _handleMeal);
+      nextMonthRef.child('meals').on('child_changed', _handleMeal);
+      nextMonthRef.child('meals').on('child_removed', snap=>{
         if(snap.key) delete DB.meals[snap.key];
         invalidateMealIndex(); invalidateMealRateCache();
         if(_dbLoaded) refreshHome();

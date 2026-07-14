@@ -27,8 +27,11 @@
 // Guard flag: prevents onAuthStateChanged from force-signing-out
 // the newly created user before sendEmailVerification() completes.
 let _registrationInProgress = false;
+let _loginInProgress = false; // doLogin() চলাকালীন onAuthStateChanged suppress করো
 
 auth.onAuthStateChanged(fbUser=>{
+  // doLogin() নিজেই সব handle করে — duplicate processing বন্ধ করো
+  if(_loginInProgress) return;
   if(!fbUser){
     // Not logged in
     hideSplash();
@@ -128,17 +131,48 @@ auth.onAuthStateChanged(fbUser=>{
       _waitUntilReady(()=>{
         // ✅ DB load হওয়ার পর CU সঠিকভাবে sync করো
         const syncIdx = DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
-        if(syncIdx>=0){
-          DB.users[syncIdx].uid           = uid;
-          DB.users[syncIdx].role          = role;
-          DB.users[syncIdx].emailVerified = true;
-          CU.name       = DB.users[syncIdx].name        || CU.name;
-          CU.mob        = DB.users[syncIdx].mob         || CU.mob;
-          CU.room       = DB.users[syncIdx].room        || CU.room;
-          CU.job        = DB.users[syncIdx].job         || CU.job;
-          CU.prevBalance= DB.users[syncIdx].prevBalance !== undefined ? DB.users[syncIdx].prevBalance : 0;
-          CU.type       = DB.users[syncIdx].type        || CU.type;
+        // ── Deleted user guard ──────────────────────────────────────────────
+        // global/users-এ নেই মানে deleteMember() করা হয়েছে।
+        // users/{uid} RTDB-এ এখনো থাকলেও এখানে ধরা পড়বে।
+        if(syncIdx<0){
+          // ✅ FIX: সরাসরি "deleted" না দেখিয়ে pendingApprovals চেক করো।
+          // Bug root cause: push.js, pending user-এর জন্যও users/{uid}/pushToken
+          // save করে। এতে users/{uid} node তৈরি হয়। auth flow মনে করে user
+          // approved — কিন্তু global/users-এ নেই → ভুলে "মুছে ফেলা" দেখাত।
+          firebase.database().ref('pendingApprovals/'+uid).once('value').then(pendSnap=>{
+            hideSplash();
+            auth.signOut(); CU=null; localStorage.removeItem('mq_authed');
+            showSc('login');
+            const _kal=document.getElementById('login-alert');
+            if(!_kal) return;
+            const pend=pendSnap.val();
+            if(pend && pend.status==='pending'){
+              _kal.innerHTML='⏳ <b>আপনার একাউন্ট পর্যালোচনা করা হচ্ছে।</b><br>মেস পরিচালকের সাথে যোগাযোগ করুন।';
+              _kal.className='alert alert-warning show';
+            } else if(pend && pend.status==='rejected'){
+              _kal.innerHTML='❌ আপনার আবেদন প্রত্যাখ্যান করা হয়েছে।<br><small>মেস পরিচালকের সাথে যোগাযোগ করুন।</small>';
+              _kal.className='alert alert-danger show';
+            } else {
+              _kal.textContent='❌ আপনার অ্যাকাউন্টটি সাইট থেকে মুছে ফেলা হয়েছে।';
+              _kal.className='alert alert-danger show';
+            }
+          }).catch(()=>{
+            hideSplash();
+            auth.signOut(); CU=null; localStorage.removeItem('mq_authed'); showSc('login');
+          });
+          return;
         }
+        // ✅ FIX: users/{uid} থেকে শুধু auth fields নাও।
+        // name, room, job, mob, balance সবসময় messData/users থেকে রাখো।
+        DB.users[syncIdx].uid           = uid;
+        DB.users[syncIdx].role          = role;
+        DB.users[syncIdx].emailVerified = true;
+        CU.name       = DB.users[syncIdx].name        || CU.name;
+        CU.mob        = DB.users[syncIdx].mob         || CU.mob;
+        CU.room       = DB.users[syncIdx].room        || CU.room;
+        CU.job        = DB.users[syncIdx].job         || CU.job;
+        CU.prevBalance= DB.users[syncIdx].prevBalance !== undefined ? DB.users[syncIdx].prevBalance : 0;
+        CU.type       = DB.users[syncIdx].type        || CU.type;
         hideSplash();
         refreshHome(); showSc('home');
         localStorage.setItem('mq_authed','1'); // returning user flag
@@ -158,7 +192,7 @@ auth.onAuthStateChanged(fbUser=>{
 // ═══════════════════════════════════════════════
 // Sync check — uses CU.role (already loaded from RTDB on login)
 function isController(u){ u=u||CU; return u&&(u.role==='controller'||(DB.controllers&&DB.controllers.includes(u.u))); }
-function isManager(u){ u=u||CU; return u&&(u.role==='manager'||u.role==='controller'||isController(u)); }
+function isManager(u){ u=u||CU; return u&&(u.role==='manager'||u.role==='controller'||isController(u)||(DB.managers&&(DB.managers[messMonthKey()]||[]).includes(u.u))); }
 function isManagerOrCtrl(u){ return isManager(u)||isController(u); }
 
 // Async RTDB role check (use when real-time accuracy needed)
@@ -171,6 +205,7 @@ function roleLabel(r,u){
   if(u&&isController(u)) return '⭐ Controller';
   if(r==='controller') return '⭐ Controller';
   if(r==='manager') return '👑 Manager';
+  if(u&&DB.managers&&(DB.managers[messMonthKey()]||[]).includes(u.u)) return '👑 Manager';
   return '👤 Member';
 }
 
@@ -258,6 +293,13 @@ function doLogin(){
   const btn = document.querySelector('#sc-login .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='লগইন হচ্ছে...'; }
 
+  // ── _loginInProgress: onAuthStateChanged কে suppress করো ──────────
+  // auth.signInWithEmailAndPassword() call হলে onAuthStateChanged fire করে।
+  // তখন doLogin() chain আর onAuthStateChanged — দুটো parallel-এ চলে।
+  // _loginInProgress=true থাকলে onAuthStateChanged skip করে।
+  // doLogin() সব handle করার পর flag clear হয়।
+  _loginInProgress = true;
+
   // Firebase Persistence: LOCAL or SESSION
   const persistence = document.getElementById('remember-me').checked
     ? firebase.auth.Auth.Persistence.LOCAL
@@ -330,34 +372,42 @@ function doLogin(){
             CU.prevBalance= DB.users[idx].prevBalance !== undefined ? DB.users[idx].prevBalance : 0;
             CU.type       = DB.users[idx].type        || CU.type;
           } else {
-            // Duplicate check
-            if(!DB.users.find(x=>x.u===CU.u)){
-              DB.users.push({...CU});
-              saveUsers();
-            } else {
-              console.warn('[auth] User already exists in DB.users:', CU.u);
-            }
+            // ⚠️ DB এখনো সম্পূর্ণ load হয়নি — এখানে push+saveUsers করা বিপজ্জনক।
+            // কারণ: activeFrom ছাড়া entry যাবে এবং পুরো users array overwrite হতে পারে।
+            // সমাধান: _waitUntilReady()-তে sync হবে — সেখানে DB fully loaded থাকবে।
+            console.warn('[auth] User not yet in DB.users at login, will sync in _waitUntilReady:', CU.u);
           }
         }
         // Auto-fix bad role value in RTDB if needed
         if(roleData?.role !== role){ firebase.database().ref('roles/'+uid).set({role}).catch(()=>{}); firebase.database().ref('users/'+uid+'/role').set(role).catch(()=>{}); }
         if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+        // ── login processing শেষ — এখন flag clear করো ──────────────
+        // _waitUntilReady-এর আগে clear করা হচ্ছে কারণ DB load হতে সময় লাগতে পারে।
+        // এই সময়ের মধ্যে অন্য auth event (token refresh) normal হওয়া দরকার।
+        _loginInProgress = false;
         _waitUntilReady(()=>{
           // ✅ DB load হওয়ার পর CU আবার sync
           const si=DB.users.findIndex(x=>x.uid===uid||x.u===CU.u);
-          if(si>=0){
-            DB.users[si].uid=uid; DB.users[si].role=role;
-            CU.prevBalance= DB.users[si].prevBalance !== undefined ? DB.users[si].prevBalance : 0;
-            CU.name = DB.users[si].name || CU.name;
-            CU.room = DB.users[si].room || CU.room;
-            CU.job  = DB.users[si].job  || CU.job;
+          // ── Deleted user guard ─────────────────────────────────────────
+          // global/users-এ নেই → login block করো
+          if(si<0){
+            auth.signOut(); CU=null; localStorage.removeItem('mq_authed');
+            if(btn){ btn.disabled=false; btn.textContent='Login করুন'; }
+            al.textContent='❌ আপনার অ্যাকাউন্টটি সাইট থেকে মুছে ফেলা হয়েছে।'; al.className='alert alert-danger show';
+            return;
           }
+          DB.users[si].uid=uid; DB.users[si].role=role;
+          CU.prevBalance= DB.users[si].prevBalance !== undefined ? DB.users[si].prevBalance : 0;
+          CU.name = DB.users[si].name || CU.name;
+          CU.room = DB.users[si].room || CU.room;
+          CU.job  = DB.users[si].job  || CU.job;
           refreshHome(); showSc('home');
           setTimeout(()=>showNoticePopup(), 600);
         });
       });
     }).catch(err=>{ al.textContent='❌ ডেটা লোড ব্যর্থ: '+err.message; al.className='alert alert-danger show'; if(btn){ btn.disabled=false; btn.textContent='Login করুন'; } });
   }).catch(err=>{
+    _loginInProgress = false; // error-এও flag reset করো
     let msg = '⚠️ Login failed. Please try again.';
     if(err.code==='auth/user-not-found'||err.code==='auth/wrong-password'||err.code==='auth/invalid-credential')
       msg='✗ Incorrect email or password.';
@@ -463,14 +513,40 @@ function doRegister(){
   }
 
   const btn = document.querySelector('#sc-register .btn-primary');
-  if(btn){ btn.disabled=true; btn.textContent='রেজিস্ট্রেশন হচ্ছে...'; }
-
-  // Set guard flag BEFORE creating the user so that onAuthStateChanged
-  // does not race us to signOut() before sendEmailVerification() fires.
-  _registrationInProgress = true;
+  if(btn){ btn.disabled=true; btn.textContent='যাচাই করা হচ্ছে...'; }
 
   (async ()=>{
     try {
+      // ── Step 0: Firebase pendingApprovals-এ duplicate mobile check ──────────
+      // সমস্যা: DB.users শুধু approved সদস্যদের রাখে। Pending সদস্যরা সেখানে নেই।
+      // ফলে উপরের DB.users চেক কখনো pending user-কে ধরতে পারে না।
+      // এর কারণে একই মোবাইল দিয়ে বারবার register করা যায় এবং Firebase Auth-এ
+      // একাধিক duplicate account তৈরি হয়।
+      // সমাধান: Firebase-এ pendingApprovals সরাসরি চেক করো।
+      try {
+        const pendSnap = await firebase.database().ref('pendingApprovals').once('value');
+        const pendData = pendSnap.val() || {};
+        const alreadyPending = Object.values(pendData).some(p =>
+          p && p.mobile === mob && p.status !== 'rejected'
+        );
+        if(alreadyPending){
+          al.innerHTML = '⏳ <b>এই মোবাইল নম্বর দিয়ে আগেই আবেদন করা হয়েছে।</b><br>অনুমোদনের অপেক্ষা করুন অথবা মেস পরিচালকের সাথে যোগাযোগ করুন।';
+          al.className = 'alert alert-warning show';
+          if(btn){ btn.disabled=false; btn.textContent='Register করুন'; }
+          return;
+        }
+      } catch(checkErr) {
+        // নেটওয়ার্ক সমস্যায় check ব্যর্থ হলে সতর্ক করো, কিন্তু আটকাবো না
+        console.warn('[doRegister] pendingApprovals check failed (network?):', checkErr);
+      }
+
+      // ── এখানে এসে মানে duplicate নেই — registration চালু করো ──
+      if(btn) btn.textContent='রেজিস্ট্রেশন হচ্ছে...';
+
+      // Set guard flag BEFORE creating the user so that onAuthStateChanged
+      // does not race us to signOut() before sendEmailVerification() fires.
+      _registrationInProgress = true;
+
       // Step 1 — Create the Firebase Auth account
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
