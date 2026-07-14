@@ -171,7 +171,7 @@ function _calcHandoverData(mmKey){
     const mealBill=myNetMeals*appliedRate;
     const {othersShare,cookFoodShare}=isOff
       ?{othersShare:0,cookFoodShare:0}
-      :calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+      :calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost,myNetMeals);
     const totalBill=mealBill+othersShare+cookFoodShare;
     const prevBal=getPreBal(u.u, mmKey);
     const monthDep=(DB.transactions||[])
@@ -1025,7 +1025,7 @@ function _doMakePDF(type){
         const appRate = isOffU ? (pdfOfRate||pm) : pm;
         const mealBill = myNetMeals * appRate;
         const sh = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0}
-                          : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost);
+                          : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost,myNetMeals);
         const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
         const monthDeposits = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
@@ -1238,7 +1238,7 @@ function showAllMembersBill(){
   const mealBill=cu.type==='cook'?0:myNetMeals*appliedRate;
   const {othersShare,cookBillShare,cookFoodShare}=isOff
     ?{othersShare:0,cookBillShare:0,cookFoodShare:0}
-    :calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost);
+    :calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost,myNetMeals);
   const totalBill=mealBill+othersShare+cookFoodShare;
 
   const prevBal=getPreBal(cu.u, mmKey);
