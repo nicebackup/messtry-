@@ -729,6 +729,7 @@ try{
       <div class="rep-row"><span class="rep-key">মিল বিল</span><span class="rep-val" id="bl-meal-bill">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">অন্যান্য শেয়ার <span style="font-size:10px;color:var(--text-light)">(split নিয়ম অনুযায়ী)</span></span><span class="rep-val" id="bl-other-share">৳ ০</span></div>
       <div class="rep-row"><span class="rep-key">বাবুর্চি খাবার ভাগ <span style="font-size:10px;color:var(--text-light)">(In=পূর্ণ, Out=৫০%)</span></span><span class="rep-val" id="bl-cook-food-share">৳ ০</span></div>
+      <div class="rep-row"><span class="rep-key">ফিস্ট মিল ভাগ <span style="font-size:10px;color:var(--text-light)">(মিল-ইউনিট অনুপাতে)</span></span><span class="rep-val" id="bl-feast-share">৳ ০</span></div>
       <div class="rep-row" style="display:none"><span class="rep-key">বাবুর্চি বেতন ভাগ</span><span class="rep-val" id="bl-cook-share">৳ ০</span></div>
       <div class="divider"></div>
       <div class="rep-row"><span class="rep-key" style="color:var(--danger);font-weight:700">মোট বিল</span><span class="rep-val" style="color:var(--danger);font-size:22px" id="bl-my-bill">৳ ০</span></div>
@@ -1122,6 +1123,27 @@ try{
         </div>
         <div id="sf-current-note" style="font-size:11px;color:var(--text-light);margin-top:6px"></div>
       </div>
+    </div>
+
+    <!-- Feast Meal Entry -->
+    <div class="card">
+      <div class="sec-title">🎉 ফিস্ট মিল এন্ট্রি</div>
+      <div class="form-group"><label class="form-label">তারিখ</label><span class="date-display-wrap"><input type="date" id="feast-date" class="form-input" style="width:100%" onchange="updateDateLabel('feast-date')"><span class="date-display-label" id="feast-date-lbl">-- তারিখ --</span></span></div>
+      <div class="form-group">
+        <label class="form-label">বেলা</label>
+        <select id="feast-slot" class="form-input">
+          <option value="b">☀️ সকাল</option>
+          <option value="l" selected>🌞 দুপুর</option>
+          <option value="d">🌙 রাত</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">পরিমাণ ৳</label><input type="number" id="feast-amt" class="form-input" placeholder="মোট ফিস্ট খরচ" min="1" step="0.01"></div>
+      <button class="btn btn-primary" onclick="addFeast()">➕ যোগ করুন</button>
+      <div class="divider"></div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px">📋 এই মাসের ফিস্ট মিল এন্ট্রি</div>
+      <div id="feast-list"><p class="muted tc">কোনো এন্ট্রি নেই</p></div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>মোট:</b><span style="font-weight:700;font-size:20px;color:var(--info)" id="feast-total">৳ ০</span></div>
     </div>
 
     <!-- Hidden popup cards -->
