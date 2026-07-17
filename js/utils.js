@@ -210,7 +210,7 @@ function _swapAndRender(hist, renderFn){
   // (e.g. {"1780489892497": {id,desc,amount,...}})।
   // hist[f] সরাসরি DB[f]-এ রাখলে .filter()/.map() crash করে।
   // _ensureArr() → Array.isArray check করে, object হলে Object.values() দেয়।
-  const _HIST_ARR = new Set(['bazar','others','transactions','cookBills']);
+  const _HIST_ARR = new Set(['bazar','others','transactions','cookBills','feastMeals']);
   MONTH_FIELDS.forEach(f=>{
     if(!hist[f]){
       // data নেই — সঠিক default দাও

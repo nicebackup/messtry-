@@ -1,22 +1,26 @@
 // ═══════════════════════════════════════════════
 // js/rules.js
-// Rules screen, Shortfall entry,
+// Rules screen, Shortfall entry, Feast Meal entry,
 // Meal config (saveCfg — moved from ADMIN block)
 //
 // Load order: AFTER ui.js
 // Depends on (all global, loaded before this file):
-//   config.js  → DB
-//   utils.js   → esc(), safeHTML(), messMonthKey(), toast()
-//   db.js      → saveDB(), saveGlobal(), isOnline(), noNetPopup()
+//   config.js  → DB (DB.feastMeals)
+//   utils.js   → esc(), safeHTML(), messMonthKey(), toast(), tod(),
+//               dateInMessMonth(), validAmount()
+//   db.js      → saveDB(), saveGlobal(), isOnline(), noNetPopup(),
+//               genId(), saveFeastItem(), deleteFeastItem()
 //   meal.js    → messMonthMeals(), getNetMemberMeals(), getShortfallMeals(),
 //               invalidateMealRateCache(), invalidateMealIndex(),
 //               invalidateMemberCountsCache()
-//   core.js    → isOfficeMealUser()
-//   ui.js      → togRulesCfg(), closeRulesCfgPopup(), showModal()
+//   core.js    → isOfficeMealUser(), fmtDate()
+//   ui.js      → togRulesCfg(), closeRulesCfgPopup(), showModal(), closeModal()
 //   home.js    → refreshHome() (called via typeof guard — async safe)
+//   inline     → V(), applyMessCycleBounds(), getMessCycleBounds()
 //
 // Extracted: 2026-05-19
 // Original inline ranges: L3381–L3498 (RULES), L2509–L2536 (saveCfg from ADMIN)
+// Feast Meal added: 2026-07
 // ═══════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════
@@ -40,6 +44,7 @@ function initRules(){
   const sfSrc=document.getElementById('sf-search');
   if(sfSel) sfSel.style.display='none';
   if(sfSrc) sfSrc.value='';
+  initFeast();
 }
 
 let _sfUser=null;
@@ -116,6 +121,111 @@ function saveShortfall(){
   document.getElementById('sf-current-note').textContent=amt>0?'বর্তমান Shortfall: '+amt.toFixed(2)+' মিল':'';
   toast('✅ '+_sfUser.name+' এর Shortfall '+amt.toFixed(2)+' মিল সেভ হয়েছে!');
 }
+
+// ═══════════════════════════════════════════════
+// FEAST MEAL (ফিস্ট মিল) — Entry + History
+// চলতি মেস মাসের এন্ট্রি — others.js এর add/render/edit/delete প্যাটার্ন
+// অনুসরণ করে। মাসিক রিপোর্ট/PDF স্ক্রিনে পুরনো মাসের এন্ট্রি দেখা যাবে,
+// এখানে শুধু চলতি মাস এডিটযোগ্য (shortfall entry-র মতোই)।
+// ═══════════════════════════════════════════════
+function initFeast(){
+  const dateEl=document.getElementById('feast-date');
+  if(dateEl && !dateEl.value) dateEl.value=tod();
+  applyMessCycleBounds('feast-date');
+  updateDateLabel('feast-date');
+  const amtEl=document.getElementById('feast-amt');
+  if(amtEl) amtEl.value='';
+  renderFeast();
+}
+function _feastSlotLabel(slot){ return slot==='b'?'☀️ সকাল':slot==='l'?'🌞 দুপুর':'🌙 রাত'; }
+function addFeast(){
+  if(!isOnline()){ noNetPopup(); return; }
+  const date=V('feast-date');
+  const slotEl=document.getElementById('feast-slot');
+  const slot=slotEl?slotEl.value:'';
+  const amount=parseFloat(document.getElementById('feast-amt').value);
+  if(!date){ toast('❌ তারিখ দিন!'); return; }
+  if(!['b','l','d'].includes(slot)){ toast('❌ বেলা নির্বাচন করুন!'); return; }
+  if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+  const _fmi={id:genId(), date, slot, amount, by:CU.name};
+  if(!DB.feastMeals) DB.feastMeals=[];
+  DB.feastMeals.push(_fmi);
+  saveFeastItem(_fmi);
+  invalidateMealRateCache();
+  document.getElementById('feast-amt').value='';
+  renderFeast();
+  toast('✅ ফিস্ট মিল এন্ট্রি যোগ হয়েছে!');
+  if(typeof refreshHome==='function') refreshHome();
+}
+function renderFeast(){
+  const mmKey=messMonthKey();
+  const list=document.getElementById('feast-list');
+  const totalEl=document.getElementById('feast-total');
+  if(!list) return;
+  const items=(DB.feastMeals||[]).filter(f=>dateInMessMonth(f.date,mmKey)).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!items.length){
+    list.innerHTML='<p class="muted tc">কোনো এন্ট্রি নেই</p>';
+    if(totalEl) totalEl.textContent='৳ ০';
+    return;
+  }
+  let total=0;
+  list.innerHTML = safeHTML(items.map(f=>{
+    total+=f.amount;
+    return `<div class="bazar-item"><div style="flex:1"><div class="bz-name">🎉 ${_feastSlotLabel(f.slot)}</div><div class="bz-meta">${fmtDate(f.date)} · ${esc(f.by)}</div></div><div style="display:flex;align-items:center;gap:6px"><div class="bz-amt">৳ ${f.amount.toLocaleString()}</div><button data-action="edit-feast" data-id="${f.id}" style="background:rgba(26,107,60,.12);border:1px solid var(--primary);color:var(--primary);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">✏️</button><button data-action="del-feast" data-id="${f.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 2px;">🗑️</button></div></div>`;
+  }).join(''));
+  if(totalEl) totalEl.textContent='৳ '+total.toLocaleString();
+  list.onclick = function(e){
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const id = Number(btn.getAttribute('data-id'));
+    if(btn.getAttribute('data-action')==='del-feast') delFeast(id);
+    else if(btn.getAttribute('data-action')==='edit-feast') editFeast(id);
+  };
+}
+function delFeast(id){
+  showModal('ফিস্ট মিল মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{
+    DB.feastMeals=DB.feastMeals.filter(f=>f.id!==id);
+    deleteFeastItem(id);
+    invalidateMealRateCache();
+    renderFeast();
+    toast('✅ মুছে ফেলা হয়েছে!');
+    if(typeof refreshHome==='function') refreshHome();
+  });
+}
+function editFeast(id){
+  const f=DB.feastMeals.find(x=>x.id===id); if(!f) return;
+  const itemMmKey=messMonthKey(new Date(f.date+'T12:00:00'));
+  const {minDate,maxDate}=getMessCycleBounds(itemMmKey);
+  const html=`<div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">তারিখ</label>
+    <input id="edit-feast-date" type="date" class="form-input" value="${esc(f.date)}" min="${minDate}" max="${maxDate}" style="margin-top:4px"></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">বেলা</label>
+    <select id="edit-feast-slot" class="form-input" style="margin-top:4px">
+      <option value="b" ${f.slot==='b'?'selected':''}>সকাল</option>
+      <option value="l" ${f.slot==='l'?'selected':''}>দুপুর</option>
+      <option value="d" ${f.slot==='d'?'selected':''}>রাত</option>
+    </select></div>
+    <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
+    <input id="edit-feast-amt" type="number" class="form-input" value="${f.amount}" style="margin-top:4px"></div>
+  </div>`;
+  showModal('ফিস্ট মিল এন্ট্রি সম্পাদনা', html, ()=>{
+    const date=document.getElementById('edit-feast-date').value;
+    const slot=document.getElementById('edit-feast-slot').value;
+    const amount=parseFloat(document.getElementById('edit-feast-amt').value);
+    if(!date){ toast('❌ তারিখ দিন!'); return; }
+    if(!['b','l','d'].includes(slot)){ toast('❌ বেলা নির্বাচন করুন!'); return; }
+    if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+    if(date<minDate||date>maxDate){ toast('❌ তারিখ এই মেস মাসের বাইরে দেওয়া যাবে না!'); return; }
+    f.date=date; f.slot=slot; f.amount=amount;
+    saveFeastItem(f);
+    invalidateMealRateCache();
+    renderFeast();
+    closeModal();
+    toast('✅ আপডেট হয়েছে!');
+    if(typeof refreshHome==='function') refreshHome();
+  }, true);
+}
+
 // saveRules() এবং clearRules() — নিয়মনীতি text feature বাদ দেওয়া হয়েছে।
 // Firebase-এ rules node থাকলেও ব্যবহার হচ্ছে না।
 // ═══════════════════════════════════════════════

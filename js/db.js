@@ -259,6 +259,8 @@ function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return
 function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('BazarDel:',e)); }
 function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others:',e)); }
 function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
+function saveFeastItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('feastMeals').child(String(item.id)).set(item).catch(e=>console.error('Feast:',e)); }
+function deleteFeastItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('feastMeals').child(String(id)).remove().catch(e=>console.error('FeastDel:',e)); }
 function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
 function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
 // ✅ FIX: office-meal.js এই দুইটা function ৬ জায়গায় call করে (saveOfficeMeal,
@@ -369,6 +371,7 @@ function migrateDB(){
   if(!DB.cookBills) DB.cookBills=[];
   if(!DB.officeMealRates) DB.officeMealRates={};
   if(!DB.officeMealNotes) DB.officeMealNotes=[];
+  if(!DB.feastMeals) DB.feastMeals=[];
   if(!DB.users) DB.users=[];
   if(!DB.bazar) DB.bazar=[];
   if(!DB.managers) DB.managers={};
@@ -476,7 +479,7 @@ function _runMigration(callback){
     // ── Month buckets ──
     const buckets={};
     function bkt(mmKey){
-      if(!buckets[mmKey]) buckets[mmKey]={meals:{},bazar:[],others:[],transactions:[],managers:{},mealRates:{},officeMealRates:{},officeMealNotes:[],cookBills:[]};
+      if(!buckets[mmKey]) buckets[mmKey]={meals:{},bazar:[],others:[],transactions:[],managers:{},mealRates:{},officeMealRates:{},officeMealNotes:[],cookBills:[],feastMeals:[]};
       return buckets[mmKey];
     }
 
@@ -696,7 +699,7 @@ function loadDB(){
     currentMonthRef.once('value').then(snap=>{
       const data=snap.val();
       if(data){
-        const ARR=['bazar','others','transactions','officeMealNotes','cookBills'];
+        const ARR=['bazar','others','transactions','officeMealNotes','cookBills','feastMeals'];
         MONTH_FIELDS.forEach(f=>{
           if(data[f]===undefined) return;
           if(ARR.includes(f)){
@@ -782,7 +785,7 @@ function loadDB(){
       if(!_dbLoaded || !currentMonthRef) return;
       currentMonthRef.once('value').then(snap=>{
         const data=snap.val(); if(!data) return;
-        const ARR=['bazar','others','transactions','officeMealNotes','cookBills'];
+        const ARR=['bazar','others','transactions','officeMealNotes','cookBills','feastMeals'];
         ARR.forEach(f=>{
           if(data[f]!==undefined) DB[f]=_ensureArr(data[f]).sort((a,b)=>(a.id||0)-(b.id||0));
         });

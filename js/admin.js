@@ -159,7 +159,7 @@ function deleteMessCycle(){
 // মাস হস্তান্তর — MONTH HANDOVER
 // ══════════════════════════════════════════════════
 function _calcHandoverData(mmKey){
-  const {othersAll,cookBillsAll,pm,cookFoodCost}=calcMealRate(mmKey);
+  const {othersAll,cookBillsAll,pm,cookFoodCost,feastEntries}=calcMealRate(mmKey);
   const ofRate=getOfficeMealRate(mmKey);
   // ✅ শুধু সেই মাসে active ছিল এমন users — নতুন member আগের মাসের carry-forward-এ যাবে না
   return DB.users.filter(u=>u.type!=='cook' && isActiveInMonth(u, mmKey)).map(u=>{
@@ -172,7 +172,10 @@ function _calcHandoverData(mmKey){
     const {othersShare,cookFoodShare}=isOff
       ?{othersShare:0,cookFoodShare:0}
       :calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost,myNetMeals);
-    const totalBill=mealBill+othersShare+cookFoodShare;
+    // ফিস্ট মিল: office সদস্যও ঢোকে (others/cookFood-এর মতো isOff skip নেই) —
+    // নাহলে হস্তান্তরের সময় ফিস্টের টাকা carry-forward balance-এ বাদ পড়ে যেত
+    const feastShare=getMemberFeastShare(u, feastEntries);
+    const totalBill=mealBill+othersShare+cookFoodShare+feastShare;
     const prevBal=getPreBal(u.u, mmKey);
     const monthDep=(DB.transactions||[])
       .filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey))
@@ -261,7 +264,7 @@ function doMonthHandover(){
       // a function" TypeError থ্রো হতো — সেটাই "ডেটাবেস load ব্যর্থ" টোস্টের
       // আসল কারণ। db.js-এর loadDB() ঠিক এই কারণেই একই ফিল্ডগুলোতে
       // _ensureArr() ব্যবহার করে — এখানেও এখন সেটাই করা হলো।
-      const _HIST_ARR_FIELDS = ['bazar','others','transactions','officeMealNotes','cookBills'];
+      const _HIST_ARR_FIELDS = ['bazar','others','transactions','officeMealNotes','cookBills','feastMeals'];
       const _calcWithHist = (hist) => {
         const saved = {};
         MONTH_FIELDS.forEach(f => { saved[f] = DB[f]; });
@@ -449,7 +452,7 @@ function setManager(){
   const sel=document.getElementById('mgr-remove');
   sel.innerHTML='<option value="">-- ম্যানেজার নির্বাচন --</option>';
   (DB.managers[month]||[]).forEach(u=>{ const usr=DB.users.find(x=>x.u===u); if(usr) sel.innerHTML+=`<option value="${esc(u)}">${esc(usr.name)}</option>`; });
-  toast('✅ ম্যানেজার নির্বাচন সফল!');
+  toast('✅ ম্যানেজার নির্বাচন সফল হয়েছে');
 }
 function removeManager(){
   if(!isOnline()){ noNetPopup(); return; }
@@ -488,7 +491,7 @@ function saveAdmMeal(){
   // saveDB() → saveMonth() → পুরো meals object overwrite (race condition)।
   saveMealEntry(_admKey, _admVal);
   invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
-  toast('✅ মিল আপডেট হয়েছে!'); closeAdmPopup();
+  toast('✅ মিল আপডেট হয়েছে'); closeAdmPopup();
 }
 // Edit member
 function loadEditMem(){
@@ -904,7 +907,7 @@ function _doMakePDF(type){
       ? (document.getElementById('rpt-month')?.value || messMonthKey())
       : messMonthKey();
     const calc = calcMealRate(mmKey);
-    const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost} = calc;
+    const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost,feastEntries} = calc;
     // ✅ শুধু সেই মাসে active ছিল এমন users — নতুন member আগের মাসে যাবে না
     const nonCookUsers = DB.users.filter(u=>u.type!=='cook' && isActiveInMonth(u, mmKey));
     // ── deduplicate: একই u (username) দুইবার থাকলে প্রথমটা রাখো ──
@@ -1013,6 +1016,7 @@ function _doMakePDF(type){
           <th style="padding:7px 4px;text-align:right;">Meal Bill</th>
           <th style="padding:7px 4px;text-align:right;">Others</th>
           <th style="padding:7px 4px;text-align:right;">Cook</th>
+          <th style="padding:7px 4px;text-align:right;">F/M</th>
           <th style="padding:7px 4px;text-align:right;">Total Bill</th>
           <th style="padding:7px 6px;text-align:right;">Net</th>
         </tr></thead><tbody>`;
@@ -1026,7 +1030,9 @@ function _doMakePDF(type){
         const mealBill = myNetMeals * appRate;
         const sh = isOffU ? {othersShare:0,cookBillShare:0,cookFoodShare:0}
                           : calcMemberOtherShares(u,mmKey,othersAll,cookBillsAll,cookFoodCost,myNetMeals);
-        const totalBill = mealBill + sh.othersShare + sh.cookFoodShare;
+        // ফিস্ট মিল: office সদস্যও ঢোকে (others/cookFood-এর মতো isOffU skip নেই)
+        const feastShare = getMemberFeastShare(u, feastEntries);
+        const totalBill = mealBill + sh.othersShare + sh.cookFoodShare + feastShare;
         const monthDeposits = (DB.transactions||[])
           .filter(tx => tx.uname===u.u && tx.type==='deposit' && dateInMessMonth(tx.date, mmKey))
           .reduce((s, tx) => s + (tx.amount||0), 0);
@@ -1054,6 +1060,7 @@ function _doMakePDF(type){
           <td style="padding:6px 4px;text-align:right">${fN(mealBill)}</td>
           <td style="padding:6px 4px;text-align:right;color:#1565c0">${isOffU?'-':fN(sh.othersShare)}</td>
           <td style="padding:6px 4px;text-align:right;color:#e65100">${isOffU?'-':fN(sh.cookFoodShare)}</td>
+          <td style="padding:6px 4px;text-align:right;color:#7b1fa2">${feastShare>0?fN(feastShare):'-'}</td>
           <td style="padding:6px 4px;text-align:right;font-weight:700;color:#e53935">${fN(totalBill)}</td>
           <td style="padding:6px 6px;text-align:right;font-weight:700;color:${netColor}">${netBal>=0?'+':'-'}${fN(Math.abs(netBal))}</td>
         </tr>`;
@@ -1168,7 +1175,7 @@ function closePrintOverlay(){
 // ═══════════════════════════════════════════════
 function showAllMembersBill(){
   const mmKey=messMonthKey();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost,feastEntries}=calcMealRate(mmKey);
   const content=document.getElementById('mybill-content');
 
   // ── office meal summary ──
@@ -1239,7 +1246,9 @@ function showAllMembersBill(){
   const {othersShare,cookBillShare,cookFoodShare}=isOff
     ?{othersShare:0,cookBillShare:0,cookFoodShare:0}
     :calcMemberOtherShares(cu,mmKey,othersAll,cookBillsAll,cookFoodCost,myNetMeals);
-  const totalBill=mealBill+othersShare+cookFoodShare;
+  // ফিস্ট মিল: office সদস্যও ঢোকে (others/cookFood-এর মতো isOff skip নেই)
+  const feastShare=getMemberFeastShare(cu, feastEntries);
+  const totalBill=mealBill+othersShare+cookFoodShare+feastShare;
 
   const prevBal=getPreBal(cu.u, mmKey);
   const monthDep=(DB.transactions||[])
@@ -1299,6 +1308,11 @@ function showAllMembersBill(){
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
       <div style="font-size:12px;color:var(--text-light)">বাবুর্চি বিল</div>
       <div style="font-size:13px;font-weight:600;color:var(--accent)">৳${fmtTk(cookFoodShare)}</div>
+    </div>`:''}
+    ${feastShare>0?`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
+      <div style="font-size:12px;color:var(--text-light)">ফিস্ট মিল ভাগ</div>
+      <div style="font-size:13px;font-weight:600;color:var(--primary)">৳${fmtTk(feastShare)}</div>
     </div>`:''}
     <div style="height:1px;background:var(--border);margin:8px 0"></div>
     <div style="display:flex;justify-content:space-between;align-items:center">

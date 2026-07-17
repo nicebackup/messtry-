@@ -28,7 +28,7 @@ function loadReport(forceRefresh=false){
 }
 
 function _doLoadReport(mmKey){
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost,officeBil}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,officeMeals,netMeals,M,C,R,X,r1,pm,cookFoodCost,officeBil,feastTotal}=calcMealRate(mmKey);
 
   const [my,mm]=mmKey.split('-').map(Number);
   const nm=mm===12?1:mm+1;
@@ -55,7 +55,7 @@ function _doLoadReport(mmKey){
         <div style="font-size:12px;opacity:.8;margin-top:2px">মোট খরচ</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;margin-bottom:8px">
       <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:15px;font-weight:700">৳${bazar.toLocaleString()}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">বাজার</div>
@@ -67,6 +67,10 @@ function _doLoadReport(mmKey){
       <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:15px;font-weight:700">৳${(cookFoodCost||0).toFixed(0)}</div>
         <div style="font-size:10px;opacity:.8;margin-top:2px">বাবুর্চি বিল</div>
+      </div>
+      <div class="hero-cell" style="padding:10px;text-align:center">
+        <div style="font-size:15px;font-weight:700">৳${(feastTotal||0).toLocaleString()}</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">ফিস্ট মিল</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden">
