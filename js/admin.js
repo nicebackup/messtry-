@@ -973,10 +973,13 @@ function _doMakePDF(type){
       // ── TOTAL ──
       html += `<div style="background:#1a2e22;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;">Total Monthly Expense</span>
-        <span style="display:flex;align-items:baseline;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:18px;font-weight:700;color:#fcd34d;">Tk ${total.toLocaleString()}</span>
-          <span style="font-size:11px;font-weight:600;color:#c4b5fd;">🎉 Feast Tk ${(feastTotal||0).toLocaleString()}</span>
-        </span>
+          <div style="background:#fce4ec;border-radius:8px;padding:6px 10px;border-left:3px solid #c2185b;">
+            <div style="font-size:9px;color:#5a7a65;">🎉 Feast Meal</div>
+            <div style="font-size:14px;font-weight:700;color:#c2185b;white-space:nowrap;">Tk ${(feastTotal||0).toLocaleString()}</div>
+          </div>
+        </div>
       </div>`;
 
       // ── FUND SUMMARY (PDF) ──
