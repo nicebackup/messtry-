@@ -907,7 +907,7 @@ function _doMakePDF(type){
       ? (document.getElementById('rpt-month')?.value || messMonthKey())
       : messMonthKey();
     const calc = calcMealRate(mmKey);
-    const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost,feastEntries} = calc;
+    const {bazar,others,othersAll,cookBillsAll,total,totalMeals,cookMeals,pm,cookFoodCost,feastEntries,feastTotal} = calc;
     // ✅ শুধু সেই মাসে active ছিল এমন users — নতুন member আগের মাসে যাবে না
     const nonCookUsers = DB.users.filter(u=>u.type!=='cook' && isActiveInMonth(u, mmKey));
     // ── deduplicate: একই u (username) দুইবার থাকলে প্রথমটা রাখো ──
@@ -973,7 +973,10 @@ function _doMakePDF(type){
       // ── TOTAL ──
       html += `<div style="background:#1a2e22;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;">Total Monthly Expense</span>
-        <span style="font-size:18px;font-weight:700;color:#fcd34d;">Tk ${total.toLocaleString()}</span>
+        <span style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-size:18px;font-weight:700;color:#fcd34d;">Tk ${total.toLocaleString()}</span>
+          <span style="font-size:11px;font-weight:600;color:#c4b5fd;">🎉 Feast Tk ${(feastTotal||0).toLocaleString()}</span>
+        </span>
       </div>`;
 
       // ── FUND SUMMARY (PDF) ──
@@ -984,7 +987,10 @@ function _doMakePDF(type){
         const wd=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((a,tx)=>a+(tx.amount||0),0);
         return s+(dep-wd);
       },0);
-      const _messFund=_handover+_thisDep-total;
+      // ✅ FIX: ফিস্ট মিলও real টাকা যা মেস ফান্ড থেকে খরচ হয়েছে — যদিও Total Monthly
+      // Expense (`total`)-এ feast যোগ হয় না (meal rate হিসাবের সাথে সম্পর্কিত নয় বলে,
+      // spec অনুযায়ী), কিন্তু ফান্ড ব্যালেন্স (cash in − cash out) থেকে অবশ্যই বাদ যাবে।
+      const _messFund=_handover+_thisDep-total-(feastTotal||0);
       const fF=v=>Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
       html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
         <div style="background:#e3f2fd;border-radius:8px;padding:10px;border-left:3px solid #1565c0;">
@@ -1175,7 +1181,7 @@ function closePrintOverlay(){
 // ═══════════════════════════════════════════════
 function showAllMembersBill(){
   const mmKey=messMonthKey();
-  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost,feastEntries}=calcMealRate(mmKey);
+  const {bazar,others,othersAll,cookBillsTotal,cookBillsAll,total,totalMeals,cookMeals,netMeals,pm,cookFoodCost,feastEntries,feastTotal}=calcMealRate(mmKey);
   const content=document.getElementById('mybill-content');
 
   // ── office meal summary ──
@@ -1191,7 +1197,9 @@ function showAllMembersBill(){
     const _fWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
     totalDeposited+=getPreBal(u.u,mmKey)+(_fDep-_fWith);
   });
-  const messBalance=totalDeposited-bazar-others;
+  // ✅ FIX: ফিস্ট মিলও real টাকা যা মেস ফান্ড থেকে খরচ হয়েছে — PDF-এর _messFund-এর
+  // সাথে সামঞ্জস্যপূর্ণ রাখতে এখানেও বাদ দিতে হবে।
+  const messBalance=totalDeposited-bazar-others-(feastTotal||0);
 
   // ── Summary Hero Card (সবাই দেখবে) ──
   let html=`
