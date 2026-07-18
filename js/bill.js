@@ -65,7 +65,7 @@ function loadBill(){
 
   const displayRate=isOfficeMealUser(cu)?getOfficeMealRate(mmKey):pm;
   document.getElementById('bl-rate-big').textContent='৳ '+displayRate.toFixed(2);
-  document.getElementById('bl-total-exp').textContent='৳ '+total.toLocaleString();
+  document.getElementById('bl-total-exp').textContent='৳ '+(total+(feastTotal||0)).toLocaleString();
   document.getElementById('bl-bazar-s').textContent='৳ '+bazar.toLocaleString();
   document.getElementById('bl-others-s').textContent='৳ '+(others+cookBillsTotal).toLocaleString();
   // নেট মিল দেখাও (বাবুর্চি বাদে)

@@ -68,7 +68,7 @@ function _doLoadReport(mmKey){
         <div style="font-size:12px;opacity:.8;margin-top:3px">প্রতি মিল রেট</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:20px;font-weight:700">৳ ${total.toLocaleString()}</div>
+        <div style="font-size:20px;font-weight:700">৳ ${(total+(feastTotal||0)).toLocaleString()}</div>
         <div style="font-size:12px;opacity:.8;margin-top:2px">মোট খরচ</div>
       </div>
     </div>
@@ -175,7 +175,7 @@ function _doMakePDF(type){
 
     if(type==='report'||type==='bill'){
       // ── SUMMARY CARDS ──
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
         <div style="background:#e8f5e9;border-radius:8px;padding:10px 12px;border-left:3px solid #1a6b3c;">
           <div style="font-size:10px;color:#5a7a65;">Total Bazar</div>
           <div style="font-size:16px;font-weight:700;color:#1a6b3c;">Tk ${bazar.toLocaleString()}</div>
@@ -188,6 +188,10 @@ function _doMakePDF(type){
           <div style="font-size:10px;color:#5a7a65;">Cook Food Cost</div>
           <div style="font-size:16px;font-weight:700;color:#e65100;">Tk ${(cookFoodCost||0).toFixed(0)}</div>
         </div>
+        <div style="background:#fce4ec;border-radius:8px;padding:10px 12px;border-left:3px solid #c2185b;">
+          <div style="font-size:10px;color:#5a7a65;">Feast Meal</div>
+          <div style="font-size:16px;font-weight:700;color:#c2185b;">Tk ${(feastTotal||0).toLocaleString()}</div>
+        </div>
         <div style="background:linear-gradient(135deg,#1a6b3c,#28a15e);border-radius:8px;padding:10px 12px;">
           <div style="font-size:10px;color:rgba(255,255,255,.8);">Meal Rate</div>
           <div style="font-size:16px;font-weight:700;color:#fff;">Tk ${pm.toFixed(2)}</div>
@@ -198,16 +202,11 @@ function _doMakePDF(type){
         </div>
       </div>`;
 
-      // ── TOTAL ──
+      // ── TOTAL ── ✅ FIX: এখন feast-ও যোগ হয়ে দেখাচ্ছে (মিল রেট/pm-এর হিসাবে
+      // feast এখনো ঢোকে না — এটা শুধু এই হেডলাইন সংখ্যার DISPLAY-এর জন্য)
       html += `<div style="background:#1a2e22;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;">Total Monthly Expense</span>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:18px;font-weight:700;color:#fcd34d;">Tk ${total.toLocaleString()}</span>
-          <div style="background:#fce4ec;border-radius:8px;padding:6px 10px;border-left:3px solid #c2185b;">
-            <div style="font-size:9px;color:#5a7a65;">🎉 Feast Meal</div>
-            <div style="font-size:14px;font-weight:700;color:#c2185b;white-space:nowrap;">Tk ${(feastTotal||0).toLocaleString()}</div>
-          </div>
-        </div>
+        <span style="font-size:18px;font-weight:700;color:#fcd34d;">Tk ${(total+(feastTotal||0)).toLocaleString()}</span>
       </div>`;
 
       // ── FUND SUMMARY (PDF) ──
