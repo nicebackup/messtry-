@@ -259,8 +259,20 @@ function saveBazarItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return
 function deleteBazarItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('bazar').child(String(id)).remove().catch(e=>console.error('BazarDel:',e)); }
 function saveOtherItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('others').child(String(item.id)).set(item).catch(e=>console.error('Others:',e)); }
 function deleteOtherItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('others').child(String(id)).remove().catch(e=>console.error('OthersDel:',e)); }
-function saveFeastItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('feastMeals').child(String(item.id)).set(item).catch(e=>console.error('Feast:',e)); }
-function deleteFeastItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('feastMeals').child(String(id)).remove().catch(e=>console.error('FeastDel:',e)); }
+function saveFeastItem(item){
+  if(!_dbLoaded||!currentMonthRef||!item?.id) return;
+  currentMonthRef.child('feastMeals').child(String(item.id)).set(item).catch(e=>{
+    console.error('Feast:',e);
+    toast('❌ ফিস্ট মিল Firebase-এ সেভ ব্যর্থ: '+(e.message||e.code||e));
+  });
+}
+function deleteFeastItem(id){
+  if(!_dbLoaded||!currentMonthRef) return;
+  currentMonthRef.child('feastMeals').child(String(id)).remove().catch(e=>{
+    console.error('FeastDel:',e);
+    toast('❌ ফিস্ট মিল Firebase থেকে মুছতে ব্যর্থ: '+(e.message||e.code||e));
+  });
+}
 function saveTxItem(item){ if(!_dbLoaded||!currentMonthRef||!item?.id) return; currentMonthRef.child('transactions').child(String(item.id)).set(item).catch(e=>console.error('Tx:',e)); }
 function deleteTxItem(id){ if(!_dbLoaded||!currentMonthRef) return; currentMonthRef.child('transactions').child(String(id)).remove().catch(e=>console.error('TxDel:',e)); }
 // ✅ FIX: office-meal.js এই দুইটা function ৬ জায়গায় call করে (saveOfficeMeal,
