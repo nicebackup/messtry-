@@ -87,7 +87,7 @@ function _doLoadReport(mmKey){
       </div>
       <div class="hero-cell" style="padding:10px;text-align:center">
         <div style="font-size:15px;font-weight:700">৳${(feastTotal||0).toLocaleString()}</div>
-        <div style="font-size:10px;opacity:.8;margin-top:2px">ফিস্ট মিল</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">Feast Meal</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden">
@@ -252,7 +252,7 @@ function _doMakePDF(type){
           <th style="padding:7px 4px;text-align:right;">Meal Bill</th>
           <th style="padding:7px 4px;text-align:right;">Others</th>
           <th style="padding:7px 4px;text-align:right;">Cook</th>
-          <th style="padding:7px 4px;text-align:right;">F/M</th>
+          <th style="padding:7px 4px;text-align:right;">Feast M.</th>
           <th style="padding:7px 4px;text-align:right;">Total Bill</th>
           <th style="padding:7px 6px;text-align:right;">Net</th>
         </tr></thead><tbody>`;

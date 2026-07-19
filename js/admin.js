@@ -1041,7 +1041,7 @@ function showAllMembersBill(){
     </div>`:''}
     ${feastShare>0?`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
-      <div style="font-size:12px;color:var(--text-light)">ফিস্ট মিল ভাগ</div>
+      <div style="font-size:12px;color:var(--text-light)">Feast Meal</div>
       <div style="font-size:13px;font-weight:600;color:var(--primary)">৳${fmtTk(feastShare)}</div>
     </div>`:''}
     <div style="height:1px;background:var(--border);margin:8px 0"></div>
