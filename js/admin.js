@@ -940,7 +940,7 @@ function showAllMembersBill(){
       <div class="amb-cell"><div class="amb-lbl">বাজার</div><div class="amb-val amb-green">৳${bazar.toLocaleString()}</div></div>
       <div class="amb-cell amb-sep"><div class="amb-lbl">অন্যান্য</div><div class="amb-val amb-green">৳${others.toLocaleString()}</div></div>
       <div class="amb-cell amb-sep"><div class="amb-lbl">বাবুর্চি বিল</div><div class="amb-val amb-orange">৳${(cookFoodCost||0).toFixed(0)}</div></div>
-      <div class="amb-cell amb-sep"><div class="amb-lbl">ফিস্ট মিল</div><div class="amb-val" style="color:#f472b6">৳${(feastTotal||0).toLocaleString()}</div></div>
+      <div class="amb-cell amb-sep"><div class="amb-lbl">F.M বিল</div><div class="amb-val" style="color:#f472b6">৳${(feastTotal||0).toLocaleString()}</div></div>
     </div>
     <div class="amb-grid amb-grid2">
       <div class="amb-cell"><div class="amb-lbl">নেট মিল (সবার)</div><div class="amb-val">${parseFloat(netMeals.toFixed(2))}</div></div>
@@ -1041,7 +1041,7 @@ function showAllMembersBill(){
     </div>`:''}
     ${feastShare>0?`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px dashed var(--border)">
-      <div style="font-size:12px;color:var(--text-light)">Feast Meal</div>
+      <div style="font-size:12px;color:var(--text-light)">Feast Meal বিল</div>
       <div style="font-size:13px;font-weight:600;color:var(--primary)">৳${fmtTk(feastShare)}</div>
     </div>`:''}
     <div style="height:1px;background:var(--border);margin:8px 0"></div>
