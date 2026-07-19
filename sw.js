@@ -1,5 +1,72 @@
-const CACHE_VERSION = 'mq-v11';
+// ═══════════════════════════════════════════════════════════════════
+// Firebase Messaging — Background Push Notification
+// ─────────────────────────────────────────────────────────────────
+// কেন: Browser app বন্ধ থাকলেও FCM-এর push পৌঁছালে এই SW এটা
+// ধরে notification দেখায়। App খোলা থাকলে push.js-এর onMessage()
+// handle করে।
+// ═══════════════════════════════════════════════════════════════════
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
+// SW-এ Firebase আলাদাভাবে init করতে হয় (config.js এখানে চলে না)
+if (!firebase.apps.length) {
+  firebase.initializeApp({
+    apiKey: 'AIzaSyDBR9Z3gnk0oHBRyqC5eOcGhu8ONa8Up-U',
+    authDomain: 'midlandquarter-19623.firebaseapp.com',
+    databaseURL: 'https://midlandquarter-19623-default-rtdb.firebaseio.com',
+    projectId: 'midlandquarter-19623',
+    storageBucket: 'midlandquarter-19623.firebasestorage.app',
+    messagingSenderId: '370339958840',
+    appId: '1:370339958840:web:dc81e43f4f584d1b1956cd'
+  });
+}
+
+const messaging = firebase.messaging();
+
+// ✅ Background message handler:
+// FCM payload-এ 'notification' field থাকলে browser নিজেই notification দেখায়
+// এই callback শুধু 'data'-only payload-এর জন্য call হয়
+messaging.onBackgroundMessage(payload => {
+  console.log('[sw.js] Received background message:', payload);
+  
+  const title = payload.notification?.title || payload.data?.title || 'মেস নোটিফিকেশন';
+  const body  = payload.notification?.body  || payload.data?.body  || '';
+  const icon  = '/mess/icon-192.png';
+  const link  = payload.fcm_options?.link || payload.data?.url || 'https://midlandquarter.github.io/mess/';
+
+  const notificationOptions = {
+    body: body,
+    icon: icon,
+    badge: icon,
+    vibrate: [200, 100, 200],
+    data: { url: link },
+    requireInteraction: false,
+    tag: 'meal-reminder' // একই notification বার বার আসবে না
+  };
+
+  return self.registration.showNotification(title, notificationOptions);
+});
+
+// ✅ Notification-এ tap করলে app খুলবে
+self.addEventListener('notificationclick', event => {
+  console.log('[sw.js] Notification clicked:', event.notification.title);
+  event.notification.close();
+  
+  const target = event.notification.data?.url || 'https://midlandquarter.github.io/mess/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      // App ইতিমধ্যে খোলা থাকলে focus করো
+      const existing = list.find(c => c.url.includes('/mess/'));
+      if (existing) return existing.focus();
+      // না থাকলে নতুন tab খোলো
+      return clients.openWindow(target);
+    })
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────
+const CACHE_VERSION = 'mq-v12'; // v12: Firebase Messaging added
 const SHELL_ASSETS = [
   './',
   './index.html',
@@ -15,6 +82,7 @@ const EXTERNAL_ASSETS = [
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js',
