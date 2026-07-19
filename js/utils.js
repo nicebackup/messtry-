@@ -281,7 +281,7 @@ function _withMonthData(mmKey, loadingEl, renderFn, forceRefresh=false){
 // BENGALI DAY NAME HELPERS
 // বাংলা বার সংক্ষেপ: রবি / সোম / মঙ্গল / বুধ / বৃহঃ / শুক্র / শনি
 // ═══════════════════════════════════════════════
-const BANGLA_DAYS_SHORT = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
+const BANGLA_DAYS_SHORT = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 
 function getBengaliDayAbbr(dateStr){
   if(!dateStr) return '';
