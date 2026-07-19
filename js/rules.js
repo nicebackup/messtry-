@@ -241,13 +241,24 @@ function editFeast(id){
 function saveCfg(grpKey){
   if(!isOnline()){ noNetPopup(); return; }
   const dateStr=document.getElementById('cfg-date-'+grpKey).value;
-  const bv=parseFloat(document.getElementById('cfg-bv-'+grpKey).value)||0.75;
-  const lv=parseFloat(document.getElementById('cfg-lv-'+grpKey).value)||1.5;
-  const dv=parseFloat(document.getElementById('cfg-dv-'+grpKey).value)||0.75;
+  // ✅ FIX: আগে parseFloat(...)||default ব্যবহার হতো। ইনপুটে 0 দিলে সেটা
+  // JS-এ falsy বলে "0 || 0.75" আসলে 0.75 হয়ে যেত — তাই কোনো বেলাকে 0
+  // করা যাচ্ছিল না। এখন শুধু ফাঁকা/অসংখ্যা ইনপুটেই default বসবে, বৈধ 0
+  // ইনপুট 0 হিসেবেই সেভ হবে।
+  const bvRaw=parseFloat(document.getElementById('cfg-bv-'+grpKey).value);
+  const lvRaw=parseFloat(document.getElementById('cfg-lv-'+grpKey).value);
+  const dvRaw=parseFloat(document.getElementById('cfg-dv-'+grpKey).value);
+  const bv=isNaN(bvRaw)?0.75:bvRaw;
+  const lv=isNaN(lvRaw)?1.5:lvRaw;
+  const dv=isNaN(dvRaw)?0.75:dvRaw;
+  if(bv<0||lv<0||dv<0){ toast('❌ ঋণাত্মক মান দেওয়া যাবে না!'); return; }
   const grp=grpKey==='outsider'?'outsider':'insider';
 
-  // ── এই মেস মাসের জন্যই save করো — অন্য মাস অপরিবর্তিত থাকবে ──
-  const mmKey = messMonthKey();
+  // ✅ FIX: তারিখ দেওয়া থাকলে সেই তারিখ যে মেস মাসে পড়ে সেই mmKey ব্যবহার করো
+  // (আগে সবসময় আজকের মেস মাসেই সেভ হতো — মাস-বাউন্ডারির (১১ তারিখ) আশেপাশে
+  // অন্য মেস মাসের কোনো তারিখে মান সেট করলে getCfg() সঠিক mmKey-তে খুঁজে
+  // সেটা আর পেত না)। তারিখ ফাঁকা থাকলে (ডিফল্ট সেভ) আজকের মেস মাসই ব্যবহার হবে।
+  const mmKey = dateStr ? messMonthKey(new Date(dateStr)) : messMonthKey();
   if(!DB.cfg[mmKey]) DB.cfg[mmKey]={};
   if(!DB.cfg[mmKey][grp]) DB.cfg[mmKey][grp]={def:{b:0.75,l:1.5,d:0.75},byDate:{}};
   if(!DB.cfg[mmKey][grp].byDate) DB.cfg[mmKey][grp].byDate={};
@@ -265,4 +276,55 @@ function saveCfg(grpKey){
   saveGlobal();
   closeRulesCfgPopup();
   if(typeof refreshHome==='function') refreshHome();
+}
+
+// ═══════════════════════════════════════════════
+// MEAL CONFIG — LOAD ON DATE PICK — loadCfgForDate()
+// ✅ FIX: এই ফাংশনটাই ছিল না, তাই তারিখ ফিল্ডে কোনো তারিখ বেছে নিলে
+// (বা আগে সেভ করা কোনো তারিখ আবার সিলেক্ট করলে) ইনপুট বক্সে আগের/ডিফল্ট
+// মানই থেকে যেত — byDate-এ যা আসলে সেভ আছে তা কখনো লোড হতো না।
+// তারিখ ফাঁকা করলে ডিফল্ট মান ফিরে আসবে (initRules()-এর সোর্সের সাথে
+// সামঞ্জস্যপূর্ণ)। তারিখ দিলে getCfg() (meal.js)-এর মতোই fallback চেইন
+// অনুসরণ করে সেই তারিখে প্রযোজ্য মান দেখাবে: এই মেস মাসের byDate → এই
+// মাসের def → আগের মাসের def → পুরনো flat ফরম্যাট → hardcoded default।
+// ═══════════════════════════════════════════════
+function _resolveCfgValue(grp,t,dateStr,mmKey){
+  const mmCfg = DB.cfg[mmKey] && DB.cfg[mmKey][grp];
+  if(mmCfg){
+    if(mmCfg.byDate && mmCfg.byDate[dateStr] && mmCfg.byDate[dateStr][t]!==undefined)
+      return mmCfg.byDate[dateStr][t];
+    if(mmCfg.def && mmCfg.def[t]!=null) return mmCfg.def[t];
+  }
+  if(DB.handoverDone && DB.handoverDone.length>0){
+    const prevMonths=[...DB.handoverDone].sort().reverse().filter(ho=>ho<mmKey);
+    for(const pm of prevMonths){
+      const pmCfg=DB.cfg[pm] && DB.cfg[pm][grp];
+      if(pmCfg && pmCfg.def && pmCfg.def[t]!=null) return pmCfg.def[t];
+    }
+  }
+  const flatGrp = !mmCfg && DB.cfg[grp];
+  if(flatGrp){
+    if(flatGrp.byDate && flatGrp.byDate[dateStr] && flatGrp.byDate[dateStr][t]!==undefined)
+      return flatGrp.byDate[dateStr][t];
+    if(flatGrp.def && flatGrp.def[t]!=null) return flatGrp.def[t];
+  }
+  return t==='l' ? 1.5 : 0.75;
+}
+function loadCfgForDate(grpKey){
+  const grp=grpKey==='outsider'?'outsider':'insider';
+  const dateStr=document.getElementById('cfg-date-'+grpKey).value;
+  const bv=document.getElementById('cfg-bv-'+grpKey);
+  const lv=document.getElementById('cfg-lv-'+grpKey);
+  const dv=document.getElementById('cfg-dv-'+grpKey);
+  if(!dateStr){
+    const cfg=DB.cfg[grp]||{def:{b:0.75,l:1.5,d:0.75}};
+    if(bv) bv.value=cfg.def.b;
+    if(lv) lv.value=cfg.def.l;
+    if(dv) dv.value=cfg.def.d;
+    return;
+  }
+  const mmKey=messMonthKey(new Date(dateStr));
+  if(bv) bv.value=_resolveCfgValue(grp,'b',dateStr,mmKey);
+  if(lv) lv.value=_resolveCfgValue(grp,'l',dateStr,mmKey);
+  if(dv) dv.value=_resolveCfgValue(grp,'d',dateStr,mmKey);
 }
