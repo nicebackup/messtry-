@@ -137,7 +137,7 @@ function initFeast(){
   if(amtEl) amtEl.value='';
   renderFeast();
 }
-function _feastSlotLabel(slot){ return slot==='b'?'☀️ সকাল':slot==='l'?'🌞 দুপুর':'🌙 রাত'; }
+function _feastSlotLabel(slot){ return slot==='b'?'🌄 সকাল':slot==='l'?'☀️ দুপুর':'🌙 রাত'; }
 function addFeast(){
   if(!isOnline()){ noNetPopup(); return; }
   const date=V('feast-date');
@@ -146,7 +146,7 @@ function addFeast(){
   const amount=parseFloat(document.getElementById('feast-amt').value);
   if(!date){ toast('❌ তারিখ দিন!'); return; }
   if(!['b','l','d'].includes(slot)){ toast('❌ বেলা নির্বাচন করুন!'); return; }
-  if(!validAmount(amount)){ toast('❌ সঠিক পরিমাণ দিন!'); return; }
+  if(!validAmount(amount)){ toast('❌ খরচের সঠিক পরিমাণ দিন!'); return; }
   const _fmi={id:genId(), date, slot, amount, by:CU.name};
   if(!DB.feastMeals) DB.feastMeals=[];
   DB.feastMeals.push(_fmi);
@@ -154,7 +154,7 @@ function addFeast(){
   invalidateMealRateCache();
   document.getElementById('feast-amt').value='';
   renderFeast();
-  toast('✅ ফিস্ট মিল এন্ট্রি যোগ হয়েছে!');
+  toast('✅ Feast Meal Expense Entry Done');
   if(typeof refreshHome==='function') refreshHome();
 }
 function renderFeast(){
@@ -183,7 +183,7 @@ function renderFeast(){
   };
 }
 function delFeast(id){
-  showModal('ফিস্ট মিল মুছুন','এই এন্ট্রি মুছে ফেলবেন?',()=>{
+  showModal('Feast Meal Expense Delete','এই এন্ট্রি মুছে ফেলবেন?',()=>{
     DB.feastMeals=DB.feastMeals.filter(f=>f.id!==id);
     deleteFeastItem(id);
     invalidateMealRateCache();
@@ -208,7 +208,7 @@ function editFeast(id){
     <div><label style="font-size:12px;font-weight:600;color:var(--text-light)">পরিমাণ ৳</label>
     <input id="edit-feast-amt" type="number" class="form-input" value="${f.amount}" style="margin-top:4px"></div>
   </div>`;
-  showModal('ফিস্ট মিল এন্ট্রি সম্পাদনা', html, ()=>{
+  showModal('Feast Meal Expense Edit', html, ()=>{
     const date=document.getElementById('edit-feast-date').value;
     const slot=document.getElementById('edit-feast-slot').value;
     const amount=parseFloat(document.getElementById('edit-feast-amt').value);

@@ -9,6 +9,27 @@
 let _dbLoaded = false; // Guard: Firebase load না হওয়া পর্যন্ত save block
 let _loadDBStarted = false; // Guard: loadDB() একবারের বেশি চলতে দেবো না
 
+// ✅ FIX (2026-07): meals-এর উপর child_added/child_changed listener প্রথমবার
+// attach হওয়ার সময় Firebase সেই মাসের প্রতিটা আগে থেকে থাকা মিল-এন্ট্রির জন্য
+// retroactively fire করে (এটা Firebase RTDB-এর normal/documented আচরণ, নতুন
+// entry-র জন্য না শুধু — attach মুহূর্তে থাকা সব existing child-এর জন্যও)।
+// ~২০০ সদস্যের মাসে এটা হাজার হাজার বার হতে পারে। প্রতিবার refreshHome()
+// সরাসরি (undebounced) কল করলে প্রতিটাতেই পুরো meal-index rebuild + পুরো
+// হোম-স্ক্রিন recalculation চলত — লগইনের পরপরই main thread কয়েক সেকেন্ডের
+// জন্য পুরোপুরি ব্লক (UI দেখা যায় কিন্তু ক্লিক কাজ করে না, ৬-৭ সেকেন্ড lag)।
+// সমাধান: refreshHome()-কে debounce — burst থামার ১৫০ms পর মাত্র একবার
+// চালানো হয়, হাজারবারের বদলে। DB.meals আপডেট আর cache invalidation (সস্তা)
+// প্রতিটা event-এই সিঙ্ক্রোনাসভাবেই হয় (অপরিবর্তিত) — শুধু ভারী
+// refreshHome()-টাই batched।
+let _homeRefreshTimer = null;
+function _scheduleHomeRefresh(){
+  if(_homeRefreshTimer) clearTimeout(_homeRefreshTimer);
+  _homeRefreshTimer = setTimeout(()=>{
+    _homeRefreshTimer = null;
+    refreshHome();
+  }, 150);
+}
+
 // ── Collision-safe ID generator ──────────────────────────────────
 // Date.now() এ একই millisecond-এ দুটো item → same ID → overwrite।
 // Date.now() * 10000 + 4-digit random → collision practically impossible।
@@ -732,7 +753,7 @@ function loadDB(){
     currentMonthRef.child('mealRates').on('value', snap=>{
       const v=snap.val(); if(v!==null) DB.mealRates=v;
       invalidateMealRateCache();
-      if(_dbLoaded) refreshHome();
+      if(_dbLoaded) _scheduleHomeRefresh();
     });
 
     // ── Meal real-time: child_added + child_changed ──
@@ -742,14 +763,14 @@ function loadDB(){
         const key=snap.key, val=snap.val();
         if(key && val){ DB.meals[key]=val; }
         invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
-        if(_dbLoaded) refreshHome();
+        if(_dbLoaded) _scheduleHomeRefresh();
       };
       currentMonthRef.child('meals').on('child_added',   _handleMeal);
       currentMonthRef.child('meals').on('child_changed', _handleMeal);
       currentMonthRef.child('meals').on('child_removed', snap=>{
         if(snap.key) delete DB.meals[snap.key];
         invalidateMealIndex(); invalidateMealRateCache();
-        if(_dbLoaded) refreshHome();
+        if(_dbLoaded) _scheduleHomeRefresh();
       });
       // ✅ FIX: চলতি মেস-চক্রের শেষ দিন/রাতেই পরের চক্রের মিল দেওয়া শুরু
       // হয়ে যায় (যেমন সকালের নাস্তার জন্য আগের রাতেই এন্ট্রি লাগে) — কিন্তু
@@ -763,14 +784,14 @@ function loadDB(){
         const data=snap.val();
         if(data) Object.keys(data).forEach(k=>{ DB.meals[k]=data[k]; });
         invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
-        if(_dbLoaded) refreshHome();
+        if(_dbLoaded) _scheduleHomeRefresh();
       }).catch(()=>{});
       nextMonthRef.child('meals').on('child_added',   _handleMeal);
       nextMonthRef.child('meals').on('child_changed', _handleMeal);
       nextMonthRef.child('meals').on('child_removed', snap=>{
         if(snap.key) delete DB.meals[snap.key];
         invalidateMealIndex(); invalidateMealRateCache();
-        if(_dbLoaded) refreshHome();
+        if(_dbLoaded) _scheduleHomeRefresh();
       });
     }
 
