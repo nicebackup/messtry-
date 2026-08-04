@@ -308,7 +308,7 @@ html.dark-mode{background:#0f0f1a;color:#f1f5f9;}
   background:rgba(56,189,248,0.07);
   border:1px solid rgba(56,189,248,0.12);
 }
-.hero-cell{background:rgba(255,255,255,0.12);}
+.hero-cell{background:rgba(255,255,255,0.12);min-width:0;overflow-wrap:break-word;word-break:break-word;}
 .dark-mode .hero-cell{background:rgba(56,189,248,0.10);}
 /* report inner grid rows */
 .summary-hero-card .rpt-inner-row{
@@ -554,7 +554,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
 .prof-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
 /* BAZAR */
 .bazar-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
-.bz-name{font-size:14px;font-weight:500;}
+.bz-name{font-size:14px;font-weight:500;white-space:pre-line;}
 .bz-meta{font-size:12px;color:var(--text-light);}
 .bz-amt{font-size:16px;font-weight:700;color:var(--primary);}
 /* TAGS */

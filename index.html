@@ -606,7 +606,7 @@ try{
               <option value="outside50">Outside সদস্য ৫০% দেবে</option>
             </select>
           </div>
-          <div class="form-group"><label class="form-label">বিবরণ</label><textarea id="oth-desc" class="form-input" placeholder="গ্যাস বিল, বিদ্যুৎ বিল, মেরামত..." rows="2" style="resize:none"></textarea></div>
+          <div class="form-group"><label class="form-label">বিবরণ</label><textarea id="oth-desc" class="form-input" placeholder="এখানে লিখুন..." rows="2" style="resize:none"></textarea></div>
           <div class="form-group"><label class="form-label">পরিমাণ ৳</label><input type="number" id="oth-amt" class="form-input" placeholder="টাকার পরিমাণ" min="1" step="0.01"></div>
           <div class="form-group"><label class="form-label">তারিখ</label><span class="date-display-wrap"><input type="date" id="oth-date" class="form-input" style="width:100%" onchange="updateDateLabel('oth-date')"><span class="date-display-label" id="oth-date-lbl">-- তারিখ --</span></span></div>
           <button class="btn btn-primary" onclick="addOther()">➕ যোগ করুন</button>
@@ -1369,6 +1369,14 @@ if ('serviceWorker' in navigator) {
               setTimeout(() => window.location.reload(true), 1800);
             }
           });
+        });
+
+        // ✅ FIX (2026-07-30): হোম স্ক্রিন থেকে installed PWA খুললে অনেক সময়
+        // ব্রাউজার আগের tab-ই resume করে — নতুন 'load' event ফায়ার হয় না,
+        // তাই উপরের update চেক-ও হয় না। app আবার visible/foreground হলে
+        // আলাদা করে update চেক করলে এই gap বন্ধ হয়।
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update();
         });
       })
       .catch(err => console.log('SW error:', err));
