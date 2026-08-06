@@ -400,6 +400,14 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
 .form-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:inherit;color:var(--text);background:var(--bg);transition:border-color .2s;outline:none;}
 .form-input:focus{border-color:var(--primary);background:var(--card);}
 .form-input.err{border-color:var(--danger);background:var(--danger-light);}
+/* ── Native date input: hide browser's own mm/dd/yyyy text and show a ──
+   ── single Bangladesh-style DD-MM-YYYY label overlaid on top instead ── */
+.date-display-wrap{position:relative;display:flex;align-items:center;}
+.date-display-wrap input[type="date"]{position:relative;color:transparent;width:100%;}
+.date-display-wrap input[type="date"]:focus{color:var(--text);}
+.date-display-label{position:absolute;left:16px;right:40px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text);pointer-events:none;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.date-display-wrap input[type="date"]:focus + .date-display-label,
+.date-display-wrap input[type="date"]:active + .date-display-label{display:none;}
 .err-txt{color:var(--danger);font-size:12px;margin-top:4px;display:none;}
 .err-txt.show{display:block;}
 /* BUTTONS */
