@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
 
 // ─────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = I'm-15'; // v14: toast + meal-success-overlay redesign — force-bust old CSS/JS cache
+const CACHE_VERSION = I'V-15'; // v14: toast + meal-success-overlay redesign — force-bust old CSS/JS cache
 
 const SHELL_ASSETS = [
   './',
