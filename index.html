@@ -1273,6 +1273,21 @@ try{
 
 <div class="toast" id="toast"></div>
 
+<!-- ═══════════ MEAL SAVE SUCCESS OVERLAY ═══════════ -->
+<div class="success-ov" id="meal-success-ov" onclick="hideMealSuccessAnim()">
+  <div class="success-card">
+    <div class="success-check-wrap">
+      <span class="success-glow"></span>
+      <svg class="success-check" viewBox="0 0 80 80">
+        <circle class="success-check-circle" cx="40" cy="40" r="36"/>
+        <path class="success-check-mark" d="M23 41 L35 53 L58 27"/>
+      </svg>
+    </div>
+    <div class="success-title">মিল সেভ হয়েছে!</div>
+    <div class="success-sub" id="meal-success-sub"></div>
+  </div>
+</div>
+
 <script>
 // config.js + utils.js + db.js → moved to external files
 
