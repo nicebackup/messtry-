@@ -404,10 +404,7 @@ body{font-family:'Hind Siliguri',sans-serif;background:var(--bg);color:var(--tex
    ── single Bangladesh-style DD-MM-YYYY label overlaid on top instead ── */
 .date-display-wrap{position:relative;display:flex;align-items:center;}
 .date-display-wrap input[type="date"]{position:relative;color:transparent;width:100%;}
-.date-display-wrap input[type="date"]:focus{color:var(--text);}
 .date-display-label{position:absolute;left:16px;right:40px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text);pointer-events:none;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.date-display-wrap input[type="date"]:focus + .date-display-label,
-.date-display-wrap input[type="date"]:active + .date-display-label{display:none;}
 .err-txt{color:var(--danger);font-size:12px;margin-top:4px;display:none;}
 .err-txt.show{display:block;}
 /* BUTTONS */
