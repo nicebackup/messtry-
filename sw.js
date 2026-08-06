@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
 
 // ─────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'mq-v10'; // v13: Firebase Messaging added
+const CACHE_VERSION = 'mq-v14'; // v14: toast + meal-success-overlay redesign — force-bust old CSS/JS cache
 
 const SHELL_ASSETS = [
   './',
