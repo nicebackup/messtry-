@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
 
 // ─────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'mq-v14'; // v14: toast + meal-success-overlay redesign — force-bust old CSS/JS cache
+const CACHE_VERSION = 'mq-v01'; // v14: toast + meal-success-overlay redesign — force-bust old CSS/JS cache
 
 const SHELL_ASSETS = [
   './',
