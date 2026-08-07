@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
 
 // ─────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'mq-v17'; // v17: office meal date overlay + rate popup + legend removed
+const CACHE_VERSION = 'mq-v18'; // v17: office meal date function and meal rate function, CSS upgrade 
 
 const SHELL_ASSETS = [
   './',
