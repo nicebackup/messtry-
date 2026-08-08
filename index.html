@@ -1177,17 +1177,11 @@ try{
 
 
 <div class="modal-bg notice-modal-center" id="notice-popup-modal">
-  <div class="notice-card">
-    <div class="notice-card-topbar"></div>
-    <div class="notice-card-head">
-      <div class="notice-card-title">Attention Please!</div>
-      <button class="notice-close-btn" onclick="closeNoticePopup()" aria-label="বন্ধ করুন">×</button>
-    </div>
-    <div class="notice-card-body-wrap">
-      <div id="notice-popup-body"></div>
-    </div>
-    <div class="notice-card-footer">
-      <button class="notice-ack-btn" onclick="closeNoticePopup()">বুঝেছি, বন্ধ করুন</button>
+  <div class="modal" style="border-radius:20px;max-height:80vh">
+    <div class="notice-attention-title">Attention Please</div>
+    <div id="notice-popup-body" class="modal-body" style="margin-bottom:16px;max-height:50vh;overflow-y:auto"></div>
+    <div style="text-align:center">
+      <button class="btn btn-primary btn-sm" onclick="closeNoticePopup()">বুঝেছি, বন্ধ করুন</button>
     </div>
   </div>
 </div>
