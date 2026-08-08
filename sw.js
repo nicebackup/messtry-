@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
 
 // ─────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'mq-v18'; // v17: office meal date function and meal rate function, CSS upgrade 
+const CACHE_VERSION = 'mq-v19'; // v19: notice pop design and CSS upgrade 
 
 const SHELL_ASSETS = [
   './',
