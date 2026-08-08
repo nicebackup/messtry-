@@ -1177,13 +1177,22 @@ try{
 
 
 <div class="modal-bg notice-modal-center" id="notice-popup-modal">
-  <div class="modal" style="border-radius:20px;max-height:80vh">
-    <div class="notice-popup-header">
-      <div class="modal-title" style="margin:0">📢 নোটিশ</div>
-      <button onclick="closeNoticePopup()" style="background:var(--danger);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
+  <div class="notice-card">
+    <div class="notice-card-topbar"></div>
+    <button class="notice-close-btn" onclick="closeNoticePopup()" aria-label="বন্ধ করুন">×</button>
+    <div class="notice-card-head">
+      <div class="notice-icon-badge">📢</div>
+      <div>
+        <div class="notice-card-title">নোটিশ</div>
+        <div class="notice-card-subtitle">কর্তৃপক্ষের ঘোষণা</div>
+      </div>
     </div>
-    <div id="notice-popup-body"></div>
-    <button class="notice-ack-btn" onclick="closeNoticePopup()">✅ বুঝেছি, বন্ধ করুন</button>
+    <div class="notice-card-body-wrap">
+      <div id="notice-popup-body"></div>
+    </div>
+    <div class="notice-card-footer">
+      <button class="notice-ack-btn" onclick="closeNoticePopup()"><span>✓</span> বুঝেছি</button>
+    </div>
   </div>
 </div>
 
