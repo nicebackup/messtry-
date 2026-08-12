@@ -561,9 +561,16 @@ function saveAdmMeal(){
   const _admKey=admBuf.uname+'_'+admBuf.dateStr;
   const _admVal={b:{...admBuf.b},l:{...admBuf.l},d:{...admBuf.d}};
   DB.meals[_admKey]=_admVal;
+  // 🐛 BUG FIX: mealMmKey পাস করা হতো না — ফলে তারিখ পরের মেস মাসে পড়লেও
+  // (যেমন চক্রের শেষ দিন রাত ১০টার পর "১১ তারিখ" চালু করা হলে) এটা সবসময়
+  // currentMonthRef (চলতি মাসের bucket)-এ সেভ হতো। toast "✅ সেভ হয়েছে"
+  // দেখাত কিন্তু আসল ডেটা ভুল bucket-এ যেত, তাই পরের মাসের রিপোর্টে/মিল
+  // তালিকায় দেখা যেত না। meal.js-এর saveMeal() এর মতোই এখন সঠিক bucket
+  // বের করে পাঠানো হচ্ছে।
+  const _admMmKey = messMonthKey(new Date(admBuf.dateStr));
   // ✅ FIX: saveDB() বাদ — শুধু এই একটা meal entry save হবে।
   // saveDB() → saveMonth() → পুরো meals object overwrite (race condition)।
-  saveMealEntry(_admKey, _admVal);
+  saveMealEntry(_admKey, _admVal, _admMmKey);
   invalidateMealIndex(); invalidateMealRateCache(); invalidateMemberCountsCache();
   toast('✅ মিল আপডেট হয়েছে'); closeAdmPopup();
 }
