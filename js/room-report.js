@@ -36,15 +36,21 @@ function openRoomReport(){
     const filter=filterEl?filterEl.value:'all';
 
     // ── ডেটা তৈরি: DB.users-এ যা আছে তাই দেখাবে (blocked বাদ যাবে না) ──
+    // ✅ FIX: cook-দেরও রুম থাকে, তাই রুম-রিপোর্টের জন্য cook=ইনসাইড ধরা
+    // হচ্ছে — শুধু outside আলাদা। filter dropdown-এও তাই আর "বাবুর্চি"
+    // অপশন নেই, "ইনসাইড" চাপলে cook-রাও দেখা যাবে।
     let users=(DB.users||[]).filter(u=>u&&u.u);
-    if(filter!=='all') users=users.filter(u=>(u.type||'inside')===filter);
+    if(filter==='outside') users=users.filter(u=>u.type==='outside');
+    else if(filter==='inside') users=users.filter(u=>u.type!=='outside');
 
-    // ── রুম অনুযায়ী group করা, রুম খালি থাকলে আলাদা লিস্টে ──
+    // ── রুম অনুযায়ী group করা ──
+    // ✅ FIX: যাদের রুম নেই (বেশিরভাগ আউটসাইড সদস্য, যাদের রুম না থাকাটাই
+    // স্বাভাবিক — এটা কোনো "ডেটা বাদ পড়েছে" সমস্যা না) তাদের এই রুম-রিপোর্টে
+    // আর দেখানো হচ্ছে না। শুধু যাদের রুম আছে তারাই এখানে থাকবে।
     const groups={};
-    const noRoom=[];
     users.forEach(u=>{
       const r=String(u.room||'').trim();
-      if(!r){ noRoom.push(u); return; }
+      if(!r) return;
       if(!groups[r]) groups[r]=[];
       groups[r].push(u);
     });
@@ -58,20 +64,16 @@ function openRoomReport(){
       return a.localeCompare(b);
     });
 
-    // ── রুম নম্বরের প্রথম digit থেকে তলা বের করা (301 → 3) ──
-    const floorOf=room=>{ const m=String(room).match(/^(\d)/); return m?m[1]:''; };
-
-    const typeLabel=u=>u.type==='outside'?'আউটসাইড':u.type==='cook'?'বাবুর্চি':'ইনসাইড';
-    const typeColor=u=>u.type==='outside'?'#e65100':u.type==='cook'?'#7b1fa2':'#1a6b3c';
+    const typeLabel=u=>u.type==='outside'?'আউটসাইড':'ইনসাইড';
+    const typeColor=u=>u.type==='outside'?'#e65100':'#1a6b3c';
     const blockedTag=u=>u.blocked?' <span style="font-size:9px;background:#fdecea;color:#c62828;border-radius:4px;padding:1px 5px;">ব্লকড</span>':'';
 
     let rows='';
     let count=0;
 
-    function rowFor(u, floorCell, roomCell){
+    function rowFor(u, roomCell){
       count++;
       return `<tr style="background:${count%2===0?'#f0f7f3':'#fff'}">
-        <td style="padding:6px 4px;text-align:center;font-weight:700;color:#1a6b3c;">${floorCell}</td>
         <td style="padding:6px 4px;text-align:center;font-weight:700;">${roomCell}</td>
         <td style="padding:6px 4px;text-align:center;font-size:10px;color:#555;">${esc(u.job||'-')}</td>
         <td style="padding:6px 6px;font-weight:600;">${esc(u.name||'-')}${blockedTag(u)}</td>
@@ -83,17 +85,11 @@ function openRoomReport(){
     roomKeys.forEach(room=>{
       const members=groups[room].slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
       members.forEach((u,i)=>{
-        rows += rowFor(u, i===0?esc(floorOf(room)):'', i===0?esc(room):'');
+        rows += rowFor(u, i===0?esc(room):'');
       });
     });
 
-    if(noRoom.length){
-      noRoom.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
-      rows += `<tr><td colspan="6" style="padding:8px 6px;background:#fff3e0;font-weight:700;color:#e65100;font-size:11px;">রুম নির্ধারণ হয়নি</td></tr>`;
-      noRoom.forEach(u=>{ rows += rowFor(u, '-', '-'); });
-    }
-
-    const filterLabel=filter==='all'?'সব':filter==='outside'?'আউটসাইড':filter==='cook'?'বাবুর্চি':'ইনসাইড';
+    const filterLabel=filter==='outside'?'আউটসাইড':filter==='inside'?'ইনসাইড':'সব';
 
     let html = `<div style="font-family:Arial,sans-serif;background:#fff;color:#1a2e22;padding:16px;">`;
     html += `<div style="background:linear-gradient(135deg,#0f4526,#1a6b3c);color:#fff;border-radius:10px;padding:14px 6px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
@@ -109,14 +105,13 @@ function openRoomReport(){
 
     html += `<table style="width:100%;border-collapse:collapse;font-size:11px;">
       <thead><tr style="background:#1a6b3c;color:#fff;">
-        <th style="padding:7px 4px;text-align:center;">তলা</th>
         <th style="padding:7px 4px;text-align:center;">রুম</th>
         <th style="padding:7px 4px;text-align:center;">ID</th>
         <th style="padding:7px 6px;text-align:left;">নাম</th>
         <th style="padding:7px 4px;text-align:center;">ধরন</th>
         <th style="padding:7px 6px;text-align:left;">মন্তব্য</th>
       </tr></thead>
-      <tbody>${rows || '<tr><td colspan="6" style="padding:20px;text-align:center;color:#888;">কোনো সদস্য পাওয়া যায়নি</td></tr>'}</tbody>
+      <tbody>${rows || '<tr><td colspan="5" style="padding:20px;text-align:center;color:#888;">কোনো সদস্য পাওয়া যায়নি</td></tr>'}</tbody>
     </table>`;
     html += `</div>`;
 
