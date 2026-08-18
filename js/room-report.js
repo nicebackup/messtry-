@@ -44,19 +44,23 @@ function openRoomReport(){
     else if(filter==='inside') users=users.filter(u=>u.type!=='outside');
 
     // ── রুম অনুযায়ী group করা ──
-    // ✅ FIX: যাদের রুম নেই (বেশিরভাগ আউটসাইড সদস্য, যাদের রুম না থাকাটাই
-    // স্বাভাবিক — এটা কোনো "ডেটা বাদ পড়েছে" সমস্যা না) তাদের এই রুম-রিপোর্টে
-    // আর দেখানো হচ্ছে না। শুধু যাদের রুম আছে তারাই এখানে থাকবে।
+    // ✅ FIX: রুম নেই এমন সদস্যও (বেশিরভাগ real আউটসাইড মানুষ) তালিকায়
+    // থাকবে — নাহলে "আউটসাইড" ফিল্টার করলে তাদের দেখা যেত না। শুধু
+    // কোনো ব্যানার/বাড়তি মন্তব্য ছাড়াই, তালিকার শেষে, রুম ঘর ফাঁকা
+    // রেখে দেখানো হচ্ছে — এটাই স্বাভাবিক, আলাদা করে হাইলাইট করার
+    // কিছু নেই।
     const groups={};
     users.forEach(u=>{
       const r=String(u.room||'').trim();
-      if(!r) return;
       if(!groups[r]) groups[r]=[];
       groups[r].push(u);
     });
 
-    // ── রুম নম্বর অনুযায়ী sort (numeric রুম আগে, ছোট থেকে বড়) ──
+    // ── রুম নম্বর অনুযায়ী sort (numeric রুম আগে, রুম-নেই সবার শেষে) ──
     const roomKeys=Object.keys(groups).sort((a,b)=>{
+      if(a===''&&b==='') return 0;
+      if(a==='') return 1;
+      if(b==='') return -1;
       const na=parseInt(a,10), nb=parseInt(b,10);
       if(!isNaN(na)&&!isNaN(nb)) return na-nb;
       if(!isNaN(na)) return -1;
@@ -85,7 +89,7 @@ function openRoomReport(){
     roomKeys.forEach(room=>{
       const members=groups[room].slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
       members.forEach((u,i)=>{
-        rows += rowFor(u, i===0?esc(room):'');
+        rows += rowFor(u, i===0?(room?esc(room):'-'):'');
       });
     });
 
