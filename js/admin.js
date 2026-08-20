@@ -1130,11 +1130,21 @@ function downloadDayImage(){
   wrap.style.cssText='position:absolute;left:-9999px;top:0;z-index:-1;';
   wrap.innerHTML=fullHtml;
   document.body.appendChild(wrap);
+  void wrap.offsetHeight; // layout flush নিশ্চিত করো
+
+  // ✅ Adaptive resolution: সদস্য সংখ্যা কম হলে (ছোট শিট) অনেক বেশি scale
+  // পাবে (৬-৮K পর্যন্ত), সদস্য সংখ্যা বেশি হলে (লম্বা শিট) নিজে থেকেই
+  // scale কমিয়ে নেবে — যাতে বড় মেসেও ছবি বানাতে গিয়ে ফোনের ব্রাউজার
+  // মেমরির অভাবে হ্যাং/ক্র্যাশ না করে। MAX_CANVAS_PX-এর বেশি কোনো
+  // dimension-এ যাওয়া হয় না — এটাই আসল নিরাপত্তার সীমা।
+  const naturalH=wrap.firstChild.offsetHeight;
+  const MAX_CANVAS_PX=6000;
+  const IDEAL_SCALE=8;
+  let scale=Math.min(IDEAL_SCALE, MAX_CANVAS_PX/WRAP_W, MAX_CANVAS_PX/naturalH);
+  scale=Math.max(scale,3); // আগের version-এর scale:3-এর চেয়ে কখনো কম না
 
   toast('⏳ HD ছবি তৈরি হচ্ছে...');
-  // ✅ scale:3 — PDF-এর scale:2 থেকে বেশি, স্পষ্টভাবে high-resolution
-  // PNG চাওয়া হয়েছে বলে ইচ্ছাকৃতভাবে বাড়ানো হয়েছে
-  html2canvas(wrap.firstChild,{scale:3,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
+  html2canvas(wrap.firstChild,{scale:scale,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
     document.body.removeChild(wrap);
     const link=document.createElement('a');
     link.href=canvas.toDataURL('image/png');
@@ -1142,10 +1152,10 @@ function downloadDayImage(){
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast('✅ ছবি ডাউনলোড হয়েছে!');
+    toast(`✅ ছবি ডাউনলোড হয়েছে! (${canvas.width}×${canvas.height})`);
   }).catch(e=>{
     if(wrap.parentNode) document.body.removeChild(wrap);
-    toast('❌ ছবি তৈরিতে সমস্যা!');
+    toast('❌ ছবি তৈরিতে সমস্যা! (মেমরি কম থাকতে পারে)');
     console.error('downloadDayImage error:', e);
   });
 
