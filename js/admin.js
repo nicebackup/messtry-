@@ -562,7 +562,7 @@ function saveAdmMeal(){
   const _admVal={b:{...admBuf.b},l:{...admBuf.l},d:{...admBuf.d}};
   DB.meals[_admKey]=_admVal;
   // 🐛 BUG FIX: mealMmKey পাস করা হতো না — ফলে তারিখ পরের মেস মাসে পড়লেও
-  // (যেমন চক্রের শেষ দিন রাত ১০টার পর "১১ তারিখ" চালু করা হলে) এটা সবসময়
+  // (যেমন চক্রের শেষ দিন রাত ৯টার পর "১১ তারিখ" চালু করা হলে) এটা সবসময়
   // currentMonthRef (চলতি মাসের bucket)-এ সেভ হতো। toast "✅ সেভ হয়েছে"
   // দেখাত কিন্তু আসল ডেটা ভুল bucket-এ যেত, তাই পরের মাসের রিপোর্টে/মিল
   // তালিকায় দেখা যেত না। meal.js-এর saveMeal() এর মতোই এখন সঠিক bucket
@@ -1143,7 +1143,7 @@ function downloadDayImage(){
   let scale=Math.min(IDEAL_SCALE, MAX_CANVAS_PX/WRAP_W, MAX_CANVAS_PX/naturalH);
   scale=Math.max(scale,3); // আগের version-এর scale:3-এর চেয়ে কখনো কম না
 
-  toast('⏳ HD ছবি তৈরি হচ্ছে...');
+  toast('⏳ ছবি তৈরি হচ্ছে...');
   html2canvas(wrap.firstChild,{scale:scale,useCORS:true,backgroundColor:'#fff'}).then(canvas=>{
     document.body.removeChild(wrap);
     const link=document.createElement('a');
