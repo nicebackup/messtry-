@@ -74,25 +74,31 @@ function toggleManagerView(){
     btn.style.color='#fff';
     btn.style.borderColor='var(--primary)';
     // Render manager list
+    // ⚠️ CRITICAL FIX (2026-09-11): আগে DB.managers[mmKey] সরাসরি in-memory
+    // থেকে পড়া হতো, যা সেশন-শুরুর সময়ের "বর্তমান মাস" থেকে একবারই লোড
+    // হয়েছিল — ফলে অন্য সময়ে সেভ করা ডেটা এখানে দেখা যেত না। এখন সবসময়
+    // loadManagersForMonth() দিয়ে টাটকা পড়া হয়।
     const mmKey=messMonthKey();
-    const mgrs=(DB.managers&&DB.managers[mmKey])||[];
     const content=document.getElementById('mgr-list-content');
-    if(!mgrs.length){
-      content.innerHTML='<p class="muted tc" style="padding:12px">এই মাসে কোনো ম্যানেজার নেই</p>';
-      return;
-    }
-    const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
-    const [my,mm]=mmKey.split('-').map(Number);
-    const nm=mm===12?1:mm+1;
-    content.innerHTML=`<div style="font-size:11px;color:var(--text-light);margin-bottom:8px;font-weight:600;">👑 ${mnames[mm-1]} ১১ – ${mnames[nm-1]} ১০, ${my}</div>`
-      + mgrs.map(u=>{
-          const usr=DB.users.find(x=>x.u===u);
-          if(!usr) return '';
-          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-            <div style="width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">${usr.name[0].toUpperCase()}</div>
-            <div><div style="font-weight:600;font-size:13px">${usr.name}</div><div style="font-size:11px;color:var(--text-light)">ID- ${usr.job||'—'} · রুম ${usr.room||'—'}</div></div>
-          </div>`;
-        }).join('');
+    content.innerHTML='<p class="muted tc" style="padding:12px">লোড হচ্ছে...</p>';
+    loadManagersForMonth(mmKey).then(mgrs=>{
+      if(!mgrs.length){
+        content.innerHTML='<p class="muted tc" style="padding:12px">এই মাসে কোনো ম্যানেজার নেই</p>';
+        return;
+      }
+      const mnames=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+      const [my,mm]=mmKey.split('-').map(Number);
+      const nm=mm===12?1:mm+1;
+      content.innerHTML=`<div style="font-size:11px;color:var(--text-light);margin-bottom:8px;font-weight:600;">👑 ${mnames[mm-1]} ১১ – ${mnames[nm-1]} ১০, ${my}</div>`
+        + mgrs.map(u=>{
+            const usr=DB.users.find(x=>x.u===u);
+            if(!usr) return '';
+            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">${usr.name[0].toUpperCase()}</div>
+              <div><div style="font-weight:600;font-size:13px">${usr.name}</div><div style="font-size:11px;color:var(--text-light)">ID- ${usr.job||'—'} · রুম ${usr.room||'—'}${(usr.mob||'').trim()?' · 📞 '+usr.mob.trim():''}</div></div>
+            </div>`;
+          }).join('');
+    });
   }
 }
 
@@ -169,13 +175,35 @@ function openMemberDetail(uname){
   const _dDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
   const _dWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
   const bal=getPreBal(u.u,_dmmKey)+(_dDep-_dWith);
+  // ✅ NEW (2026-09-12): ফোন নাম্বার দেখানো — u.u (যেমন "u_01700000000")
+  // আসলে internal ID, ফোন নাম্বার না। আসল নাম্বার u.mob-এ থাকে। কিছু
+  // বিশেষ (office) অ্যাকাউন্টে mob ফাঁকা/খালি স্পেস থাকে — .trim() দিয়ে
+  // চেক করে সেক্ষেত্রে কিছু দেখানো হয় না, ভাঙা "📞" দেখাবে না।
+  const _mob=(u.mob||'').trim();
+  const _phoneRow = _mob
+    ? `<div data-action="call" data-uname="${esc(u.u)}" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 14px;border-radius:20px;background:var(--bg);cursor:pointer">
+        <span style="font-size:15px">📞</span><span style="font-size:14px;font-weight:600;color:var(--primary)">${esc(_mob)}</span>
+      </div>`
+    : '';
   document.getElementById('memdet-info').innerHTML = safeHTML(`
     <div class="prof-av" style="width:60px;height:60px;font-size:24px">${esc(u.name[0])}</div>
     <div style="font-size:18px;font-weight:700">${esc(u.name)}</div>
-    <div style="font-size:13px;color:var(--text-light);margin-top:4px">${esc(roleLabel(u.role,u))} · ${u.type==='inside'?'ইনসাইড':'আউটসাইড'}</div>
+    <div style="font-size:13px;color:var(--text-light);margin-top:4px">${esc(roleLabel(u.role,u))} · ${isOfficeMealUser(u)?'🏢 অফিস':u.type==='inside'?'ইনসাইড':'আউটসাইড'}</div>
+    ${_phoneRow}
     <div style="margin-top:8px;font-size:22px;font-weight:700;color:${bal>=0?'var(--success)':'var(--danger)'}">${bal>=0?'+':''}৳${Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</div>
     <div style="font-size:12px;color:var(--text-light)">${bal>=0?'জমা আছে':'বকেয়া আছে'}</div>
   `);
+  // ✅ NEW (2026-09-12): কল-চিপে ট্যাপ করলে ডিভাইসের ডায়ালার খুলবে।
+  // safeHTML()/DOMPurify-এর ALLOWED_ATTR-এ href নেই (নিরাপত্তার জন্যই বাদ
+  // — নিচে mem-list-এর ক্লিকেও এই একই কারণে raw onclick attribute-এর
+  // বদলে data-attribute + event delegation ব্যবহার হয়েছে), তাই এখানেও
+  // <a href="tel:..."> না করে সেই একই প্যাটার্ন অনুসরণ করা হলো।
+  document.getElementById('memdet-info').onclick = function(e){
+    const item = e.target.closest('[data-action="call"]');
+    if(!item) return;
+    const mu = DB.users.find(x=>x.u===item.getAttribute('data-uname'));
+    if(mu && (mu.mob||'').trim()) window.location.href = 'tel:'+mu.mob.trim();
+  };
   // Manager actions
   const mgrDiv=document.getElementById('memdet-mgr-actions');
   if(isManagerOrCtrl()&&uname!==CU.u){
