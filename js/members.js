@@ -38,6 +38,25 @@ let currentDetailMemTab = 'meals';
 // ফিরলে ঠিক ওই জায়গায় ফিরিয়ে আনার জন্য। (ui.js-এর popstate-ও এটা পড়ে, তাই window-এ রাখা)
 window._memListScrollY = 0;
 
+// ✅ FIX (2026-11-22): ফোনের Back বাটনে সদস্য তালিকার অবস্থান ধরে রাখা।
+// কারণ: ব্রাউজার নিজে থেকেও Back-এর পর স্ক্রল ঠিক করতে চায়, আর অ্যাপ প্রতিটি পাতা দেখানোর সময়
+// আগে স্ক্রল ০ করে তারপর history-তে জমা রাখে — তাই ব্রাউজারের মনে থাকে "উপরেই ছিল" এবং
+// সে আমাদের ঠিক করা অবস্থানের উপর আবার ০ বসিয়ে দেয়। তাই ব্রাউজারের নিজস্ব স্ক্রল-ঠিক-করা বন্ধ
+// ('manual') করা হলো; স্ক্রল এখন শুধু অ্যাপই ঠিক করবে। (অন্য কোনো পাতার আচরণ বদলায় না,
+// কারণ সেসব পাতায় আগেও সবসময় উপরেই যেত।)
+if('scrollRestoration' in history){ try{ history.scrollRestoration='manual'; }catch(e){} }
+window.addEventListener('popstate',function(e){
+  if(!(e.state && e.state.screen==='members')) return;
+  const y=window._memListScrollY||0;
+  const apply=function(){
+    const sc=document.getElementById('sc-members');
+    if(sc && sc.classList.contains('active')) window.scrollTo(0,y);
+  };
+  apply();                          // সাথে সাথে
+  requestAnimationFrame(apply);     // লেআউট বসার পর
+  setTimeout(apply,80);             // ইতিমধ্যে অন্য কিছু ০ করে দিলে আবার ঠিক করতে
+});
+
 
 // ═══════════════════════════════════════════════
 // MEMBER COUNT SUMMARY
