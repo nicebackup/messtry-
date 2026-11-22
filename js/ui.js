@@ -47,8 +47,7 @@ window.addEventListener('popstate',function(e){
     if(id==='home'){ homeViewDate=null; refreshHome(); }
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const el=document.getElementById('sc-'+id);
-    // ✅ NEW (2026-11-22): ফোনের Back চাপলে সদস্য তালিকায় আগের স্ক্রল অবস্থানে ফেরা
-    if(el){ el.classList.add('active'); window.scrollTo(0, id==='members' ? (window._memListScrollY||0) : 0); }
+    if(el){ el.classList.add('active'); window.scrollTo(0,0); }
   } else {
     // No state = go home
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -230,7 +229,7 @@ function sec(s){
   if(s==='deposit'){ initDeposit(); showSc('deposit'); return; }
   if(s==='bill'){ loadBill(); showSc('bill'); return; }
   if(s==='report'){ buildMessMonthOptions(); showSc('report'); return; }
-  if(s==='members'){ window._memListScrollY=0; loadMembers(); showSc('members'); return; } // নতুন করে খুললে উপর থেকেই শুরু
+  if(s==='members'){ loadMembers(); showSc('members'); return; }
   if(s==='profile'){ loadProfile(); showSc('profile'); return; }
   if(s==='admin'){ if(!isManagerOrCtrl()){ toast('❌ অনুমতি নেই!'); return; } initAdmin(); showSc('admin'); return; }
   if(s==='roomreport'){ if(!isController()){ toast('❌ শুধুমাত্র Controller এক্সেস করতে পারবেন!'); return; } initRoomReport(); showSc('roomreport'); return; }
@@ -261,7 +260,7 @@ function persistDark(isDark){
 }
 function syncThemeMeta(isDark){
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', isDark ? '#0f0f1a' : '#0f4526');
+  if(meta) meta.setAttribute('content', isDark ? '#121413' : '#0a3a3e');
 }
 function applyDark(force){
   const isDark = typeof force === 'boolean' ? force : getPreferredDark();
