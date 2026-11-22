@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
 
 // ─────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'mq-v20'; // V20: report system added 
+const CACHE_VERSION = 'mq-v23'; // V23: Admin meal-edit & member-edit now use Job ID search (like deposit) instead of dropdown. V22: Manager system fix, phone number added in members list, any person selected as office if admin want ,please upgrade All file
 
 const SHELL_ASSETS = [
   './',
