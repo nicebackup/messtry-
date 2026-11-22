@@ -34,6 +34,9 @@
 // removed from config.js (see inline removal instructions below).
 let currentDetailUser = '';
 let currentDetailMemTab = 'meals';
+// ✅ NEW (2026-11-22): সদস্য তালিকা কতটা নিচে স্ক্রল করা ছিল — বিস্তারিত পাতা থেকে
+// ফিরলে ঠিক ওই জায়গায় ফিরিয়ে আনার জন্য। (ui.js-এর popstate-ও এটা পড়ে, তাই window-এ রাখা)
+window._memListScrollY = 0;
 
 
 // ═══════════════════════════════════════════════
@@ -166,6 +169,12 @@ function loadMembers(){
 // MEMBER DETAIL
 // ═══════════════════════════════════════════════
 function openMemberDetail(uname){
+  // ✅ NEW: শুধু তালিকা পাতা সক্রিয় থাকলেই অবস্থান মনে রাখো। (ব্লক/আনব্লকের পর এই
+  // ফাংশন বিস্তারিত পাতা থেকেই আবার ডাকা হয় — তখন যেন আগের সঠিক অবস্থান মুছে না যায়।)
+  const _scMem=document.getElementById('sc-members');
+  if(_scMem && _scMem.classList.contains('active')){
+    window._memListScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  }
   currentDetailUser=uname;
   const u=DB.users.find(x=>x.u===uname); if(!u) return;
   document.getElementById('memdet-title').textContent=u.name;
@@ -214,6 +223,14 @@ function openMemberDetail(uname){
   } else { mgrDiv.style.display='none'; }
   memdetTab('meals');
   showSc('memdetail');
+}
+// ✅ NEW (2026-11-22): "← সদস্য তালিকা" বাটন — তালিকায় ফিরে আগের স্ক্রল অবস্থানে যাবে।
+// (আগে sec('members') ডাকা হতো, যা সবসময় পাতার একদম উপরে নিয়ে যেত।)
+function backToMembers(){
+  const y=window._memListScrollY||0;
+  loadMembers(); showSc('members');
+  window.scrollTo(0,y);
+  requestAnimationFrame(()=>window.scrollTo(0,y)); // লেআউট বসার পর আবার একবার, নিশ্চিত হতে
 }
 function memdetTab(tab){
   currentDetailMemTab=tab;
