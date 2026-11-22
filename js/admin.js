@@ -50,16 +50,7 @@ function initAdmin(){
     }).catch(()=>{});
   }
 
-  const sortedForSel=[...DB.users].sort((a,b)=>{
-    const ai=parseInt(a.job)||Infinity, bi=parseInt(b.job)||Infinity;
-    if(ai!==Infinity||bi!==Infinity) return ai-bi;
-    return (a.job||'').localeCompare(b.job||'');
-  });
-  ['mgr-sel','adm-mem','edit-mem-sel','del-mem-sel'].forEach(id=>{
-    const el=document.getElementById(id); if(!el) return;
-    el.innerHTML='<option value="">-- নির্বাচন করুন --</option>';
-    sortedForSel.forEach(u=>{ el.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
-  });
+  _fillAdmMemberSelects(['mgr-sel','adm-mem','edit-mem-sel','del-mem-sel']);
   // Populate mgr-month with mess month options
   const mgrMonSel=document.getElementById('mgr-month');
   if(mgrMonSel){
@@ -600,6 +591,80 @@ function removeManager(){
 // Extracted: 2026-05-19 | Original lines: 2509–2536
 // ✅ UPGRADE: "মিল এডিট" পপআপ খোলার সময় কল হয় — প্রতিবার আগামীকালের
 // তারিখ দিয়ে রিসেট করে দেয় (initAdmin() একবারই চলে, কিন্তু popup বারবার খোলা যায়)
+// ✅ NEW (2026-11-22): সদস্য dropdown বানানোর কাজ আলাদা ফাংশনে — initAdmin() আগের মতোই
+// সব ড্রপডাউন নতুন করে বানায় (সিলেকশন রিসেট), আর "মিল এডিট" পপআপ খোলার সময়
+// keepSelection=true দিয়ে ডাকা হয় যাতে নতুন অনুমোদিত সদস্যও তালিকায় আসে।
+function _fillAdmMemberSelects(ids, keepSelection){
+  const sortedForSel=[...DB.users].sort((a,b)=>{
+    const ai=parseInt(a.job)||Infinity, bi=parseInt(b.job)||Infinity;
+    if(ai!==Infinity||bi!==Infinity) return ai-bi;
+    return (a.job||'').localeCompare(b.job||'');
+  });
+  ids.forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const prev=keepSelection ? el.value : '';
+    el.innerHTML='<option value="">-- নির্বাচন করুন --</option>';
+    sortedForSel.forEach(u=>{ el.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
+    if(prev && sortedForSel.some(u=>u.u===prev)) el.value=prev;
+  });
+}
+
+// ✅ NEW (2026-11-22): মিল এডিটে ID বা নাম লিখে সদস্য খোঁজা
+// বাংলা সংখ্যা (১২৩) → ইংরেজি (123) করে নেয়, যাতে বাংলা কিবোর্ডেও কাজ করে
+function _admNormQ(s){
+  const bn='০১২৩৪৫৬৭৮৯';
+  return String(s||'').trim().toLowerCase().replace(/[০-৯]/g,d=>String(bn.indexOf(d)));
+}
+// খোঁজার নিয়ম: ID হুবহু মিললে আগে → ID এর শুরু মিললে → নামের মধ্যে মিললে
+function admMemMatches(q, users){
+  q=_admNormQ(q);
+  if(!q) return [];
+  const idOf=u=>String(u.job||'').toLowerCase();
+  const exact=users.filter(u=>idOf(u)===q);
+  const starts=users.filter(u=>idOf(u)!==q && idOf(u).startsWith(q));
+  const byName=users.filter(u=>!idOf(u).startsWith(q) && String(u.name||'').toLowerCase().includes(q));
+  return [...exact,...starts,...byName];
+}
+function admMemSearch(){
+  const inp=document.getElementById('adm-mem-search');
+  const box=document.getElementById('adm-mem-results');
+  if(!inp||!box) return;
+  const q=inp.value;
+  if(!_admNormQ(q)){ box.style.display='none'; box.innerHTML=''; return; }
+  const matches=admMemMatches(q, DB.users||[]);
+  if(!matches.length){
+    box.innerHTML='<div style="padding:10px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
+    box.style.display='block'; return;
+  }
+  box.innerHTML=safeHTML(matches.slice(0,8).map(u=>
+    `<div data-uname="${esc(u.u)}" data-action="adm-mem-pick" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">${esc(String(u.name||'?')[0])}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(u.name)}</div>
+        <div style="font-size:11px;color:var(--text-light)">ID: ${esc(String(u.job||'-'))}${u.room?' · রুম '+esc(u.room):''}</div>
+      </div>
+    </div>`).join(''));
+  box.style.display='block';
+  box.onclick=function(e){
+    const item=e.target.closest('[data-action="adm-mem-pick"]');
+    if(item) admMemPick(item.getAttribute('data-uname'));
+  };
+}
+function admMemSearchKey(e){
+  // Enter চাপলে প্রথম ফলাফল সিলেক্ট হবে (কম্পিউটার/কিবোর্ডের সুবিধার জন্য)
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  const first=document.querySelector('#adm-mem-results [data-action="adm-mem-pick"]');
+  if(first) admMemPick(first.getAttribute('data-uname'));
+}
+function admMemPick(uname){
+  const sel=document.getElementById('adm-mem');
+  if(!sel||!DB.users.find(x=>x.u===uname)) return;
+  sel.value=uname;
+  const inp=document.getElementById('adm-mem-search'); if(inp) inp.value='';
+  const box=document.getElementById('adm-mem-results'); if(box){ box.style.display='none'; box.innerHTML=''; }
+  loadAdmMeal(); // আগের মতোই মিল লোড হবে
+}
 function openAdmMealPopup(){
   const dt=document.getElementById('adm-dt');
   if(dt){
@@ -607,6 +672,10 @@ function openAdmMealPopup(){
     applyMessCycleBounds('adm-dt', null, true);
     appendDayToBNLabel('adm-dt');
   }
+  // নতুন অনুমোদিত সদস্য যেন তালিকায় আসে + সার্চ বক্স পরিষ্কার
+  _fillAdmMemberSelects(['adm-mem'], true);
+  const sInp=document.getElementById('adm-mem-search'); if(sInp) sInp.value='';
+  const sBox=document.getElementById('adm-mem-results'); if(sBox){ sBox.style.display='none'; sBox.innerHTML=''; }
   loadAdmMeal();
   tog('card-adm-meal');
 }
