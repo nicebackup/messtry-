@@ -50,8 +50,8 @@ function initAdmin(){
     }).catch(()=>{});
   }
 
-  _fillAdmMemberSelects(['mgr-sel','del-mem-sel']);
-  memPickClear('adm', true); memPickClear('edit', true); // সার্চ-সিলেক্ট রিসেট (আগে dropdown রিসেট হতো)
+  _fillAdmMemberSelects(['mgr-sel']);
+  memPickClear('adm', true); memPickClear('edit', true); memPickClear('del', true); // সার্চ-সিলেক্ট রিসেট (আগে dropdown রিসেট হতো)
   // Populate mgr-month with mess month options
   const mgrMonSel=document.getElementById('mgr-month');
   if(mgrMonSel){
@@ -363,6 +363,7 @@ function _reconcileManagerRoles(){
     let changed=false;
     const toDemote=[], toPromote=[];
     DB.users.forEach(u=>{
+      if(u.left) return; // ✅ প্রাক্তন সদস্যের role আর বদলানো/তৈরি করা হবে না
       if(u.role==='manager' && !curMgrs.includes(u.u)){
         toDemote.push(u.u); changed=true;
       }
@@ -592,7 +593,7 @@ function removeManager(){
 // Extracted: 2026-05-19 | Original lines: 2509–2536
 // ✅ সদস্য dropdown বানানো (ম্যানেজার যোগ/বাদ ও সদস্য মুছে ফেলার জন্য — আগের মতোই)
 function _fillAdmMemberSelects(ids){
-  const sortedForSel=[...DB.users].sort((a,b)=>{
+  const sortedForSel=DB.users.filter(u=>!u.left).sort((a,b)=>{ // ✅ প্রাক্তন সদস্য বাদ
     const ai=parseInt(a.job)||Infinity, bi=parseInt(b.job)||Infinity;
     if(ai!==Infinity||bi!==Infinity) return ai-bi;
     return (a.job||'').localeCompare(b.job||'');
@@ -613,7 +614,8 @@ function _fillAdmMemberSelects(ids){
 // ═══════════════════════════════════════════════
 const _MEM_PICKERS={
   adm: {search:'adm-mem-search',  hidden:'adm-mem',      results:'adm-mem-results',  chip:'adm-mem-chip',  chipName:'adm-mem-chip-name',  onChange:()=>loadAdmMeal()},
-  edit:{search:'edit-mem-search', hidden:'edit-mem-sel', results:'edit-mem-results', chip:'edit-mem-chip', chipName:'edit-mem-chip-name', onChange:()=>loadEditMem()}
+  edit:{search:'edit-mem-search', hidden:'edit-mem-sel', results:'edit-mem-results', chip:'edit-mem-chip', chipName:'edit-mem-chip-name', onChange:()=>loadEditMem()},
+  del: {search:'del-mem-search',  hidden:'del-mem-sel',  results:'del-mem-results',  chip:'del-mem-chip',  chipName:'del-mem-chip-name',  onChange:()=>_resignOnPick()}
 };
 // বাংলা সংখ্যা (১২৩) → ইংরেজি (123), যাতে বাংলা কিবোর্ডেও কাজ করে
 function _memNormQ(s){
@@ -635,7 +637,7 @@ function memPickSearch(key){
   const inp=document.getElementById(c.search), box=document.getElementById(c.results);
   if(!inp||!box) return;
   if(!_memNormQ(inp.value)){ box.style.display='none'; box.innerHTML=''; return; }
-  const matches=memPickMatches(inp.value, DB.users||[]);
+  const matches=memPickMatches(inp.value, (DB.users||[]).filter(u=>!u.left)); // ✅ প্রাক্তন সদস্য বাদ
   if(!matches.length){
     box.innerHTML='<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-light)">কোনো সদস্য পাওয়া যায়নি</div>';
     box.style.display='block'; return;
@@ -686,6 +688,7 @@ function memPickClear(key, silent){
   if(!silent) c.onChange();
   else if(key==='edit'){ const f=document.getElementById('edit-mem-form'); if(f) f.style.display='none'; }
   else if(key==='adm'){ const p=document.getElementById('adm-pqo'); if(p) p.style.display='none'; }
+  else if(key==='del'){ const o=document.getElementById('del-opts'); if(o) o.style.display='none'; }
 }
 
 // ✅ UPGRADE: "মিল এডিট" পপআপ খোলার সময় কল হয় — প্রতিবার আগামীকালের
@@ -815,79 +818,88 @@ function saveEditMem(){
 
   toast('✅ সদস্যের তথ্য সংরক্ষিত হয়েছে!'); closeAdmPopup(); initAdmin();
 }
-// Delete member
-function deleteMember(){
-  if(!isOnline()){ noNetPopup(); return; }
-  const uname=document.getElementById('del-mem-sel').value; if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
+// ═══════════════════════════════════════════════
+// ✅ NEW (2026-11-23): প্রাক্তন সদস্য (Resigned) — আগের "সদস্য মুছে ফেলুন"-এর বদলে
+// সমস্যা ছিল: সদস্যকে DB.users থেকে মুছলে পুরনো মাসের মোট মিল কমে গিয়ে মিল রেট ও সবার বিল
+// বদলে যেত। এখন রেকর্ড থেকে যায়, শুধু চিহ্ন বসে:
+//   left:true, activeTo:'YYYY-MM' (শেষ মাস), leftOn:'YYYY-MM-DD'
+// activeTo পর্যন্ত সব মাসের হিসাব আগের মতোই; পরের মাস থেকে সব চলতি তালিকা থেকে বাদ।
+// লগইন বন্ধ করতে users/{uid}, roles/{uid}, pendingApprovals/{uid} আগের মতোই মোছা হয়।
+// ═══════════════════════════════════════════════
+function _resignOnPick(){
+  const uname=(document.getElementById('del-mem-sel')||{}).value||'';
+  const opts=document.getElementById('del-opts');
+  const sel=document.getElementById('del-last-mm');
+  if(!opts||!sel) return;
+  if(!uname){ opts.style.display='none'; sel.innerHTML=''; return; }
   const u=DB.users.find(x=>x.u===uname);
+  const cur=messMonthKey();
+  // শেষ ১৩টা মেস-মাস (চলতি মাস সবার আগে); সদস্যের যোগদানের আগের মাস দেখানো হয় না
+  let keys=[], k=cur;
+  for(let i=0;i<13;i++){ keys.push(k); k=prevCycleKeyOf(k); }
+  if(u && u.activeFrom){ const f=keys.filter(m=>m>=u.activeFrom); if(f.length) keys=f; }
+  sel.innerHTML=keys.map(m=>`<option value="${esc(m)}">${esc(bnCycleLabel(m))}${m===cur?' (চলতি মাস)':''}</option>`).join('');
+  // ডিফল্ট: চলতি মাসে মিল থাকলে চলতি মাস, নাহলে আগের মাস (মাস ক্লোজ ও টাকা মেটানোর পর সরানো হয়)
+  const def=(messMonthMeals(uname,cur)>0) ? cur : prevCycleKeyOf(cur);
+  sel.value=keys.includes(def)?def:keys[0];
+  opts.style.display='block';
+}
+function resignMember(){
+  if(!isOnline()){ noNetPopup(); return; }
+  const uname=document.getElementById('del-mem-sel').value;
+  if(!uname){ toast('❌ সদস্য নির্বাচন করুন!'); return; }
+  const u=DB.users.find(x=>x.u===uname);
+  if(!u){ toast('❌ সদস্য পাওয়া যায়নি!'); return; }
+  if(CU && CU.u===uname){ toast('❌ নিজেকে প্রাক্তন সদস্য করা যাবে না!'); return; }
+  const lastMm=(document.getElementById('del-last-mm')||{}).value;
+  if(!lastMm){ toast('❌ শেষ মাস নির্বাচন করুন!'); return; }
 
-  // ✅ FIX BUG-05: মুছে দেওয়ার আগে balance check।
-  // সমস্যা: outstanding balance সহ member delete করলে handover-এ তার balance
-  // আর দেখা যায় না — DB.users-এ নেই তাই _calcHandoverData() miss করে।
-  // সমাধান: balance থাকলে manager-কে সতর্ক করো, সে সচেতনভাবে সিদ্ধান্ত নিক।
-  const mmKey=messMonthKey();
-  const _dep=(DB.transactions||[]).filter(tx=>tx.uname===uname&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
-  const _with=(DB.transactions||[]).filter(tx=>tx.uname===uname&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
-  const bal=getPreBal(uname,mmKey)+(_dep-_with);
+  const curKey=messMonthKey();
+  const curMeals=messMonthMeals(uname,curKey);
+  // চলতি মাসে মিল থাকলে শেষ মাস অবশ্যই চলতি মাস হতে হবে — নাহলে ওই মিল হিসাব থেকে বাদ পড়বে
+  if(curMeals>0 && lastMm<curKey){
+    toast('❌ চলতি মাসে এই সদস্যের '+curMeals.toFixed(2)+' মিল আছে — শেষ মাস হিসেবে "চলতি মাস" বেছে নিন।');
+    return;
+  }
+  const _dep=(DB.transactions||[]).filter(tx=>tx.uname===uname&&tx.type==='deposit'&&dateInMessMonth(tx.date,curKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const _with=(DB.transactions||[]).filter(tx=>tx.uname===uname&&tx.type==='withdraw'&&dateInMessMonth(tx.date,curKey)).reduce((s,tx)=>s+(tx.amount||0),0);
+  const bal=getPreBal(uname,curKey)+(_dep-_with);
   const balWarn=bal!==0
-    ? `\n\n⚠️ সতর্কতা: এই সদস্যের বর্তমান ব্যালেন্স ৳${Math.abs(bal).toFixed(2)} (${bal>0?'জমা আছে':'বকেয়া আছে'})। মুছে ফেললে এই হিসাব হারিয়ে যাবে!`
-    : '';
-  // ✅ FIX: ব্যালেন্সের পাশাপাশি চলতি মাসের মিলও ০ কিনা চেক করো — মিল থাকা
-  // অবস্থায় মুছলে চলতি মাসের মিল-হিসাব থেকে সেটা বাদ পড়ে যাবে।
-  const myMeals=messMonthMeals(uname,mmKey);
-  const mealWarn=myMeals>0
-    ? `\n\n⚠️ সতর্কতা: এই সদস্যের চলতি মাসে ${myMeals.toFixed(2)} মিল রেকর্ড আছে। মুছে ফেললে চলতি মাসের মিল হিসাব থেকে এটা বাদ পড়ে যাবে!`
+    ? `\n\n⚠️ মনে রাখবেন: এই সদস্যের বর্তমান ব্যালেন্স ৳${Math.abs(bal).toFixed(2)} (${bal>0?'জমা আছে':'বকেয়া আছে'})। টাকার হিসাব মিটিয়ে নিয়েছেন তো?`
     : '';
 
-  showModal('সদস্য মুছুন',`${u?.name||uname} কে স্থায়ীভাবে মুছে ফেলবেন? সব ডেটা হারিয়ে যাবে!${balWarn}${mealWarn}`,()=>{
-    // ✅ FIX: RTDB cleanup-এর জন্য uid আগেই নাও — DB.users filter করার পরে u হারিয়ে যাবে
-    const targetUid = u?.uid;
-    // ⚠️ RACE FIX: DB.users=DB.users.filter(...) + saveUsers() (পুরো blob
-    // overwrite) বাদ — updateUserRecord(uname, ()=>null) transaction দিয়ে
-    // Firebase-এর fresh array থেকে শুধু এই একজনকেই বাদ দেয়, ঠিক তখন অন্য
-    // কারো (ভিন্ন সদস্যের) প্রোফাইল সেভ চলতে থাকলেও তা হারায় না। একইভাবে
-    // controllers-এও DB.controllers.filter()+saveControllers() এর বদলে
-    // updateControllers(uname, false)।
-    updateUserRecord(uname, ()=>null);
+  showModal('প্রাক্তন সদস্য (Resigned) করুন',
+    `${u.name||uname} কে প্রাক্তন সদস্য (Resigned) করবেন?\n\n• শেষ মাস: ${bnCycleLabel(lastMm)}\n• ওই মাস পর্যন্ত পুরনো সব হিসাব, মিল রেট ও রিপোর্ট আগের মতোই থাকবে\n• ${bnCycleLabel(nextCycleKey(lastMm))} থেকে তিনি সব তালিকা থেকে সরে যাবেন এবং লগইন করতে পারবেন না${balWarn}`,
+  ()=>{
+    const targetUid=u.uid;
+    // ✅ রেকর্ড মোছা হয় না — শুধু চিহ্ন বসে (transaction দিয়ে, অন্য কারো পরিবর্তন না হারিয়ে)
+    updateUserRecord(uname, rec=>{ rec.left=true; rec.activeTo=lastMm; rec.leftOn=tod(); rec.role='member'; return rec; });
     updateControllers(uname, false);
-    Object.keys(DB.managers).forEach(m=>{ DB.managers[m]=(DB.managers[m]||[]).filter(u=>u!==uname); });
-    // member মুছলে _minUserCount আপডেট — নাহলে false block
-    if(typeof _minUserCount!=='undefined') _minUserCount=Math.max(0,new Set(DB.users.filter(u=>u&&u.u).map(u=>u.u)).size);
-    // ⚠️ CRITICAL FIX (2026-09-11): এখানে আগে পুরো DB.managers (সব মাস
-    // একসাথে) currentMonthRef-এ (সেশন-শুরুর "বর্তমান মাস") সেভ হতো — এটাই
-    // ছিল ম্যানেজার-তালিকা ভুল মাসের ঘরে "আটকে" যাওয়ার মূল কারণ। ঠিক
-    // নিচের _purgeManagerRefsAllMonths() আগে থেকেই প্রতিটা মাসের নিজের
-    // নোডে গিয়ে ঠিকভাবে uname সরায় — তাই এই লাইনটা সরিয়ে দেওয়া হলো,
-    // দরকারও ছিল না, ক্ষতিই করছিল।
-    // ✅ FIX: শুধু বর্তমানে লোড করা মাস না — গত ২৪ মাসের ম্যানেজার
-    // রেফারেন্স থেকেও এই সদস্যকে সরিয়ে দাও, একেবারে delete-এর মুহূর্তেই।
-    // এটা শুধু "কে ম্যানেজার ছিল" এই ছোট্ট রেফারেন্স ছোঁয় — মিল/বাজার/
-    // জমা-উত্তোলনের কোনো ঐতিহাসিক হিসাবে হাত দেয় না।
-    (function _purgeManagerRefsAllMonths(){
+    // ম্যানেজার তালিকা: শেষ মাসের পরের মাসগুলো থেকেই শুধু সরানো হয় — আগের মাসে কে ম্যানেজার ছিল সেই ইতিহাস অক্ষত
+    Object.keys(DB.managers).forEach(m=>{ if(m>lastMm) DB.managers[m]=(DB.managers[m]||[]).filter(x=>x!==uname); });
+    (function _purgeManagerRefsAfter(){
       if(typeof monthsRef==='undefined'||!monthsRef) return;
       const base=messMonthKey(); let [py,pm]=base.split('-').map(Number);
       for(let i=0;i<24;i++){
         const pk=py+'-'+String(pm).padStart(2,'0');
-        monthsRef.child(pk).child('managers').child(pk).once('value').then(snap=>{
-          const arr=snap.val();
-          if(Array.isArray(arr)&&arr.includes(uname)){
-            monthsRef.child(pk).child('managers').child(pk).set(arr.filter(x=>x!==uname)).catch(()=>{});
-          }
-        }).catch(()=>{});
+        if(pk>lastMm){
+          monthsRef.child(pk).child('managers').child(pk).once('value').then(snap=>{
+            const arr=snap.val();
+            if(Array.isArray(arr)&&arr.includes(uname)){
+              monthsRef.child(pk).child('managers').child(pk).set(arr.filter(x=>x!==uname)).catch(()=>{});
+            }
+          }).catch(()=>{});
+        }
         pm--; if(pm<1){ pm=12; py--; }
       }
     })();
-    // ✅ FIX: RTDB node cleanup — users/{uid} + roles/{uid} + pendingApprovals/{uid}
-    // Bug: আগে এই cleanup ছিল না।
-    // users/{uid} থেকে যায় → deleted user পেজ refresh করলে onAuthStateChanged
-    // users/{uid} পড়ে ভেতরে ঢুকে যেত (_waitUntilReady-এ global/users চেক করে kick করে,
-    // কিন্তু এই orphan node থাকলে RTDB স্পেস নষ্ট হয় + security hole থাকে)।
+    // লগইন বন্ধ: users/{uid} + roles/{uid} + pendingApprovals/{uid} (আগের মতোই)
     if(targetUid){
       firebase.database().ref('users/'+targetUid).remove().catch(()=>{});
       firebase.database().ref('roles/'+targetUid).remove().catch(()=>{});
       firebase.database().ref('pendingApprovals/'+targetUid).remove().catch(()=>{});
     }
-    closeAdmPopup(); initAdmin(); toast('✅ সদস্য মুছে ফেলা হয়েছে!');
+    closeAdmPopup(); initAdmin(); toast('✅ '+(u.name||uname)+' এখন প্রাক্তন সদস্য (Resigned)');
   });
 }
 // Controller management
@@ -913,7 +925,7 @@ function renderControllerList(){
   const remSel=document.getElementById('ctrl-rem-sel');
   addSel.innerHTML='<option value="">-- সদস্য নির্বাচন --</option>';
   remSel.innerHTML='<option value="">-- Controller নির্বাচন --</option>';
-  DB.users.filter(u=>!DB.controllers.includes(u.u)).sort((a,b)=>(parseInt(a.job)||0)-(parseInt(b.job)||0)).forEach(u=>{ addSel.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
+  DB.users.filter(u=>!u.left && !DB.controllers.includes(u.u)).sort((a,b)=>(parseInt(a.job)||0)-(parseInt(b.job)||0)).forEach(u=>{ addSel.innerHTML+=`<option value="${esc(u.u)}">${esc(u.name)} (ID: ${esc(u.job||'-')})</option>`; });
   DB.controllers.forEach(c=>{ const usr=DB.users.find(x=>x.u===c); if(usr) remSel.innerHTML+=`<option value="${esc(c)}">${esc(usr.name)} (ID: ${esc(c)})</option>`; });
 }
 function addController(){
@@ -1381,7 +1393,7 @@ function showAllMembersBill(){
 
   // ── মেস ফান্ড ──
   let totalDeposited=0;
-  DB.users.filter(u=>u.type!=='cook').forEach(u=>{
+  DB.users.filter(u=>u.type!=='cook' && isActiveInMonth(u,mmKey)).forEach(u=>{ // ✅ মাস অনুযায়ী (প্রাক্তন সদস্য শেষ মাস পর্যন্ত ধরা হবে)
     const _fDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
     const _fWith=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='withdraw'&&dateInMessMonth(tx.date,mmKey)).reduce((s,tx)=>s+(tx.amount||0),0);
     totalDeposited+=getPreBal(u.u,mmKey)+(_fDep-_fWith);

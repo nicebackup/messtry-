@@ -67,7 +67,7 @@ window.addEventListener('popstate',function(e){
 function _renderMemberCountBar(filteredList) {
   var el = document.getElementById('mem-count-bar');
   if (!el) return;
-  var total = DB.users.filter(function(u){ return !u.blocked; }).length;
+  var total = DB.users.filter(function(u){ return !u.blocked && !u.left; }).length; // ✅ প্রাক্তন সদস্য বাদ
   var q = (document.getElementById('mem-search') ? document.getElementById('mem-search').value : '').trim();
   if (q) {
     var shown = filteredList.filter(function(u){ return !u.blocked; }).length;
@@ -130,6 +130,7 @@ function loadMembers(){
 
   // ── Search fix: u.job number হতে পারে — String() দিয়ে convert করো ──
   const filtered = DB.users.filter(u=>{
+    if(u.left) return false; // ✅ প্রাক্তন সদস্য (Resigned) মূল তালিকায় নয় — নিচে আলাদা অংশে
     if(!q) return true;
     const name  = (u.name||'').toLowerCase();
     const job   = String(u.job||'').toLowerCase();
@@ -182,6 +183,58 @@ function loadMembers(){
 
   // ── Member count summary bar — auto-updates on every render ──
   _renderMemberCountBar(filtered);
+  _renderFormerMembers(q); // ✅ প্রাক্তন সদস্য (Resigned) আলাদা অংশ
+}
+
+// ═══════════════════════════════════════════════
+// ✅ NEW (2026-11-23): প্রাক্তন সদস্য (Resigned) — তালিকার নিচে আলাদা, ভাঁজ-করা অংশ
+// এরা DB.users-এ থেকে যায় (left:true, activeTo:'YYYY-MM') যাতে পুরনো মাসের হিসাব অক্ষত থাকে।
+// ═══════════════════════════════════════════════
+let _formerOpen = false;
+function _renderFormerMembers(q){
+  const btn=document.getElementById('mem-former-btn');
+  const box=document.getElementById('mem-former-list');
+  if(!btn||!box) return;
+  const all=DB.users.filter(u=>u&&u.left);
+  if(!all.length){ btn.style.display='none'; box.style.display='none'; return; }
+  q=(q||'').trim().toLowerCase();
+  const list=all.filter(u=>{
+    if(!q) return true;
+    return (u.name||'').toLowerCase().includes(q) || String(u.job||'').toLowerCase().includes(q)
+        || String(u.room||'').toLowerCase().includes(q) || (u.u||'').toLowerCase().includes(q);
+  }).sort((a,b)=>{
+    const aj=parseInt(a.job)||0, bj=parseInt(b.job)||0;
+    if(aj && bj) return aj-bj;
+    if(aj) return -1;
+    if(bj) return 1;
+    return String(a.job||'').localeCompare(String(b.job||''));
+  });
+  btn.style.display='block';
+  btn.textContent=(_formerOpen?'▲ ':'▼ ')+'প্রাক্তন সদস্য (Resigned): '+list.length+' জন';
+  box.innerHTML=safeHTML(list.map(u=>{
+    const idLabel=u.job?`<span style="font-weight:700;color:var(--primary);font-size:12px">ID ${esc(String(u.job))}</span>`:'';
+    const roomLabel=u.room?`<span style="color:var(--text-light);font-size:11px">রুম ${esc(String(u.room))}</span>`:'';
+    return `<div class="mem-item" data-uname="${esc(u.u)}" style="cursor:pointer;opacity:.9">
+      <div class="mem-av blocked">${esc(String(u.name||'?')[0])}</div>
+      <div style="flex:1">
+        <div class="mem-name">${esc(u.name)} <span class="badge" style="background:#eceff1;color:#546e7a">Resigned</span></div>
+        <div class="mem-meta" style="display:flex;gap:8px;align-items:center;margin-top:2px">${idLabel}${roomLabel}</div>
+      </div>
+      <div class="mem-right">
+        <div style="font-size:11px;color:var(--text-light)">শেষ মাস</div>
+        <div style="font-size:12px;font-weight:700">${esc(bnCycleLabel(u.activeTo))}</div>
+      </div>
+    </div>`;
+  }).join('')||'<p class="muted tc">কোনো প্রাক্তন সদস্য পাওয়া যায়নি</p>');
+  box.style.display=_formerOpen?'block':'none';
+  box.onclick=function(e){
+    const item=e.target.closest('[data-uname]');
+    if(item) openMemberDetail(item.getAttribute('data-uname'));
+  };
+}
+function toggleFormerMembers(){
+  _formerOpen=!_formerOpen;
+  _renderFormerMembers((document.getElementById('mem-search')?.value)||'');
 }
 
 // ═══════════════════════════════════════════════
@@ -197,7 +250,7 @@ function openMemberDetail(uname){
   currentDetailUser=uname;
   const u=DB.users.find(x=>x.u===uname); if(!u) return;
   document.getElementById('memdet-title').textContent=u.name;
-  document.getElementById('memdet-sub').textContent=`রুম ${u.room||'-'} · ${u.job||'-'}`;
+  document.getElementById('memdet-sub').textContent=`রুম ${u.room||'-'} · ${u.job||'-'}`+(u.left?' · Resigned':'');
   // Info card
   const _dmmKey=messMonthKey();
   const _dDep=(DB.transactions||[]).filter(tx=>tx.uname===u.u&&tx.type==='deposit'&&dateInMessMonth(tx.date,_dmmKey)).reduce((s,tx)=>s+(tx.amount||0),0);

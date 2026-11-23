@@ -893,6 +893,18 @@ function loadDB(){
             }catch(e){}
             return; // এই listener call-এ আর কিছু করার নেই
           }
+          // ✅ NEW (2026-11-23): প্রাক্তন সদস্য (Resigned) হলে চলমান session থেকেও logout।
+          if(_myEntry.left){
+            console.warn('[kick] CU is a former member — forcing logout. uid=',CU.uid);
+            auth.signOut().catch(()=>{});
+            CU=null; localStorage.removeItem('mq_authed');
+            try{ showSc('login'); }catch(e){}
+            try{
+              const _kal=document.getElementById('login-alert');
+              if(_kal){ _kal.textContent='ℹ️ আপনার সদস্যপদ শেষ হয়েছে (Resigned)।'; _kal.className='alert alert-warning show'; }
+            }catch(e){}
+            return;
+          }
           // ⚠️ FORCE-FIX (2026-08-11, Rashedul ইনসিডেন্টের পর): role কমে গেলে
           // (manager/controller → এর নিচে কিছু) এখন block-kick-এর মতোই সাথে
           // সাথে জোরপূর্বক logout। আগে শুধু CU.role লোকালি আপডেট + বর্তমান
