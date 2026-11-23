@@ -781,6 +781,8 @@ try{
     <div class="card">
   <div id="mem-count-bar" style="font-size:12px;color:var(--text-light);padding:0 4px 8px;font-weight:600;"></div>
   <div id="mem-list"></div>
+  <button id="mem-former-btn" type="button" onclick="toggleFormerMembers()" style="display:none;width:100%;margin-top:14px;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;"></button>
+  <div id="mem-former-list" style="display:none;margin-top:8px"></div>
 </div>
   </div>
 </div>
@@ -927,7 +929,7 @@ try{
       <div class="adm-item ctrl-only" onclick="tog('card-mgr')"><div class="adm-icon">👑</div><div><div class="adm-lbl">ম্যানেজার নিয়োগ</div><div class="adm-sub">প্রতি মাসের ম্যানেজার সেট করুন (সর্বোচ্চ ১০ জন)</div></div></div>
       <div class="adm-item" onclick="openAdmMealPopup()"><div class="adm-icon">🔓</div><div><div class="adm-lbl">যেকোনো সদস্যের মিল এডিট</div><div class="adm-sub">যেকোনো তারিখ — Lock নেই</div></div></div>
       <div class="adm-item ctrl-only" onclick="openEditMemPopup()"><div class="adm-icon">✏️📃</div><div><div class="adm-lbl">সদস্যের তথ্য সম্পাদনা</div><div class="adm-sub">নাম, রুম, ফোন, ধরন পরিবর্তন</div></div></div>
-      <div class="adm-item ctrl-only" onclick="tog('card-del-mem')"><div class="adm-icon">🗑️</div><div><div class="adm-lbl">সদস্য মুছে ফেলুন</div><div class="adm-sub">মেস ছেড়ে যাওয়া সদস্য ডিলিট</div></div></div>
+      <div class="adm-item ctrl-only" onclick="tog('card-del-mem')"><div class="adm-icon">🚪</div><div><div class="adm-lbl">প্রাক্তন সদস্য করুন (Resigned)</div><div class="adm-sub">মেস/চাকরি ছেড়ে যাওয়া সদস্য — পুরনো হিসাব ঠিক থাকবে</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-del-cycle')"><div class="adm-icon">🗓️</div><div><div class="adm-lbl">মেস চক্র ডিলিট</div><div class="adm-sub">সম্পন্ন চক্রের ডেটা Firebase থেকে মুছুন</div></div></div>
       <div class="adm-item ctrl-only" onclick="tog('card-ctrl')"><div class="adm-icon">⭐</div><div><div class="adm-lbl">Controller নিয়োগ</div><div class="adm-sub">নতুন Controller যোগ/বাদ দিন</div></div></div>
       <div class="adm-item" onclick="tog('card-sitenote')"><div class="adm-icon">📍</div><div><div class="adm-lbl">ঠিকানা / সাইট নোট</div><div class="adm-sub">Home এ দেখানো ঠিকানা বা শর্ট নোট</div></div></div>
@@ -1019,10 +1021,20 @@ try{
 
     <!-- Delete Member -->
     <div class="card" id="card-del-mem" style="display:none">
-      <div class="sec-title">🗑️ সদস্য মুছে ফেলুন</div>
-      <div class="alert alert-danger show">⚠️ এই কাজ পূর্বাবস্থায় ফেরানো যাবে না!</div>
-      <div class="form-group"><label class="form-label">সদস্য নির্বাচন</label><select id="del-mem-sel" class="form-input"><option value="">-- নির্বাচন --</option></select></div>
-      <button class="btn btn-danger" onclick="deleteMember()">🗑️ স্থায়ীভাবে মুছুন</button>
+      <div class="sec-title">🚪 প্রাক্তন সদস্য করুন (Resigned)</div>
+      <div class="alert alert-warning show">ℹ️ সদস্য মুছে যাবে না। শেষ মাস পর্যন্ত পুরনো সব হিসাব আগের মতোই থাকবে; পরের মাস থেকে তিনি সব তালিকা থেকে সরে যাবেন ও লগইন করতে পারবেন না।</div>
+      <div class="form-group"><label class="form-label">সদস্য নির্বাচন</label>
+        <input type="text" id="del-mem-search" class="form-input" placeholder="🔍 Job ID লিখুন (যেমন: 1120)" autocomplete="off" oninput="memPickSearch('del')" onkeydown="memPickKey(event,'del')">
+        <input type="hidden" id="del-mem-sel" value="">
+        <div id="del-mem-results" style="display:none;margin-top:6px;background:var(--card);border:2px solid var(--primary);border-radius:var(--radius-sm);max-height:230px;overflow-y:auto"></div>
+        <div id="del-mem-chip" style="display:none;margin-top:6px;padding:8px 12px;background:var(--success-light);border:1px solid #c8e6c9;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--success);align-items:center;justify-content:space-between;">
+          <span id="del-mem-chip-name">&#8212;</span>
+          <button type="button" onclick="memPickClear('del')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;">&#10005;</button>
+        </div></div>
+      <div id="del-opts" style="display:none">
+        <div class="form-group"><label class="form-label">শেষ কোন মাস পর্যন্ত ছিলেন?</label><select id="del-last-mm" class="form-input"></select></div>
+      </div>
+      <button class="btn btn-danger" onclick="resignMember()">🚪 প্রাক্তন সদস্য করুন</button>
     </div>
 
     <!-- Controller Management -->
