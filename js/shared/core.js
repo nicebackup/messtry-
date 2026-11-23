@@ -44,7 +44,7 @@ function fmtDate(isoStr){
 //            admin.js (handover), pdf.js, home.js (activeUsers)
 // External dep: messMonthKey() — lives in utils.js (loads before core.js ✓)
 function isActiveInMonth(u, mmKey){
-  // ✅ NEW (2026-11-23): প্রাক্তন (Resigned) সদস্য — activeTo মাসের পরের মাসগুলোতে আর active নয়।
+  // ✅ NEW (2026-11-23): মেস ছেড়েছেন (Resigned) — activeTo মাসের পরের মাসগুলোতে আর active নয়।
   // কিন্তু activeTo পর্যন্ত সব মাসে (পুরনো হিসাব, মিল রেট, রিপোর্ট, হিস্ট্রি) আগের মতোই গণ্য হয় —
   // তাই সদস্যকে তালিকা থেকে সরালেও পুরনো মাসের হিসাব বদলায় না।
   if(u.activeTo && mmKey > u.activeTo) return false;
@@ -56,7 +56,7 @@ function isActiveInMonth(u, mmKey){
 }
 
 
-// ✅ NEW (2026-11-23): প্রাক্তন সদস্য (Resigned)
+// ✅ NEW (2026-11-23): মেস ছেড়েছেন (Resigned) — সদস্য বাদ দিন
 // সদস্যকে আর DB.users থেকে মুছে ফেলা হয় না — রেকর্ড থেকে যায় (left:true, activeTo:'YYYY-MM'),
 // যাতে পুরনো মাসের হিসাব অক্ষত থাকে। চলতি কাজের তালিকায় (সদস্য তালিকা, জমা-উত্তোলন, মিল এডিট,
 // হোম ইত্যাদি) !u.left দিয়ে বাদ দেওয়া হয়।
